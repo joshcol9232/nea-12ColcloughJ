@@ -5,7 +5,7 @@ from kivy.config import Config
 Config.set("graphics", "resizable", False)
 Config.set("graphics", "width", "1000")
 Config.set("graphics", "height", "600")
-Config.set("input", "mouse", "mouse,disable_on_activity")
+Config.set("input", "mouse", "mouse,disable_multitouch")
 Config.write()
 
 from kivy.app import App
@@ -25,6 +25,7 @@ class MainScreen(Screen, FloatLayout):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         self.buttons = []
+        self.tempList = []
         self.currentDir = os.path.dirname(os.path.realpath(__file__))+"/"
         self.configDir = self.getPathBack()
         self.configFile = open(self.configDir+"config.cfg", "r")
@@ -102,16 +103,17 @@ class MainScreen(Screen, FloatLayout):
             return myList
 
     def listFiles(self, dir):
-        self.tempList = []
         files = self.quickSortAlphabetical(self.List(dir))
         self.currentDir = dir
-        self.displayList(files)
+        return self.displayList(files)
 
     def displayList(self, array):
+        self.tempList = []
+        print(array, "array")
         self.fileCount = 0 #19 count = filled, 20 for full but one is the down button
         for file in array:
-            self.y = 0.78 - (0.04 * self.fileCount)
-            self.buttonTemp = self.listButton(self, text=str(file), pos_hint={"x": 0.01, "y": self.y})
+            y = 0.78 - (0.04 * self.fileCount)
+            self.buttonTemp = self.listButton(self, text=str(file), pos_hint={"x": 0.01, "y": y})
             if self.fileCount < 19:
                 self.buttons.append(self.buttonTemp)
                 self.add_widget(self.buttonTemp)
@@ -121,7 +123,7 @@ class MainScreen(Screen, FloatLayout):
 
         if len(self.tempList) > 0:
             print("BIG BUTTON EEEEEEEEEEEEEEEE")
-            self.buttonDownTemp = self.listButton(self, text="V", pos_hint={"x": 0.01, "y": 0.01})
+            self.buttonDownTemp = self.listButton(self, text="V", pos_hint={"x": 0.16, "y": 0.01}, size_hint=(.4, .04))
             self.buttons.append(self.buttonDownTemp)
             self.add_widget(self.buttonDownTemp)
 
@@ -148,10 +150,11 @@ class MainScreen(Screen, FloatLayout):
         return self.listFiles(self.getPathBack())
 
     def moveListDown(self):
+        print(self.tempList, "eggg")
         self.removeCurrentList()
-        print("removed list")
+        return self.displayList(self.tempList)
         #self.displayList(self.tempList)
-
+        
 
     def values(self, st):
         values = shutil.disk_usage(self.path)
