@@ -1,22 +1,27 @@
 # File name: kiv.py
 #: import FadeTransition kivy.uix.screenmanager.FadeTransition
+#: import Window kivy.core.window.Window
 
 ScreenManagement:
     transition: FadeTransition()
     MainScreen:
     LoginScreen:
 
-<listButton@Button>:
-    font_size: 12
-    size_hint: .7, .04
-    text:
-    on_release: root.listNextFiles()
 
+<listButton@Button>:
+    font_size: 14
+    size_hint: 1, None
+    
+    text:
+    on_release: root.outerScreen.traverseButton(self.text)
 
 <MainScreen>:
     name: "main"
+    id: main
 
     FloatLayout:
+        id: MainLayout
+
 
         TextInput:
             id: Search
@@ -99,6 +104,7 @@ ScreenManagement:
 
 <LoginScreen>:
     name: "Login"
+    id: login
     Button:
         on_release: app.root.current = "main"
         text: "egg"
