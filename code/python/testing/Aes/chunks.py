@@ -1,14 +1,11 @@
 import time
 
-def getFileData(Dir):
+def getChunk(Dir):
     fo = open(Dir, "rb")
     eachByte = []
     for line in fo:
         for item in line:
             eachByte.append(item)
-
-    fo.close()
-    return eachByte
 
 def splitIntoChunks(data):
     chunks = []
@@ -37,9 +34,8 @@ def xorWithKey(chunks, key):
 
 
 start = time.time()
-data = getFileData("smile.bmp")
+data = getFileData("/home/josh/VirtualBox VMs/bob/bob.vdi")
 chunks = splitIntoChunks(data)
-print(chunks)
 print("Took:", str(time.time()-start), "seconds to split.")
 
 keyInput = "mynamejeffeleven"

@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 import shutil
 
 from kivy.config import Config
@@ -39,6 +41,7 @@ class MainScreen(Screen, FloatLayout):
         self.configFile = open(self.startDir+"config.cfg", "r")
         self.path = "/"
         self.sizeCount = 0
+        self.tooBig = False
         self.assetsPath = "/"
         for line in self.configFile:
             lineSplit = line.split(":")
@@ -50,7 +53,6 @@ class MainScreen(Screen, FloatLayout):
 
         self.currentDir = self.path
         self.configFile.close()
-        self.getGoodUnit(38129471950117)
         self.root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         self.createButtons(self.List(self.currentDir))
 
@@ -73,36 +75,54 @@ class MainScreen(Screen, FloatLayout):
 
 
 ##########Getting File Information##########
-    def getFolderSize(self, folder):
-        self.sizeCount = 0
-        print(folder)
-        f = os.listdir(folder)
-        for item in f:
-            if os.path.isdir(folder+item):
-                try:
-                    self.getFolderSize(folder+item+"/")
-                except OSError:
-                    print("Can't open", folder+item+"/")
-            else:
-                try:
-                    self.sizeCount += os.path.getsize(folder+item)
-                except:
-                    print("can't get size")
+    def getFolderSize(self, f):
+        print(f)
+        if self.sizeCount < 5000000000: #5GB
+            fs = os.listdir(f)
+            for item in fs:
+                if os.path.isdir(f+item):
+                    try:
+                        self.getFolderSize(f+item+"/")
+                    except OSError:
+                        print("Not allowed xd")
+                else:
+                    if os.path.islink(f+item) == False:
+                        try:
+                            self.sizeCount += os.path.getsize(f+item)
+                        except Exception as e:
+                            print(e, "error reeeeeeeeeeee")
+        else:
+            self.tooBig = True
+
+
+
 
     def getFileSize(self, item):
         if os.path.isdir(self.currentDir+item):
+            #return " -"
+            self.tooBig = False
+            self.sizeCount = 0
             self.getFolderSize(self.currentDir+item+"/")
-            return self.sizeCount
+            if self.tooBig:
+                return " -"
+            else:
+                return self.getGoodUnit(self.sizeCount)
         else:
-            return os.path.getsize(self.currentDir+item)
+            try:
+                size = os.path.getsize(self.currentDir+item)
+                return self.getGoodUnit(size)
+            except Exception as e:
+                print(e, "couldn't get size.")
+                return " -"
 
-    def getGoodUnit(self, bytes):   ##################################################################################################
+    def getGoodUnit(self, bytes):
         divCount = 0
-        bytePref = {0: "B", 1: "Kb", 2: "Mb", 3: "Gb", 4: "TiB", 5: "P"}
-        while bytes/1024 > 1024:
-            bytes = bytes/1024
+        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+        while bytes > 1000:
+            bytes = bytes/1000
             divCount += 1
 
+        return ("%.2f" % bytes) + divisions[divCount]
 
 
 ############################################
@@ -119,7 +139,7 @@ class MainScreen(Screen, FloatLayout):
             fileS.bind(size=fileS.setter("text_size"))
             self.grid.add_widget(btn)
             self.grid.add_widget(fileS)
-        self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .02, "y": -.2})
+        self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .02, "y": -.22})
         self.root.add_widget(self.grid)
         self.add_widget(self.root)
 
@@ -138,7 +158,11 @@ class MainScreen(Screen, FloatLayout):
             self.removeButtons()
             self.createButtons(self.List(self.currentDir))
         else:
-            print((self.currentDir+fileName+"/"), "not dir")
+            try:
+                opener = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.call([opener, self.currentDir+fileName])
+            except Exception as e:
+                print(e, "-- Can't open :(")
 
     def goBackFolder(self):
         if self.currentDir != "/":
@@ -172,15 +196,13 @@ class MainScreen(Screen, FloatLayout):
                 while not compared:
                     if count >= len(pivot) or count >= len(item):
                         if len(pivot) > len(item):
-                            print(pivot, "bigger than", item)
                             left.append(item)
                             compared = True
                         elif len(pivot) < len(item):
-                            print(pivot, "less than", item)
                             right.append(item)
                             compared = True
                         else:
-                            print("bit of a problem")
+                            print("bit of a problem -------------------------------EROOR")
                             print(item, pivot, len(item), len(pivot))
                             compared = True
 
@@ -233,6 +255,11 @@ class MainScreen(Screen, FloatLayout):
     def getPathForButton(self, item):
         return self.assetsPath+item
 
+    def printStuff(self, val):
+        print(val)
+
+    def searchForItem(self, item):
+        pass
 
 class LoginScreen(Screen):
     pass

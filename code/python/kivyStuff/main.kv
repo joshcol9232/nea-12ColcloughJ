@@ -11,7 +11,6 @@ ScreenManagement:
 <listButton@Button>:
     font_size: 14
     size_hint: 1, None
-    
     text:
     on_release: root.outerScreen.traverseButton(self.text)
 
@@ -30,6 +29,8 @@ ScreenManagement:
             hint_text: "Search"
             pos_hint: {"x": 0.16, "top": 1}
             multiline: False
+            on_text_validate: root.printStuff(self.text)
+
 
         Button:
             id: searchButton
