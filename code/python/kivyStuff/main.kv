@@ -33,6 +33,14 @@ ScreenManagement:
 
 
         Button:
+            id: SortByName
+            font_size: 14
+            size_hint: .7, .02
+            pos_hint: {"x": .02, "y": .8}
+            text: root.getSortOrder()
+            on_release: root.changeSortOrder()
+
+        Button:
             id: searchButton
             size_hint: .06, .08
             pos_hint: {"x": .62, "top": 1}
@@ -106,7 +114,18 @@ ScreenManagement:
 <LoginScreen>:
     name: "Login"
     id: login
+
+    TextInput:
+        id: Pass
+        size_hint: .46, .08
+        font_size: 22
+        hint_text:
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+        multiline: False
+
     Button:
+        id: loginButton
+        size_hint: .16, .16
+        pos_hint: {"center_x": .5, "center_y": .5}
         on_release: app.root.current = "main"
-        text: "egg"
-        font_size: 50
+        text: "Login"

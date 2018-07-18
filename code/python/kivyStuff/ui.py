@@ -22,6 +22,18 @@ from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.lang import Builder
 
+##########Import Bluetooth Module########
+blueDir = str(os.path.dirname(os.path.realpath(__file__)))
+blueDir = blueDir.split("/")
+print(blueDir)
+del blueDir[len(blueDir)-1]
+blueDir = "/".join(blueDir)
+blueDir += "/bluetoothStuff"
+print(blueDir, "egg")
+
+sys.path.insert(0, bluDir)
+import bluetoothMain
+########################################
 
 class MainScreen(Screen, FloatLayout):
 
@@ -41,7 +53,7 @@ class MainScreen(Screen, FloatLayout):
         self.configFile = open(self.startDir+"config.cfg", "r")
         self.path = "/"
         self.sizeCount = 0
-        self.tooBig = False
+        self.ascending = True
         self.assetsPath = "/"
         for line in self.configFile:
             lineSplit = line.split(":")
@@ -76,56 +88,50 @@ class MainScreen(Screen, FloatLayout):
 
 ##########Getting File Information##########
     def getFolderSize(self, f):
-        print(f)
-        if self.sizeCount < 5000000000: #5GB
-            fs = os.listdir(f)
-            for item in fs:
-                if os.path.isdir(f+item):
+        fs = os.listdir(f)
+        for item in fs:
+            if os.path.isdir(f+item):
+                try:
+                    self.getFolderSize(f+item+"/")
+                except OSError:
+                    print("Not allowed xd")
+            else:
+                if os.path.islink(f+item) == False:
                     try:
-                        self.getFolderSize(f+item+"/")
-                    except OSError:
-                        print("Not allowed xd")
-                else:
-                    if os.path.islink(f+item) == False:
-                        try:
-                            self.sizeCount += os.path.getsize(f+item)
-                        except Exception as e:
-                            print(e, "error reeeeeeeeeeee")
-        else:
-            self.tooBig = True
+                        self.sizeCount += os.path.getsize(f+item)
+                    except Exception as e:
+                        print(e, "error reeeeeeeeeeee")
 
 
 
 
     def getFileSize(self, item):
         if os.path.isdir(self.currentDir+item):
-            #return " -"
-            self.tooBig = False
-            self.sizeCount = 0
-            self.getFolderSize(self.currentDir+item+"/")
-            if self.tooBig:
-                return " -"
-            else:
-                return self.getGoodUnit(self.sizeCount)
+            return " -"
         else:
             try:
-                size = os.path.getsize(self.currentDir+item)
-                return self.getGoodUnit(size)
+                size = self.getGoodUnit(os.path.getsize(self.currentDir+item))
+                return size
             except Exception as e:
                 print(e, "couldn't get size.")
                 return " -"
 
     def getGoodUnit(self, bytes):
-        divCount = 0
-        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-        while bytes > 1000:
-            bytes = bytes/1000
-            divCount += 1
+        if bytes == " -":
+            return " -"
+        else:
+            divCount = 0
+            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+            while bytes > 1000:
+                bytes = bytes/1000
+                divCount += 1
 
-        return ("%.2f" % bytes) + divisions[divCount]
+            return ("%.2f" % bytes) + divisions[divCount]
 
 
 ############################################
+
+#######Button Creation and button functions#######
 
     def createButtons(self, array):
         sortedArray = self.getSortedFoldersAndFiles(array)
@@ -157,12 +163,6 @@ class MainScreen(Screen, FloatLayout):
             self.currentDir = self.currentDir+fileName+"/"
             self.removeButtons()
             self.createButtons(self.List(self.currentDir))
-        else:
-            try:
-                opener = "open" if sys.platform == "darwin" else "xdg-open"
-                subprocess.call([opener, self.currentDir+fileName])
-            except Exception as e:
-                print(e, "-- Can't open :(")
 
     def goBackFolder(self):
         if self.currentDir != "/":
@@ -184,6 +184,32 @@ class MainScreen(Screen, FloatLayout):
                 listOfFiles.append(item)
         return listOfFiles
 
+    def getPathBack(self):
+        tempDir = self.currentDir.split("/")
+        del tempDir[len(tempDir)-2]
+        tempDir = "/".join(tempDir)
+        return tempDir
+
+    def getPathForButton(self, item):
+        return self.assetsPath+item
+
+
+###########Name Sort Button############
+
+    def getSortOrder(self):
+        if self.ascending:
+            return "v"
+        else:
+            return "^"
+
+    def changeSortOrder(self):
+        if self.ascending:
+            self.ascending = False
+        else:
+            self.ascending = True
+
+#######################################
+###########Sorts + Searches############
     def quickSortAlphabetical(self, myList):
         if len(myList) > 1:
             left = []
@@ -225,12 +251,6 @@ class MainScreen(Screen, FloatLayout):
             return myList
 
 
-    def getPathBack(self):
-        tempDir = self.currentDir.split("/")
-        del tempDir[len(tempDir)-2]
-        tempDir = "/".join(tempDir)
-        return tempDir
-
     def binarySearch(self, myList, item):
         mid = int(len(myList)/2)
         if len(myList) == 1 and myList[mid] != item:
@@ -243,17 +263,19 @@ class MainScreen(Screen, FloatLayout):
             elif myList[mid] < item:
                 return self.binarySearch(myList[mid:], item)     #If middle less than item, look through right side.
 
+##################################
 
+
+####Progress Bar Information####
 
     def values(self, st):
         values = shutil.disk_usage(self.path)
         if st:
-            return str(int(values[1]/1000000))+" MB / " + str(int(values[0]/1000000)) + " MB used."
+            return self.getGoodUnit(int(values[1]))+" / " + self.getGoodUnit(int(values[0])) + " used."
         else:
             return [values[0], values[1]]
 
-    def getPathForButton(self, item):
-        return self.assetsPath+item
+################################
 
     def printStuff(self, val):
         print(val)
@@ -261,8 +283,10 @@ class MainScreen(Screen, FloatLayout):
     def searchForItem(self, item):
         pass
 
-class LoginScreen(Screen):
-    pass
+class LoginScreen(Screen, FloatLayout):
+    def __init__(self, **kwargs):
+        super(LoginScreen, self).__init__(**kwargs)
+
 
 class ScreenManagement(ScreenManager):
     pass
