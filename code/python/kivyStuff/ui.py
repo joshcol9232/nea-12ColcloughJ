@@ -31,7 +31,7 @@ blueDir = "/".join(blueDir)
 blueDir += "/bluetoothStuff"
 print(blueDir, "egg")
 
-sys.path.insert(0, bluDir)
+sys.path.insert(0, blueDir)
 import bluetoothMain
 ########################################
 
@@ -52,9 +52,10 @@ class MainScreen(Screen, FloatLayout):
         self.startDir = "/".join(tempDir)
         self.configFile = open(self.startDir+"config.cfg", "r")
         self.path = "/"
+        self.assetsPath = "/"
         self.sizeCount = 0
         self.ascending = True
-        self.assetsPath = "/"
+
         for line in self.configFile:
             lineSplit = line.split(":")
             lineSplit[1] = lineSplit[1].replace("\n", "")
@@ -81,8 +82,8 @@ class MainScreen(Screen, FloatLayout):
             else:
                 files.append(file)
 
-        foldersSort = self.quickSortAlphabetical(folders)
-        filesSort = self.quickSortAlphabetical(files)
+        foldersSort = self.quickSortAlph(folders)
+        filesSort = self.quickSortAlph(files)
         return foldersSort+filesSort
 
 
@@ -134,7 +135,14 @@ class MainScreen(Screen, FloatLayout):
 #######Button Creation and button functions#######
 
     def createButtons(self, array):
-        sortedArray = self.getSortedFoldersAndFiles(array)
+        if self.ascending:
+            sortedArray = self.getSortedFoldersAndFiles(array)
+            btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
+            self.add_widget(btn)
+        else:
+            btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
+            self.add_widget(btn)
+
         self.grid = GridLayout(cols=2, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
         for item in sortedArray:
@@ -145,7 +153,7 @@ class MainScreen(Screen, FloatLayout):
             fileS.bind(size=fileS.setter("text_size"))
             self.grid.add_widget(btn)
             self.grid.add_widget(fileS)
-        self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .02, "y": -.22})
+        self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
         self.root.add_widget(self.grid)
         self.add_widget(self.root)
 
@@ -161,14 +169,12 @@ class MainScreen(Screen, FloatLayout):
         fileName = self.getFileNameFromText(itemName)
         if os.path.isdir(self.currentDir+fileName+"/"):
             self.currentDir = self.currentDir+fileName+"/"
-            self.removeButtons()
-            self.createButtons(self.List(self.currentDir))
+            self.resetButtons()
 
     def goBackFolder(self):
         if self.currentDir != "/":
             self.currentDir = self.getPathBack()
-            self.removeButtons()
-            self.createButtons(self.List(self.currentDir))
+            self.resetButtons()
         else:
             print("Can't go further up.")
 
@@ -193,8 +199,17 @@ class MainScreen(Screen, FloatLayout):
     def getPathForButton(self, item):
         return self.assetsPath+item
 
+    def resetButtons(self):
+        self.removeButtons()
+        self.createButtons(self.List(self.currentDir))
+
 
 ###########Name Sort Button############
+    class nameSortButton(Button):
+
+        def __init__(self, outerScreen, **kwargs):
+            super(Button, self).__init__(self, **kwargs)
+
 
     def getSortOrder(self):
         if self.ascending:
@@ -205,63 +220,88 @@ class MainScreen(Screen, FloatLayout):
     def changeSortOrder(self):
         if self.ascending:
             self.ascending = False
+            self.resetButtons()
         else:
             self.ascending = True
+            self.resetButtons()
 
 #######################################
 ###########Sorts + Searches############
-    def quickSortAlphabetical(self, myList):
+    def compareStrings(self, string1, string2):     #returns True if string1 < string2 alphabetically, and "Found" if string1 == string2
+        count = 0
+        while not (count >= len(string1) or count >= len(string2)):
+            if ord(string2[count].lower()) < ord(string1[count].lower()):
+                return True
+            elif ord(string2[count].lower()) > ord(string1[count].lower()):
+                return False
+            else:
+                if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+                    return True
+                elif ord(string2[count]) > ord(string1[count]):
+                    return False
+                else:
+                    if string2 == string1:
+                        return "Found"
+                    else:
+                        count += 1
+        if len(string1) > len(string2):
+            return True
+        elif len(string1) < len(string2):
+            return False
+        else:
+            print("bit of a problem -------------------------------EROOR")
+            print(string2, string1, len(string2), len(string1))
+
+
+
+
+    def quickSortAlph(self, myList):
         if len(myList) > 1:
             left = []
             right = []  #Make seperate l+r lists, and add on at the end.
             middle = []
             pivot = myList[int(len(myList)/2)]
             for item in myList:
-                compared = False
-                count = 0
-                while not compared:
-                    if count >= len(pivot) or count >= len(item):
-                        if len(pivot) > len(item):
-                            left.append(item)
-                            compared = True
-                        elif len(pivot) < len(item):
-                            right.append(item)
-                            compared = True
-                        else:
-                            print("bit of a problem -------------------------------EROOR")
-                            print(item, pivot, len(item), len(pivot))
-                            compared = True
+                leftSide = self.compareStrings(pivot, item)
+                if leftSide == "Found":
+                    middle.append(item)
+                elif leftSide:
+                    left.append(item)
+                elif not leftSide:
+                    right.append(item)
 
-                    else:
-                        if ord(item[count].lower()) < ord(pivot[count].lower()):
-                            left.append(item)
-                            compared = True
-                        elif ord(item[count].lower()) > ord(pivot[count].lower()):
-                            right.append(item)
-                            compared = True
-                        else:
-                            if item == pivot:
-                                middle.append(item)
-                                compared = True
-                            else:
-                                count += 1
-
-            return self.quickSortAlphabetical(left)+middle+self.quickSortAlphabetical(right)
+            return self.quickSortAlph(left)+middle+self.quickSortAlph(right)
         else:
             return myList
 
 
-    def binarySearch(self, myList, item):
-        mid = int(len(myList)/2)
-        if len(myList) == 1 and myList[mid] != item:
-            return "Not found."
+    def quickSortNums(self, myList):
+        if len(myList) > 1:
+            left = []
+            right = []  #Make seperate l+r lists, and add on at the end.
+            middle = []
+            pivot = myList[int(len(myList)/2)]
+            for i in myList:
+                if i < pivot:
+                    left.append(i)
+                elif i > pivot:
+                    right.append(i)
+                else:
+                    middle.append(i)
+            return self.quickSortByLength(left)+middle+self.quickSortByLength(right)
         else:
-            if myList[mid] == item:
-                return "Found."
-            elif myList[mid] > item:
-                return self.binarySearch(myList[:mid], item)     #If middle bigger than item, look through left side.
-            elif myList[mid] < item:
-                return self.binarySearch(myList[mid:], item)     #If middle less than item, look through right side.
+            return myList
+
+
+    def binarySearchAlph(self, myList, item):
+        mid = int(len(myList)/2)
+        print(myList[mid])
+        if item in myList[mid]:
+            self.searchResults.append(myList[mid])
+
+
+
+
 
 ##################################
 
@@ -277,11 +317,17 @@ class MainScreen(Screen, FloatLayout):
 
 ################################
 
-    def printStuff(self, val):
-        print(val)
+####Search Bar functions####
 
-    def searchForItem(self, item):
-        pass
+    # def printStuff(self, val): #test
+    #     print(val)
+
+    def searchForItem(self, array, item):
+        self.searchResults = []
+        self.binarySearchAlph(array, item)
+        print(self.searchResults, "SEARCH FOUND TINGS")
+
+############################
 
 class LoginScreen(Screen, FloatLayout):
     def __init__(self, **kwargs):

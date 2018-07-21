@@ -29,23 +29,24 @@ ScreenManagement:
             hint_text: "Search"
             pos_hint: {"x": 0.16, "top": 1}
             multiline: False
-            on_text_validate: root.printStuff(self.text)
+            on_text_validate: root.searchForItem(root.quickSortAlph(root.List(root.currentDir)), self.text)
 
+
+        # Button:
+        #     id: SortByName
+        #     font_size: 14
+        #     size_hint: .7, .015
+        #     pos_hint: {"x": .005, "y": .805}
+        #     text: root.getSortOrder()
+        #     on_release: root.changeSortOrder()
 
         Button:
-            id: SortByName
-            font_size: 14
-            size_hint: .7, .02
-            pos_hint: {"x": .02, "y": .8}
-            text: root.getSortOrder()
-            on_release: root.changeSortOrder()
-
-        Button:
-            id: searchButton
+            id: goBackArrow
             size_hint: .06, .08
-            pos_hint: {"x": .62, "top": 1}
+            pos_hint: {"x": .62, "y": 0.84}
+            on_release: root.resetButtons()
             Image:
-                source: root.getPathForButton("search.png")
+                source: root.getPathForButton("backArrows.png")
                 x: self.parent.x + 5
                 y: self.parent.y
                 size: 50, 50
@@ -54,7 +55,7 @@ ScreenManagement:
         Button:
             id: goBackFolder
             size_hint: .06, .08
-            pos_hint: {"x": 0.62, "y": 0.84}
+            pos_hint: {"x": 0.62, "top": 1}
             on_release: root.goBackFolder()
             Image:
                 source: root.getPathForButton("backUpFolder.png")
@@ -115,13 +116,12 @@ ScreenManagement:
     name: "Login"
     id: login
 
-    TextInput:
-        id: Pass
+    Label:
+        id: labelLogin
         size_hint: .46, .08
+        text: "Connect via bluetooth."
         font_size: 22
-        hint_text:
         pos_hint: {"center_x": 0.5, "y": 0.8}
-        multiline: False
 
     Button:
         id: loginButton
