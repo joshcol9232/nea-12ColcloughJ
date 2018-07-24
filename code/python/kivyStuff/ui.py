@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import shutil
+import threading
+import time
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -20,6 +22,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
+from kivy.uix.checkbox import CheckBox
 from kivy.lang import Builder
 
 ##########Import Bluetooth Module########
@@ -34,6 +37,7 @@ print(blueDir, "egg")
 sys.path.insert(0, blueDir)
 import bluetoothMain
 ########################################
+
 
 class MainScreen(Screen, FloatLayout):
 
@@ -55,6 +59,7 @@ class MainScreen(Screen, FloatLayout):
         self.assetsPath = "/"
         self.sizeCount = 0
         self.ascending = True
+        self.threads = []
 
         for line in self.configFile:
             lineSplit = line.split(":")
@@ -88,31 +93,16 @@ class MainScreen(Screen, FloatLayout):
 
 
 ##########Getting File Information##########
-    def getFolderSize(self, f):
-        fs = os.listdir(f)
-        for item in fs:
-            if os.path.isdir(f+item):
-                try:
-                    self.getFolderSize(f+item+"/")
-                except OSError:
-                    print("Not allowed xd")
-            else:
-                if os.path.islink(f+item) == False:
-                    try:
-                        self.sizeCount += os.path.getsize(f+item)
-                    except Exception as e:
-                        print(e, "error reeeeeeeeeeee")
-
-
-
-
     def getFileSize(self, item):
         if os.path.isdir(self.currentDir+item):
             return " -"
         else:
             try:
                 size = self.getGoodUnit(os.path.getsize(self.currentDir+item))
-                return size
+                if size == 0:
+                    return " -"
+                else:
+                    return size
             except Exception as e:
                 print(e, "couldn't get size.")
                 return " -"
@@ -134,28 +124,44 @@ class MainScreen(Screen, FloatLayout):
 
 #######Button Creation and button functions#######
 
-    def createButtons(self, array):
+    def createButtons(self, array, sort=True):
         if self.ascending:
-            sortedArray = self.getSortedFoldersAndFiles(array)
+            if sort:
+                sortedArray = self.getSortedFoldersAndFiles(array)
             btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
             self.add_widget(btn)
         else:
+            if sort:
+                pass
             btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
             self.add_widget(btn)
 
         self.grid = GridLayout(cols=2, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
-        for item in sortedArray:
-            fileSize = self.getFileSize(item)
-            btn = self.listButton(self, text=("    "+item), height=30, halign="left", valign="middle")
-            btn.bind(size=btn.setter("text_size"))
-            fileS = Label(text=" "+str(fileSize), size_hint=(.1, 1), halign="left", valign="middle")
-            fileS.bind(size=fileS.setter("text_size"))
-            self.grid.add_widget(btn)
-            self.grid.add_widget(fileS)
-        self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
-        self.root.add_widget(self.grid)
-        self.add_widget(self.root)
+        if sort:
+            for item in sortedArray:
+                fileSize = self.getFileSize(item)
+                btn = self.listButton(self, text=("    "+item), height=30, halign="left", valign="middle")
+                btn.bind(size=btn.setter("text_size"))
+                fileS = Label(text=" "+str(fileSize), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS.bind(size=fileS.setter("text_size"))
+                self.grid.add_widget(btn)
+                self.grid.add_widget(fileS)
+            self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.root.add_widget(self.grid)
+            self.add_widget(self.root)
+        else:
+            for item in array:
+                fileSize = self.getFileSize(item)
+                btn = self.listButton(self, text=("    "+item), height=30, halign="left", valign="middle")
+                btn.bind(size=btn.setter("text_size"))
+                fileS = Label(text=" "+str(fileSize), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS.bind(size=fileS.setter("text_size"))
+                self.grid.add_widget(btn)
+                self.grid.add_widget(fileS)
+            self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.root.add_widget(self.grid)
+            self.add_widget(self.root)
 
     def removeButtons(self):
         self.grid = 0
@@ -178,6 +184,15 @@ class MainScreen(Screen, FloatLayout):
         else:
             print("Can't go further up.")
 
+    def getPathForButton(self, item):
+        return self.assetsPath+item
+
+    def resetButtons(self):
+        self.removeButtons()
+        self.createButtons(self.List(self.currentDir))
+
+
+####File Handling####
     def List(self, dir):
         fs = os.listdir(dir)
         count = 0
@@ -195,13 +210,6 @@ class MainScreen(Screen, FloatLayout):
         del tempDir[len(tempDir)-2]
         tempDir = "/".join(tempDir)
         return tempDir
-
-    def getPathForButton(self, item):
-        return self.assetsPath+item
-
-    def resetButtons(self):
-        self.removeButtons()
-        self.createButtons(self.List(self.currentDir))
 
 
 ###########Name Sort Button############
@@ -253,8 +261,6 @@ class MainScreen(Screen, FloatLayout):
             print(string2, string1, len(string2), len(string1))
 
 
-
-
     def quickSortAlph(self, myList):
         if len(myList) > 1:
             left = []
@@ -293,14 +299,69 @@ class MainScreen(Screen, FloatLayout):
             return myList
 
 
-    def binarySearchAlph(self, myList, item):
-        mid = int(len(myList)/2)
-        print(myList[mid])
-        if item in myList[mid]:
-            self.searchResults.append(myList[mid])
+    def quickSortTuples(self, tuples):
+        if len(tuples) > 1:
+            left = []
+            right = []  #Make seperate l+r lists, and add on at the end.
+            middle = []
+            pivot = tuples[int(len(tuples)/2)]
+            for i in tuples:
+                if i[0] < pivot[0]:
+                    left.append(i)
+                elif i[0] > pivot[0]:
+                    right.append(i)
+                else:
+                    middle.append(i)
+            return self.quickSortTuples(left)+middle+self.quickSortTuples(right)
+        else:
+            return tuples
 
 
+    def findAndSort(self, myList, item):
+        unsorted = []
+        self.temp = []
+        for file in myList:
+            loc = file.find(item)
 
+            # if os.path.isdir(self.currentDir+item):
+            #     self.traverseFileTree(self.currentDir+item)
+
+            if file == item:
+                self.searchResults = [item] + self.searchResults
+                self.removeButtons()
+                self.createButtons(self.searchResults)
+            elif loc != -1:
+                unsorted.append((loc, file))
+                temp.append(file)
+
+
+        if len(unsorted) > 0:
+            sorted = self.quickSortTuples(unsorted)
+            for i in sorted:
+                self.searchResults.append(i[1])
+            self.removeButtons()
+            self.createButtons(self.searchResults, False)
+
+
+        if self.createButtons == []:
+            self.resetButtons()
+
+    # def traverseFileTree(self, f):
+    #     fs = os.listdir(f)
+    #     for item in fs:
+    #         if os.path.isdir(f+item):
+    #             try:
+    #                 self.traverseFileTree(f+item+"/")
+    #             except OSError:
+    #                 pass
+    #         else:
+    #             if os.path.islink(f+item) == False:
+    #                 self.findAndSort()
+
+
+    def searchThread(self, myList, item):
+        self.findAndSort(myList, item)
+        return "Done"
 
 
 ##################################
@@ -323,9 +384,10 @@ class MainScreen(Screen, FloatLayout):
     #     print(val)
 
     def searchForItem(self, array, item):
+        self.resetButtons()
         self.searchResults = []
-        self.binarySearchAlph(array, item)
-        print(self.searchResults, "SEARCH FOUND TINGS")
+        self.t = threading.Thread(target=self.searchThread, args=(array, item,), daemon=True)
+        self.t.start()
 
 ############################
 
