@@ -23,19 +23,22 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.checkbox import CheckBox
+#import kivy.uix.contextmenu
+from kivy.base import EventLoop
 from kivy.lang import Builder
 
 ##########Import Bluetooth Module########
-blueDir = str(os.path.dirname(os.path.realpath(__file__)))
-blueDir = blueDir.split("/")
-print(blueDir)
-del blueDir[len(blueDir)-1]
-blueDir = "/".join(blueDir)
-blueDir += "/bluetoothStuff"
-print(blueDir, "egg")
-
-sys.path.insert(0, blueDir)
-import bluetoothMain
+# blueDir = str(os.path.dirname(os.path.realpath(__file__)))
+# blueDir = blueDir.split("/")
+# print(blueDir)
+# del blueDir[len(blueDir)-1]
+# blueDir = "/".join(blueDir)
+# blueDir += "/bluetoothStuff"
+# print(blueDir, "egg")
+#
+# sys.path.insert(0, blueDir)
+# import bluetoothMain
+import bluetooth
 ########################################
 
 
@@ -46,7 +49,6 @@ class MainScreen(Screen, FloatLayout):
         def __init__(self, mainScreen, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
-
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
@@ -211,29 +213,6 @@ class MainScreen(Screen, FloatLayout):
         tempDir = "/".join(tempDir)
         return tempDir
 
-
-###########Name Sort Button############
-    class nameSortButton(Button):
-
-        def __init__(self, outerScreen, **kwargs):
-            super(Button, self).__init__(self, **kwargs)
-
-
-    def getSortOrder(self):
-        if self.ascending:
-            return "v"
-        else:
-            return "^"
-
-    def changeSortOrder(self):
-        if self.ascending:
-            self.ascending = False
-            self.resetButtons()
-        else:
-            self.ascending = True
-            self.resetButtons()
-
-#######################################
 ###########Sorts + Searches############
     def compareStrings(self, string1, string2):     #returns True if string1 < string2 alphabetically, and "Found" if string1 == string2
         count = 0
@@ -332,7 +311,6 @@ class MainScreen(Screen, FloatLayout):
                 self.createButtons(self.searchResults)
             elif loc != -1:
                 unsorted.append((loc, file))
-                temp.append(file)
 
 
         if len(unsorted) > 0:
@@ -341,10 +319,6 @@ class MainScreen(Screen, FloatLayout):
                 self.searchResults.append(i[1])
             self.removeButtons()
             self.createButtons(self.searchResults, False)
-
-
-        if self.createButtons == []:
-            self.resetButtons()
 
     # def traverseFileTree(self, f):
     #     fs = os.listdir(f)
@@ -392,8 +366,66 @@ class MainScreen(Screen, FloatLayout):
 ############################
 
 class LoginScreen(Screen, FloatLayout):
+
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
+        self.lockCode = b"1234"
+        self.lockList = []
+        self.unlock = False
+        self.threads = []
+        self.checkButton = Button(size_hint= (.16, .16))
+        self.btThread = threading.Thread(target=self.startBTServer, daemon=True)
+        # self.lockThread = threading.Thread(target=self.lockThreadFunc, daemon=True)
+        # self.threads.append(self.btThread)
+        # self.threads.append(self.lockThread)
+        self.btThread.start()
+        # self.lockThread.start()
+
+    def startBTServer(self):
+        lock = self.runServ()
+        if lock == True:
+            print("LOCK")
+        return "done"
+
+    def checkValid(self):   #Bound to checkbutton
+        if len(self.lockList) > 0:
+            print("UNLOCK")
+            return True
+        return False
+
+
+
+    # def lockThreadFunc(self):
+    #     while len(self.lockList) == 0:
+    #         pass
+    #     self.unlocc = True
+    #     print("UNLOCK")
+    #     return "done"
+
+
+
+    def runServ(self):
+        hostMACAddress = '00:1a:7d:da:71:0a' # mac of bt adapter
+        port = 5
+        backlog = 1
+        size = 1024
+        s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        s.bind((hostMACAddress, port))
+        s.listen(backlog)
+        try:
+            client, clientInfo = s.accept()
+            while True:
+                data = client.recv(size)
+                if data:
+                    client.send(data) # Echo back to client
+                    print(data)
+                    if data == self.lockCode:
+                        self.lockList.append(data)
+
+        except bluetooth.btcommon.BluetoothError as e:
+            client.close()
+            s.close()
+            return True
 
 
 class ScreenManagement(ScreenManager):

@@ -4,8 +4,8 @@
 
 ScreenManagement:
     transition: FadeTransition()
-    MainScreen:
     LoginScreen:
+    MainScreen:
 
 
 <listButton@Button>:
@@ -13,6 +13,14 @@ ScreenManagement:
     size_hint: 1, None
     text:
     on_release: root.outerScreen.traverseButton(self.text)
+
+# <nameSortButton@Button>:
+#     font_size: 14
+#     size_hint: .7, .015
+#     pos_hint: {"x": .005, "y": .805}
+#     text: root.getSortOrder()
+#     on_release: root.changeSortOrder()
+
 
 <MainScreen>:
     name: "main"
@@ -131,5 +139,12 @@ ScreenManagement:
         id: loginButton
         size_hint: .16, .16
         pos_hint: {"center_x": .5, "center_y": .5}
-        on_release: app.root.current = "main"
-        text: "Login"
+        on_release: app.root.current = "main";root.lockList = [];root.unlock = False
+        text: "bypass"
+
+    # Button:
+    #     id: checkbutton
+    #     size_hint: .16, .16
+    #     pos_hint: {"center_x": .5, "center_y": .34}
+    #     on_release: root.unlock = root.checkValid()
+    #     text: "Check Code Sent"
