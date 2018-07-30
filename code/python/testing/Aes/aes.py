@@ -148,7 +148,7 @@ def encrypt(state, key, expandedKeys, regularRounds):
         state = subBytes(state)
         state = shiftRows(state)
         state = mixColumns(state)
-        state = addRoundKey(state, expandedKeys[(16 * (i)):(16 * (i+1))])
+        state = addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
     #Last round
     state = subBytes(state)
     state = shiftRows(state)
@@ -243,23 +243,24 @@ def main():
     expandedKeys = expandKey(key, emptyExpandedKeys)
 
     ####Test Files####
-    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
-    #w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hmmm.txt"
+    f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
+    w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hmmm.txt"
     #f = "/run/media/josh/Storage/kali-linux-2018.1-amd64.iso"
     #f = "/run/media/josh/Storage/Solus-3-Budgie.iso"
-    f= "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
+    #f= "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
 
     fileSize = os.path.getsize(f)
     print(str(fileSize/1000000) + "MB - File size.")
 
-    perc = 0.05
+    perc = 0.2
 
-    bufferSize = getBufferSize(perc)#100000 #50mb uses 618 MB WTF
+    bufferSize = getBufferSize(perc/2) #Uses double the ram due to the write buffer
     print(str(bufferSize/1000000) + "MB - Buffer size.")
     fo = open(f, "rb")
     buff = fo.read(bufferSize)
     one = True
-    #fw = open(w, "wb")
+    fw = open(w, "wb")
+    writeBuffer = b""
     while buff:
         for i in range(len(buff)-1):
             # if i % 1000000 == 0:
@@ -272,14 +273,25 @@ def main():
                     buffChunk += b"\x00"
 
                 buffChunk = encrypt(buffChunk, key, expandedKeys, 9)
+                writeBuffer += bytes(buffChunk)
+
+
 
         print("done buff")
         buff = fo.read(bufferSize)
 
 
-    print("done")
     fo.close()
-    # fw.close()
+    print("Writing ...")
+    print(writeBuffer)
+    fw.write(writeBuffer)
+    print("Done.")
+    fw.close()
+
+
+    geg = encrypt(bytearray(b"elliott is smelly and needs to shower."), key, expandedKeys, 9)
+    print()
+    print(geg)
 
 
 
