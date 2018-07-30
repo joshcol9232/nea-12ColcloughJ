@@ -1,4 +1,5 @@
-import time, psutil, sys
+import time, psutil, os
+
 
 def getOrdOfInp(keyInput):
     ords = []
@@ -8,21 +9,21 @@ def getOrdOfInp(keyInput):
 
 def getBufferSize(percentage):
     mem = psutil.virtual_memory()
-    return int(mem.free * percentage)
+    return int(mem.available * percentage)
 
-def splitBuffer(data):
-    chunks = []
-
-    divisions = int(len(data)/16)
-    count = 0
-    for i in range(divisions):
-        segment = data[count:count+16]
-        chunk = []
-        for i in segment:
-            chunk.append(i)
-        chunks.append(chunk)
-        #print(chunks, "chung")
-        count += 1
+# def splitBuffer(data):
+#     chunks = []
+#
+#     divisions = int(len(data)/16)
+#     count = 0
+#     for i in range(divisions):
+#         segment = data[count:count+16]
+#         chunk = []
+#         for i in segment:
+#             chunk.append(i)
+#         chunks.append(chunk)
+#         #print(chunks, "chung")
+#         count += 1
 
     for item in chunks:
         while len(item) < 16:
@@ -32,7 +33,7 @@ def splitBuffer(data):
     return chunks
 
 def addRoundKey(state, roundKey):
-    #print(state, roundKey, len(state), len(roundKey))
+    #print(state, roundKey, len(state), len(roundKey), "ADD ROUND KEY")
     for i in range(16):
         state[i] ^= roundKey[i]
     return state
@@ -123,31 +124,41 @@ def encrypt(state, key, regularRounds):
 
 def main():
     key = getOrdOfInp("mynamejeffeleven")
-    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
-    #w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/hmmm.txt"
-    #f = "/run/media/josh/Storage/kali-linux-2018.1-amd64.iso"
-    f= "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
 
-    perc = 0.1
-    bufferSize = getBufferSize(perc)
-    print("Using "+str(int(perc*100))+"% of free memory:", bufferSize)
-    key = getOrdOfInp("mynamejeffeleven")
+    ####Test Files####
+    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
+    #w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hmmm.txt"
+    f = "/run/media/josh/Storage/kali-linux-2018.1-amd64.iso"
+    #f= "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
+
+    fileSize = os.path.getsize(f)
+    print(str(fileSize/1000000) + "MB - File size.")
+
+    perc = 0.5
+    bufferSize = getBufferSize(perc)#100000 #50mb uses 618 MB WTF
+    print(str(bufferSize/1000000) + "MB - Buffer size.")
+    key = str.encode("mynamejeffeleven")
     fo = open(f, "rb")
     buff = fo.read(bufferSize)
     #fw = open(w, "wb")
     while buff:
-        print(sys.getsizeof(buff))
-        buff = splitBuffer(buff)
-        print(sys.getsizeof(buff))
         for i in range(len(buff)-1):
-            buff[i] = encrypt(buff[i], key, 9)
+            # if i % 1000000 == 0:
+            #     print(i/1000000, "MB")
+            if i % 16 == 0:
+                buffChunk = bytearray(buff[i:i+16])
+                #print(repr(buffChunk))
+                while len(buffChunk) < 16:
+                    print("Not enough bytes, adding a 0.")
+                    buffChunk += b"\x00"
 
-        print("done chunk")
-        print(buff)
-        #buff = 0
+                buffChunk = encrypt(buffChunk, key, 9)
+
+        print("done buff")
         buff = fo.read(bufferSize)
 
 
+    print("done")
     fo.close()
     # fw.close()
 
