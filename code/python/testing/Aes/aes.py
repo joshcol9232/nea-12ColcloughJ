@@ -168,17 +168,6 @@ mul14 = [0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x62,0x48,0x46,0
          0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d]
 
 
-def getOrdOfInp(keyInput):
-    ords = []
-    for i in list(keyInput):
-       ords.append(ord(i))
-    return ords
-
-def getBufferSize(percentage):
-    mem = psutil.virtual_memory()
-    return int(mem.available * percentage)
-
-
 def keyExpansionCore(inp, i):
     #Shift the inp left by moving the first byte to the end (rotate).
     #t = inp[0]
@@ -264,10 +253,6 @@ def shiftRows(state):
     temp[14] = state[6]
     temp[15] = state[11]
 
-    # for i in range(16):
-    #     state[i] = temp[i]
-    #
-    # return state
     return temp
 
 def invShiftRows(state):
@@ -298,10 +283,6 @@ def invShiftRows(state):
     temp[6] = state[14]
     temp[11] = state[15]
 
-    # for i in range(16):
-    #     state[i] = temp[i]
-    #
-    # return state
     return temp
 
 def mixColumns(state):
@@ -331,10 +312,6 @@ def mixColumns(state):
     temp[14] = state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]]
     temp[15] = mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]
 
-    # for i in range(16):
-    #     state[i] = temp[i]
-    #
-    # return state
     return temp
 
 def invMixColumns(state):
@@ -364,12 +341,18 @@ def invMixColumns(state):
     return temp
 
 
-
 def padKey(key):    #Use sha128 to produce key of length 128 bits from original input
     while len(key) != 16:
         key += b"\x00"
 
     return key
+
+def checkForPadding(inp):
+    while inp[len(inp)-1] == 0:
+        print("Removed a 0")
+        inp = inp[:len(inp)-2]
+
+    return inp
 
 
 def encrypt(state, expandedKeys, regularRounds):
@@ -394,7 +377,6 @@ def decrypt(state, expandedKeys, regularRounds):
     state = invSubBytes(state)
 
     while regularRounds >= 1:
-        print(regularRounds)
         state = addRoundKey(state, expandedKeys[(16 * (regularRounds)):(16 * (regularRounds+1))])
         state = invMixColumns(state)
         state = invShiftRows(state)
@@ -419,13 +401,10 @@ def decryptFile(key, f, w):
 
     perc = 0.2
 
-    usableByProgram = getBufferSize(perc/2) #Uses double the ram due to the write buffer
+    bufferSize = 16384 #16 kb gives best speed, bigger buffers slow it down for some reason.
     customBuff = False
-    if fileSize < usableByProgram:
+    if fileSize < bufferSize:
         bufferSize = fileSize
-    else:
-        bufferSize = usableByProgram
-        customBuff = True
 
     print(str(bufferSize/1000000) + "MB - Buffer size.")
     fo = open(f, "rb")
@@ -435,58 +414,30 @@ def decryptFile(key, f, w):
     fw.close()
     fw = open(w, "ab")
 
+    buff = fo.read(bufferSize)
     bufferCount = 0
-    if customBuff:
-        buff = fo.read(bufferSize)
-        while buff:
-            writeBuffer = b""
-            for i in range(len(buff)-1):
-                # if i % 1000000 == 0:
-                #     print(i/1000000, "MB")
-                if i % 16 == 0:
-                    buffChunk = bytearray(buff[i:i+16])
-                    #print(repr(buffChunk))
-                    while len(buffChunk) < 16:
-                        print("Not enough bytes, adding a 0.")
-                        buffChunk += b"\x00"
-
-                    buffChunk = decrypt(buffChunk, expandedKeys, 9)
-                    writeBuffer += bytes(buffChunk)
-
-            print("Writing buffer to file...")
-            fw.write(writeBuffer)
-            bufferCount += 1
-            print("Done Buffer.")
-
-            if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
-                bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
-                print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
-            buff = fo.read(bufferSize)
-
-
-    else:   #if filesize == buffer
-        data = fo.read()
+    while buff:
+        start = time.time()
         writeBuffer = b""
-        for i in range(len(data)-1):
-            # if i % 1000000 == 0:
-            #     print(i/1000000, "MB")
+        for i in range(len(buff)-1):
             if i % 16 == 0:
-                buffChunk = bytearray(data[i:i+16])
-                #print(repr(buffChunk))
+                buffChunk = bytearray(buff[i:i+16])
                 while len(buffChunk) < 16:
-                    print("Not enough bytes, adding a 0.") #Usually only needed on the last bytes of the file
+                    print("Not enough bytes, adding a 0.")
                     buffChunk += b"\x00"
 
-                buffChunk = encrypt(buffChunk, expandedKeys, 9)
+                buffChunk = decrypt(buffChunk, expandedKeys, 9)
                 writeBuffer += bytes(buffChunk)
 
-        print("Writing buffer to file...")
-        fw.write(writeBuffer)
         bufferCount += 1
-        print("Done.")
+        fw.write(writeBuffer)
+        timeTaken = time.time() - start
+        print((bufferSize//timeTaken)/1000, "KB/s", end="\r")
 
-    fo.close()
-    fw.close()
+        if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
+            bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
+            print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
+        buff = fo.read(bufferSize)
 
 def encryptFile(key, f, w):
     emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -500,13 +451,10 @@ def encryptFile(key, f, w):
 
     perc = 0.2
 
-    usableByProgram = getBufferSize(perc/2) #Uses double the ram due to the write buffer
+    bufferSize = 16384 #16 kb gives best speed, bigger buffers slow it down for some reason.
     customBuff = False
-    if fileSize < usableByProgram:
+    if fileSize < bufferSize:
         bufferSize = fileSize
-    else:
-        bufferSize = usableByProgram
-        customBuff = True
 
     print(str(bufferSize/1000000) + "MB - Buffer size.")
     fo = open(f, "rb")
@@ -516,79 +464,56 @@ def encryptFile(key, f, w):
     fw.close()
     fw = open(w, "ab")
 
+    buff = fo.read(bufferSize)
     bufferCount = 0
-    if customBuff:
-        buff = fo.read(bufferSize)
-        while buff:
-            writeBuffer = b""
-            for i in range(len(buff)-1):
-                # if i % 1000000 == 0:
-                #     print(i/1000000, "MB")
-                if i % 16 == 0:
-                    buffChunk = bytearray(buff[i:i+16])
-                    #print(repr(buffChunk))
-                    while len(buffChunk) < 16:
-                        print("Not enough bytes, adding a 0.")
-                        buffChunk += b"\x00"
-
-                    buffChunk = encrypt(buffChunk, expandedKeys, 9)
-                    writeBuffer += bytes(buffChunk)
-
-            print("Writing buffer to file...")
-            fw.write(writeBuffer)
-            bufferCount += 1
-            print("Done Buffer.")
-
-            if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
-                bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
-                print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
-            buff = fo.read(bufferSize)
-
-
-    else:   #if filesize == buffer
-        data = fo.read()
+    while buff:
+        start = time.time()
         writeBuffer = b""
-        for i in range(len(data)-1):
-            # if i % 1000000 == 0:
-            #     print(i/1000000, "MB")
+        for i in range(len(buff)-1):
             if i % 16 == 0:
-                buffChunk = bytearray(data[i:i+16])
-                #print(repr(buffChunk))
+                buffChunk = bytearray(buff[i:i+16])
                 while len(buffChunk) < 16:
-                    print("Not enough bytes, adding a 0.") #Usually only needed on the last bytes of the file
+                    print("Not enough bytes, adding a 0.")
                     buffChunk += b"\x00"
 
                 buffChunk = encrypt(buffChunk, expandedKeys, 9)
                 writeBuffer += bytes(buffChunk)
 
-        print("Writing buffer to file...")
-        fw.write(writeBuffer)
-        print(writeBuffer, "data")
         bufferCount += 1
-        print("Done.")
+        #print("Writing buffer to file...")
+        fw.write(writeBuffer)
+        #print("Done Buffer.")
+        timeTaken = time.time() - start
+        print("Done:",(bufferCount * bufferSize)/1000000,"MB" , (bufferSize//timeTaken)/1000, "KB/s", end="\r")
 
-    fo.close()
-    fw.close()
+        if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
+            bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
+            print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
+        buff = fo.read(bufferSize)
+
+
 
 
 
 if __name__ == "__main__":
     ####Test Files####
-    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
+    f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
     w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hmmm"
     #f = "/run/media/josh/Storage/kali-linux-2018.1-amd64.iso"
     #f = "/run/media/josh/Storage/Solus-3-Budgie.iso"
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/_67535032_67535031.jpg"
-    f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hello.txt"
-    a = "/run/media/josh/USB/hello.txt"
-    # encryptFile(b"mynamejeffeleven", f, w)
-    # decryptFile(b"mynamejeffeleven", w, a)
-    emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    exp = expandKey(b"mynamejeffeleven", emptyExpandedKeys)
-    print(b"hello aaaaaaaaaa")
-    out = encrypt(bytearray(b"hello aaaaaaaaaa"), exp, 9)
-    print(bytes(out))
-    re = decrypt(out, exp, 9)
-    print(bytes(re))
+    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hello.txt"
+    a = "/run/media/josh/USB/hello.png"
+    start = time.time()
+    encryptFile(b"mynamejeffeleven", f, w)
+    print("Time to encrypt:", (time.time() - start), "s")
+    decryptFile(b"mynamejeffeleven", w, a)
+    # emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #
+    # exp = expandKey(b"mynamejeffeleven", emptyExpandedKeys)
+    # print(b"hello aaaaaaaaaa")
+    # out = encrypt(bytearray(b"hello aaaaaaaaaa"), exp, 9)
+    # print(bytes(out))
+    # re = decrypt(out, exp, 9)
+    # print(bytes(re))
