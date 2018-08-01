@@ -1,5 +1,6 @@
-import time, psutil, os
-
+import time, os, multiprocessing
+from multiprocessing import Pool
+from itertools import repeat
 
 #Lookup tables are global so they don't keep getting redefined, as they are constant.
 global sBox
@@ -354,7 +355,6 @@ def checkForPadding(inp):
 
     return inp
 
-
 def encrypt(state, expandedKeys, regularRounds):
     state = addRoundKey(state, expandedKeys[:16])
 
@@ -419,20 +419,20 @@ def decryptFile(key, f, w):
     while buff:
         start = time.time()
         writeBuffer = b""
-        for i in range(len(buff)-1):
-            if i % 16 == 0:
-                buffChunk = bytearray(buff[i:i+16])
-                while len(buffChunk) < 16:
-                    print("Not enough bytes, adding a 0.")
-                    buffChunk += b"\x00"
+        i = 0
+        while i < bufferSize:
+            buffChunk = bytearray(buff[i:i+16])
+            while len(buffChunk) < 16:
+                print("Not enough bytes, adding a 0.")
+                buffChunk += b"\x00"
 
-                buffChunk = decrypt(buffChunk, expandedKeys, 9)
-                writeBuffer += bytes(buffChunk)
+            buffChunk = decrypt(buffChunk, expandedKeys, 9) #the only different line
+            writeBuffer += bytes(buffChunk)
+            i += 16
 
         bufferCount += 1
         fw.write(writeBuffer)
-        timeTaken = time.time() - start
-        print((bufferSize//timeTaken)/1000, "KB/s", end="\r")
+        print("Done:",(bufferCount * bufferSize)/1000000,"MB" , (bufferSize//(time.time() - start))/1000, "KB/s", end="\r")
 
         if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
             bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
@@ -469,22 +469,23 @@ def encryptFile(key, f, w):
     while buff:
         start = time.time()
         writeBuffer = b""
-        for i in range(len(buff)-1):
-            if i % 16 == 0:
-                buffChunk = bytearray(buff[i:i+16])
-                while len(buffChunk) < 16:
-                    print("Not enough bytes, adding a 0.")
-                    buffChunk += b"\x00"
+        i = 0
+        while i < bufferSize:
+            buffChunk = bytearray(buff[i:i+16])
+            while len(buffChunk) < 16:
+                print("Not enough bytes, adding a 0.")
+                buffChunk += b"\x00"
 
-                buffChunk = encrypt(buffChunk, expandedKeys, 9)
-                writeBuffer += bytes(buffChunk)
+            buffChunk = encrypt(buffChunk, expandedKeys, 9)
+            writeBuffer += bytes(buffChunk)
+            i += 16
 
         bufferCount += 1
-        #print("Writing buffer to file...")
+        print(writeBuffer)
         fw.write(writeBuffer)
-        #print("Done Buffer.")
-        timeTaken = time.time() - start
-        print("Done:",(bufferCount * bufferSize)/1000000,"MB" , (bufferSize//timeTaken)/1000, "KB/s", end="\r")
+        kbs = (bufferSize//(time.time() - start))/1000
+        done = bufferCount * bufferSize
+        print("Done:", done/1000000,"MB" , kbs, "KB/s", "Time Left:", str(int(((fileSize - done)/1000)/kbs)), "seconds.", end="\r")
 
         if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
             bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
@@ -492,23 +493,134 @@ def encryptFile(key, f, w):
         buff = fo.read(bufferSize)
 
 
+def encryptFileMulCores(key, f, w):
+    emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #176 empty slots
 
+    key = padKey(key)   #Make sure key is correct length
+    expandedKeys = expandKey(key, emptyExpandedKeys)
+
+    fileSize = os.path.getsize(f)
+    print(str(fileSize/1000000) + "MB - File size.")
+
+    perc = 0.2
+
+    bufferSize = 4096 #4 Kb is pretty solid
+    customBuff = False
+    if fileSize < bufferSize:
+        bufferSize = fileSize
+
+    print(str(bufferSize/1000000) + "MB - Buffer size.")
+    fo = open(f, "rb")
+
+    one = True
+    fw = open(w, "wb") # empty file
+    fw.close()
+    fw = open(w, "ab")
+
+    buff = fo.read(bufferSize)
+    bufferCount = 0
+    secondaryBuffer = []
+    p = Pool(processes=multiprocessing.cpu_count())
+    while buff:
+        start = time.time()
+        buff = [bytearray(buff[x:x+16]) for x in range(0, len(buff), 16)] #Splits buffer into 16 byte chunks
+        while len(buff[len(buff)-1]) < 16: #Last element might be too short
+            print("Adding Padding")
+            buff[len(buff)-1] += b"\x00"
+        buff = p.starmap(encrypt, zip(buff, repeat(expandedKeys), repeat(9)))   #parralel processing
+        bufferCount += 1
+
+        for item in buff:
+            fw.write(bytes(item))
+
+
+        kbs = (bufferSize//(time.time() - start))/1000
+        done = bufferCount * bufferSize
+        print("Done:", done/1000000,"MB" , kbs, "KB/s", "Time Left:", str(int(((fileSize - done)/1000)/kbs)), "seconds.", end="\r")
+
+        if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
+            bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
+            print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
+        buff = fo.read(bufferSize)
+
+    fw.close()
+    fo.close()
+
+
+def decryptFileMulCores(key, f, w):
+    emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #176 empty slots
+
+    key = padKey(key)   #Make sure key is correct length
+    expandedKeys = expandKey(key, emptyExpandedKeys)
+
+    fileSize = os.path.getsize(f)
+    print(str(fileSize/1000000) + "MB - File size.")
+
+    perc = 0.2
+
+    bufferSize = 4096 #4 Kb is pretty solid
+    customBuff = False
+    if fileSize < bufferSize:
+        bufferSize = fileSize
+
+    print(str(bufferSize/1000000) + "MB - Buffer size.")
+    fo = open(f, "rb")
+
+    one = True
+    fw = open(w, "wb") # empty file
+    fw.close()
+    fw = open(w, "ab")
+
+    buff = fo.read(bufferSize)
+    bufferCount = 0
+    secondaryBuffer = []
+    p = Pool(processes=multiprocessing.cpu_count())
+    while buff:
+        start = time.time()
+        buff = [bytearray(buff[x:x+16]) for x in range(0, len(buff), 16)] #Splits buffer into 16 byte chunks
+        while len(buff[len(buff)-1]) < 16: #Last element might be too short
+            print("Adding Padding")
+            buff[len(buff)-1] += b"\x00"
+        buff = p.starmap(decrypt, zip(buff, repeat(expandedKeys), repeat(9)))
+        bufferCount += 1
+
+        for item in buff:
+            fw.write(bytes(item))
+
+
+        kbs = (bufferSize//(time.time() - start))/1000
+        done = bufferCount * bufferSize
+        print("Done:", done/1000000,"MB" , kbs, "KB/s", "Time Left:", str(int(((fileSize - done)/1000)/kbs)), "seconds.", end="\r")
+
+        if (fileSize - (bufferCount * bufferSize)) < bufferSize:    #Prevents the use of large buffers where the program would spend
+            bufferSize = fileSize - (bufferCount * bufferSize)      #too much time just encrypting empty data.
+            print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
+        buff = fo.read(bufferSize)
+
+    fw.close()
+    fo.close()
 
 
 if __name__ == "__main__":
     ####Test Files####
-    f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
-    w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hmmm"
+    #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
+    w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/temp"
     #f = "/run/media/josh/Storage/kali-linux-2018.1-amd64.iso"
     #f = "/run/media/josh/Storage/Solus-3-Budgie.iso"
-    #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
+    f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/_67535032_67535031.jpg"
     #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hello.txt"
-    a = "/run/media/josh/USB/hello.png"
+    #f = "/run/media/josh/USB/TullamoreGrandCanal.jpg"
+    #f = "/run/media/josh/USB/File Security program Analysis.odt"
+    a = "/run/media/josh/USB/hello.jpg"
+
     start = time.time()
-    encryptFile(b"mynamejeffeleven", f, w)
+    encryptFileMulCores(b"aaaaaaaaaaaaaaaa", f, w)
+    #encryptFile(b"aaaaaaaaaaaaaaaa", f, w)
     print("Time to encrypt:", (time.time() - start), "s")
-    decryptFile(b"mynamejeffeleven", w, a)
+    decryptFileMulCores(b"aaaaaaaaaaaaaaaa", w, a)
     # emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     #
     # exp = expandKey(b"mynamejeffeleven", emptyExpandedKeys)
@@ -517,3 +629,5 @@ if __name__ == "__main__":
     # print(bytes(out))
     # re = decrypt(out, exp, 9)
     # print(bytes(re))
+
+    #encryptFileTree("/run/media/josh/USB/")

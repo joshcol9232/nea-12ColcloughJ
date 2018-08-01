@@ -3,6 +3,7 @@ import base64
 import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
+import time
 
 class AESCipher(object):
 
@@ -20,7 +21,7 @@ class AESCipher(object):
         enc = base64.b64decode(enc)
         iv = enc[:AES.block_size]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
+        return cipher.decrypt(enc[AES.block_size:])
 
     def _pad(self, s):
         return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
@@ -29,5 +30,7 @@ class AESCipher(object):
     def _unpad(s):
         return s[:-ord(s[len(s)-1:])]
 
-geg = AESCipher("mynamejeffeleven")
-print(geg.encrypt("hmmmmmmm"))
+geg = AESCipher("aaaaaaaaaaaaaaaa")
+start = time.time()
+e = geg.encrypt("computing is okk")
+print("Took:", time.time()-start, "s")
