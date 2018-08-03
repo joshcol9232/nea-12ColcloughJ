@@ -4,6 +4,7 @@ import sys
 import shutil
 import threading
 import time
+import multiprocessing
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -23,11 +24,15 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.checkbox import CheckBox
+from kivy.uix.popup import Popup
+from kivy.uix.widget import WidgetException
+from kivy.properties import ObjectProperty
+from kivy.properties import StringProperty
 #import kivy.uix.contextmenu
 from kivy.base import EventLoop
 from kivy.lang import Builder
 
-##########Import Bluetooth Module########
+##########Import Bluetooth Module##########
 # blueDir = str(os.path.dirname(os.path.realpath(__file__)))
 # blueDir = blueDir.split("/")
 # print(blueDir)
@@ -41,6 +46,16 @@ from kivy.lang import Builder
 import bluetooth
 ########################################
 
+############Import AES Module###########
+aesDir = str(os.path.dirname(os.path.realpath(__file__)))
+aesDir = aesDir.split("/")
+del aesDir[len(aesDir)-1]
+aesDir = "/".join(aesDir)
+sys.path.insert(0, aesDir)
+print(aesDir, "AES")
+import AES
+
+
 
 class MainScreen(Screen, FloatLayout):
 
@@ -49,6 +64,117 @@ class MainScreen(Screen, FloatLayout):
         def __init__(self, mainScreen, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
+
+
+    class addFileScreen(Popup):
+
+        def __init__(self, mainScreen, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.layout = FloatLayout()
+
+        class ConfirmationPopup(Popup):
+
+            def __init__(self, fileScreen, input, **kwargs):
+                super(Popup, self).__init__(**kwargs)
+                self.fileScreen = fileScreen
+                self.inputText = input
+
+
+        def checkIfSure(self, input):
+            sure = self.ConfirmationPopup(self, input)
+            sure.open()
+
+        # def reAddSubmit(self):
+        #     try:
+        #         self.add_widget(self.submitDirs)
+        #     except WidgetException:
+        #         print("Submit button already there.")
+
+        def checkDirExists(self, dir):
+            if os.path.exists(dir):
+                print("is a thingy")
+                # try:
+                #     self.remove_widget(self.submitDirs)
+                # except WidgetException:
+                #     print("Submit button already gone.")
+                return True
+
+            else:
+                print("not a thingy")
+                self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+                self.popup.open()
+                # self.reAddSubmit()
+                return False
+
+        def encryptFile(self, d, targetLoc):
+            print(d, targetLoc, "AAA")
+            encryptThread = threading.Thread(target=AES.encryptFile, args=(self.outerScreen.key, d, targetLoc))
+            encryptThread.start()
+
+        def encryptDir(self, d, targetLoc):
+            print(d)
+            fs = os.listdir(d)
+            print(d)
+            for item in fs:
+                print(d+item+"/", "hmmmmmmmmmmmmmmm")
+                if os.path.isdir(d+item+"/"):
+                    try:
+                        self.encryptDir(d+item+"/", targetLoc+item+"/")
+                    except OSError:
+                        print("Not allowed xd")
+                else:
+                    if item != "open.py":
+                        try:
+                            #self.encryptFile(d+item, targetLoc+item)
+                            self.toEncrypt.append((item, d+item, targetLoc, targetLoc+item))
+                            print(d+item, "TO ENCRYPT")
+                        except PermissionError:
+                            pass
+
+
+        def checkCanEncrypt(self, inp):
+            self.toEncrypt = [] #Queue
+            if ":" in inp:
+                print("COLON")
+                inp = input.split(":")
+                for d in inp:
+                    exists = self.checkDirExists(d, "")
+                    if exists:
+                        self.encryptDir(d, "")
+                        if os.path.isdir(d):
+                            if d[len(d)-1] != "/":
+                                d += "/"
+                            dSplit = d.split("/")
+                            self.encryptDir(d, dSplit[len(dSplit)-2]+"/")
+                        else:
+                            self.toEncrypt.append(d, "", d)
+
+
+            else:
+                exists = self.checkDirExists(inp)
+                if exists:
+                    if os.path.isdir(inp):
+                        if inp[len(inp)-1] != "/":
+                            inp += "/"
+                        inpSplit = inp.split("/")
+                        self.encryptDir(inp, inpSplit[len(inpSplit)-2]+"/")
+                    else:
+                        self.toEncrypt.append(inp, "", inp)
+
+            for filename, x, target, fullPath in self.toEncrypt:
+                print(x, target, fullPath)
+                self.createFolders(target)
+                self.encryptFile(x, self.outerScreen.currentDir+target+filename)
+
+
+        def createFolders(self, targetLoc):
+            if not os.path.exists(self.outerScreen.currentDir+targetLoc):
+                os.makedirs(self.outerScreen.currentDir+targetLoc)
+
+
+
+
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
@@ -61,7 +187,8 @@ class MainScreen(Screen, FloatLayout):
         self.assetsPath = "/"
         self.sizeCount = 0
         self.ascending = True
-        self.threads = []
+        self.addFile = 0
+        self.key = "1234"
 
         for line in self.configFile:
             lineSplit = line.split(":")
@@ -71,10 +198,15 @@ class MainScreen(Screen, FloatLayout):
             elif lineSplit[0] == "assetsDir":
                 self.assetsPath = lineSplit[1]
 
+
         self.currentDir = self.path
+        currentDirShare = self.currentDir
+        print(self.currentDir, "CURRENT DIR")
         self.configFile.close()
-        self.root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        self.scroll = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        #self.encrypt(b"aaaaaaa", "/run/media/josh/USB/File Security program Analysis.odt", "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/temp")
         self.createButtons(self.List(self.currentDir))
+
 
 
     def __repr__(self):
@@ -149,9 +281,9 @@ class MainScreen(Screen, FloatLayout):
                 fileS.bind(size=fileS.setter("text_size"))
                 self.grid.add_widget(btn)
                 self.grid.add_widget(fileS)
-            self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
-            self.root.add_widget(self.grid)
-            self.add_widget(self.root)
+            self.scroll = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.scroll.add_widget(self.grid)
+            self.add_widget(self.scroll)
         else:
             for item in array:
                 fileSize = self.getFileSize(item)
@@ -161,27 +293,63 @@ class MainScreen(Screen, FloatLayout):
                 fileS.bind(size=fileS.setter("text_size"))
                 self.grid.add_widget(btn)
                 self.grid.add_widget(fileS)
-            self.root = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
-            self.root.add_widget(self.grid)
-            self.add_widget(self.root)
+            self.scroll = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.scroll.add_widget(self.grid)
+            self.add_widget(self.scroll)
 
     def removeButtons(self):
         self.grid = 0
-        self.remove_widget(self.root)
-        self.root = 0
+        self.remove_widget(self.scroll)
+        self.scroll = 0
 
     def getFileNameFromText(self, itemName):
         return itemName[4:]
+
+############################
+    def openFile(self, location):
+        os.system("xdg-open " + location)
+
+    def checkThread(self):
+        while self.openFileThread.is_alive():
+            pass
+
+
+        print("DONE")
+
+    def decrypt(self, fileDir, fileName):
+        if not os.path.isdir("/tmp/FileMate/"):
+            os.makedirs("/tmp/FileMate/")
+        fileLoc = "/tmp/FileMate/"+fileName
+        if os.path.exists(fileLoc):
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread.start()
+        else:
+            decryptThread = multiprocessing.Process(target=AES.decryptFile, args=(self.key, fileDir, fileLoc))
+            decryptThread.start()
+            decryptThread.join()
+
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread.start()
+
+        checkOpenThread = threading.Thread(target=self.checkThread)
+        checkOpenThread.start()
+        #os.startfile("/tmp/"+fileName)
+        #subprocess.call(["xdg-open", file])
+###########################
 
     def traverseButton(self, itemName):
         fileName = self.getFileNameFromText(itemName)
         if os.path.isdir(self.currentDir+fileName+"/"):
             self.currentDir = self.currentDir+fileName+"/"
+            currentDirShare = self.currentDir
             self.resetButtons()
+        else:
+            self.decrypt(self.currentDir+fileName, fileName)
 
     def goBackFolder(self):
-        if self.currentDir != "/":
+        if self.currentDir != self.path:
             self.currentDir = self.getPathBack()
+            currentDirShare = self.currentDir
             self.resetButtons()
         else:
             print("Can't go further up.")
@@ -196,6 +364,7 @@ class MainScreen(Screen, FloatLayout):
 
 ####File Handling####
     def List(self, dir):
+        print(dir, "LIST DIR")
         fs = os.listdir(dir)
         count = 0
         listOfFiles = []
@@ -278,7 +447,9 @@ class MainScreen(Screen, FloatLayout):
             return myList
 
 
-    def quickSortTuples(self, tuples):
+    def quickSortTuples(self, tuples):    # def encrypt(self, key, dir, outputDir):
+    #     encryptThread = multiprocessing.Process(target=AES.encryptFile, args=(key, dir, outputDir))
+    #     encryptThread.start()
         if len(tuples) > 1:
             left = []
             right = []  #Make seperate l+r lists, and add on at the end.
@@ -365,6 +536,13 @@ class MainScreen(Screen, FloatLayout):
 
 ############################
 
+######Encryption Stuff######
+    # def encrypt(self, key, dir, outputDir):
+    #     encryptThread = multiprocessing.Process(target=AES.encryptFile, args=(key, dir, outputDir))
+    #     encryptThread.start()
+
+
+
 class LoginScreen(Screen, FloatLayout):
 
     def __init__(self, **kwargs):
@@ -428,8 +606,15 @@ class LoginScreen(Screen, FloatLayout):
             return True
 
 
+
+
+
 class ScreenManagement(ScreenManager):
+    # LoginScreen = ObjectProperty(None)
+    # MainScreen = ObjectProperty(None)
+    # addFileScreen = ObjectProperty(None)
     pass
+
 
 presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+"/main.kv")
 
@@ -441,6 +626,7 @@ class uiApp(App):
 def runUI():
     ui = uiApp()
     ui.run()
+
 
 if __name__ == "__main__":
     runUI()

@@ -3,6 +3,8 @@
 #: import Window kivy.core.window.Window
 
 ScreenManagement:
+    mainScreenManager: mainScreenManager
+    id: mainScreenManager
     transition: FadeTransition()
     LoginScreen:
     MainScreen:
@@ -14,6 +16,7 @@ ScreenManagement:
     text:
     on_release: root.outerScreen.traverseButton(self.text)
 
+
 # <nameSortButton@Button>:
 #     font_size: 14
 #     size_hint: .7, .015
@@ -22,9 +25,31 @@ ScreenManagement:
 #     on_release: root.changeSortOrder()
 
 
+<ConfirmationPopup@Popup>:
+    title: "Confirmation"
+    size_hint: .4, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: False
+    FloatLayout:
+        Label:
+            text: "Are you sure?"
+            pos_hint: {"center_x": .5, "center_y": .7}
+        Button:
+            text: "No!!!"
+            pos_hint: {"center_x": .25, "center_y": .25}
+            size_hint: .4, .3
+            on_release: root.dismiss()
+
+        Button:
+            text: "Yes"
+            pos_hint: {"center_x": .75, "center_y": .25}
+            size_hint: .4, .3
+            on_release: root.dismiss();root.fileScreen.checkCanEncrypt(root.inputText)
+
 <MainScreen>:
     name: "main"
     id: main
+    addFile: addFile
 
     FloatLayout:
         id: MainLayout
@@ -88,10 +113,12 @@ ScreenManagement:
             id: addFile
             size_hint: .16, .16
             pos_hint: {"right": 1, "top": 1}
+            on_release: root.addFile = root.addFileScreen(root, title="Add File");root.addFile.open()
             Image:
                 source: root.getPathForButton("addFile.png")
                 x: self.parent.x - 33
                 y: self.parent.y - 73
+
                 size: 250, 267
                 allow_stretch: True
 
@@ -105,6 +132,7 @@ ScreenManagement:
                 y: self.parent.y - 73
                 size: 250, 267
                 allow_stretch: True
+
 
         ProgressBar:
             id: pb1
@@ -148,3 +176,37 @@ ScreenManagement:
     #     pos_hint: {"center_x": .5, "center_y": .34}
     #     on_release: root.unlock = root.checkValid()
     #     text: "Check Code Sent"
+
+
+<addFileScreen@Popup>:
+    name: "addFile"
+    id: addFile
+    submitDirs: submitDirs
+    FloatLayout:
+        Label:
+            size_hint: .46, .08
+            font_size: 18
+            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with a ':' if you want to do multiple locations."
+            pos_hint: {"center_x": 0.5, "y": 0.8}
+
+        Button:
+            id: submitDirs
+            size_hint: .16, .16
+            pos_hint: {"center_x": .5, "center_y": .4}
+            text: "Submit"
+            on_release: root.checkIfSure(Search.text)
+
+        Button:
+            id: cancel
+            size_hint: .16, .08
+            pos_hint: {"center_x": .5, "center_y": .24}
+            text: "Cancel"
+            on_release: root.dismiss()
+
+        TextInput:
+            id: Search
+            size_hint: .7, .08
+            font_size: 22
+            hint_text: "Directories"
+            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+            multiline: False

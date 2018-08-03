@@ -342,7 +342,8 @@ def invMixColumns(state):
     return temp
 
 
-def padKey(key):    #Use sha128 to produce key of length 128 bits from original input
+def padKey(key):
+    key = key.encode()
     while len(key) != 16:
         key += b"\x00"
 
@@ -606,11 +607,15 @@ def encryptFile(key, f, w):
     else:
         encryptFileSingle(key, f, w)
 
+    return "Done"
+
 def decryptFile(key, f, w):
     if multiprocessing.cpu_count() > 1:
         decryptFileMulCores(key, f, w)
     else:
         decryptFileSingle(key, f, w)
+
+    return "Done"
 
 
 if __name__ == "__main__":
