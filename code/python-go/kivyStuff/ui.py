@@ -68,6 +68,13 @@ class MainScreen(Screen, FloatLayout):
     class infoLabel(Label):
         pass
 
+    class deleteButton(Button):
+
+        def __init__(self, mainScreen, fileDir, **kwargs):
+            super(Button, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.fileDir = fileDir
+
     class addFileScreen(Popup):
 
         def __init__(self, mainScreen, **kwargs):
@@ -93,74 +100,6 @@ class MainScreen(Screen, FloatLayout):
         #     except WidgetException:
         #         print("Submit button already there.")
 
-        def checkDirExists(self, dir):
-            if os.path.exists(dir):
-                return True
-
-            else:
-                self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-                self.popup.open()
-                return False
-
-
-        def encryptDir(self, d, targetLoc):
-            fs = os.listdir(d)
-            print(d, targetLoc)
-            for item in fs:
-                if os.path.isdir(d+item):
-                    try:
-                        self.encryptDir(d+item+"/", targetLoc+"/"+item)
-                    except OSError:
-                        pass
-                else:
-                    try:
-                        #print(d+item, targetLoc+"/"+item, "AAAAAAAAAAAAAAAAAAAAAA")
-                        self.createFolders(targetLoc+"/")
-                        self.outerScreen.encDecTerminal("y", self.outerScreen.key, d+item, targetLoc+"/"+item)
-                    except PermissionError:
-                        pass
-
-        def checkCanEncrypt(self, inp):
-            if ":" in inp:
-                print("COLON")
-                inp = input.split(":")
-                for d in inp:
-                    exists = self.checkDirExists(d)
-                    if exists:
-                        if os.path.isdir(d):
-                            if d[len(d)-1] != "/":
-                                d += "/"
-                            dSplit = d.split("/")
-                            # print(d, "ISDIR")
-                            self.encryptDir(d, self.outerScreen.currentDir+dSplit[len(dSplit)-2]+"/")
-                        else:
-                            dSplit = d.split("/")
-                            self.outerScreen.encDecTerminal("y", self.outerScreen.key, d, self.outerScreen.currentDir+dSplit[len(dSplit)-1])
-
-
-
-            else:
-                exists = self.checkDirExists(inp)
-                if exists:
-                    if os.path.isdir(inp):
-                        if inp[len(inp)-1] != "/":
-                            inp += "/"
-                        inpSplit = inp.split("/")
-                        # print(inp, "ISDIR")
-                        #print(self.outerScreen.currentDir+inpSplit[len(inpSplit)-2]+"/")
-                        self.encryptDir(inp, self.outerScreen.currentDir+inpSplit[len(inpSplit)-2])
-                    else:
-                        inpSplit = inp.split("/")
-                        self.outerScreen.encDecTerminal("y", self.outerScreen.key, inp, self.outerScreen.currentDir+inpSplit[len(inpSplit)-1])
-
-
-            self.outerScreen.resetButtons()
-
-
-        def createFolders(self, targetLoc):
-            if not os.path.exists(targetLoc):
-                os.makedirs(targetLoc)
-
 
 
 
@@ -176,7 +115,8 @@ class MainScreen(Screen, FloatLayout):
         self.sizeCount = 0
         self.ascending = True
         self.addFile = 0
-        self.key = "1234"
+        self.key = "1234" #Super secret secure key for testing (before bluetooth is added)
+        Window.bind(on_dropfile=self.onFileDrop)
 
         for line in self.configFile:
             lineSplit = line.split(":")
@@ -266,6 +206,12 @@ class MainScreen(Screen, FloatLayout):
 
             return ("%.2f" % bytes) + divisions[divCount]
 
+    def deleteFile(self, location):
+        if os.path.exists(location):
+            if os.path.isdir(location):
+                shutil.rmtree(location)
+            else:
+                os.remove(location)
 
 ############################################
 
@@ -324,50 +270,6 @@ class MainScreen(Screen, FloatLayout):
     def getFileNameFromText(self, itemName):
         return itemName[4:]
 
-############################OPENING FILES
-    def openFile(self, location):
-        os.system("xdg-open " + "'"+location+"'")
-
-    def checkThread(self, fileName, startSize, fullPath):
-        print(fullPath)
-        while self.openFileThread.is_alive():
-            pass
-
-        print("DONE THREAD")
-        if os.path.getsize("/tmp/FileMate/"+fileName) != startSize:
-            print("FILE CHANGED")                     ###########################
-            #self.encryptWhenModified("/tmp/FileMate/"+fileName, fullPath)
-            popup = Popup(title="One second :)", content=Label(text="Encrypting edited file, please wait."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-            popup.open()
-            self.encDecTerminal("y", self.key, "/tmp/FileMate/"+fileName, fullPath)
-            popup.dismiss()
-
-
-    def encDecTerminal(self, type, key, d, targetLoc):
-        os.system("./AES "+type+" "+key+" '"+d+"' '"+targetLoc+"'")
-
-    def decrypt(self, fileDir, fileName):
-        if not os.path.isdir("/tmp/FileMate/"):
-            os.makedirs("/tmp/FileMate/")
-        fileLoc = "/tmp/FileMate/"+fileName
-        if os.path.exists(fileLoc):
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
-            self.openFileThread.start()
-        else:
-            decryptThread = multiprocessing.Process(target=self.encDecTerminal, args=("n", self.key, fileDir, fileLoc))
-            decryptThread.start()
-            print("decrypt")
-            decryptThread.join()
-
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
-            self.openFileThread.start()
-
-        checkOpenThread = threading.Thread(target=self.checkThread, args=(fileName, os.path.getsize(fileLoc), fileDir))
-        checkOpenThread.start()
-        #os.startfile("/tmp/"+fileName)
-        #subprocess.call(["xdg-open", file])
-###########################
-
     def traverseButton(self, itemName):
         fileName = self.getFileNameFromText(itemName)
         if os.path.isdir(self.currentDir+fileName+"/"):
@@ -376,6 +278,13 @@ class MainScreen(Screen, FloatLayout):
             self.resetButtons()
         else:
             self.decrypt(self.currentDir+fileName, fileName)
+
+    def deleteFile(self, location):
+        if os.path.exists(location):
+            if os.path.isdir(location):
+                shutil.rmtree(location)
+            else:
+                os.remove(location)
 
     def getFileInfo(self, fileRef):
         fileFullDir = self.currentDir+fileRef
@@ -402,10 +311,6 @@ class MainScreen(Screen, FloatLayout):
             fileSize = self.getFileSize(fileRef)
         internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileSize), halign="left", valign="middle"))
-
-        internalLayout.add_widget(self.infoLabel(text="Last Modified:", size_hint_x=.2, halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=str(time.ctime(os.path.getmtime(fileFullDir))), halign="left", valign="middle"))
-
 
         internalView.add_widget(internalLayout)
         infoPopup.open()
@@ -602,10 +507,127 @@ class MainScreen(Screen, FloatLayout):
 
 ############################
 
-######Encryption Stuff######
-    # def encrypt(self, key, dir, outputDir):
-    #     encryptThread = multiprocessing.Process(target=AES.encryptFile, args=(key, dir, outputDir))
-    #     encryptThread.start()
+######Encryption Stuff + opening decrypted files######
+    def passToTerm(self, type, key, d, targetLoc):
+        os.system("./AES "+type+" "+key+" '"+d+"' '"+targetLoc+"'") #Passes parameters to compiled go AES
+
+    def encDecTerminal(self, type, key, d, targetLoc):
+        self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))###get rid
+        self.encryptProcess.start()
+
+    def openFile(self, location):
+        os.system("xdg-open " + "'"+location+"'")
+
+    def checkThread(self, fileName, startSize, fullPath):
+        print(fullPath)
+        while self.openFileThread.is_alive():
+            pass
+
+        print("DONE THREAD")
+        if os.path.getsize("/tmp/FileMate/"+fileName) != startSize:
+            print("FILE CHANGED")
+            #self.encryptWhenModified("/tmp/FileMate/"+fileName, fullPath)
+            popup = Popup(title="One second :)", content=Label(text="Encrypting edited file, please wait."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+            popup.open()
+            self.encDecTerminal("y", self.key, "/tmp/FileMate/"+fileName, fullPath)
+            popup.dismiss()
+
+    def onFileDrop(self, window, file_path):  #Drag + drop files
+        self.checkCanEncrypt(file_path.decode())
+        self.resetButtons()
+        return "Done"
+
+
+    def decrypt(self, fileDir, fileName):
+        if not os.path.isdir("/tmp/FileMate/"):
+            os.makedirs("/tmp/FileMate/")
+        fileLoc = "/tmp/FileMate/"+fileName
+        if os.path.exists(fileLoc):
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread.start()
+        else:
+            decryptThread = multiprocessing.Process(target=self.encDecTerminal, args=("n", self.key, fileDir, fileLoc))
+            decryptThread.start()
+            print("decrypt")
+            decryptThread.join()
+
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread.start()
+
+        checkOpenThread = threading.Thread(target=self.checkThread, args=(fileName, os.path.getsize(fileLoc), fileDir))
+        checkOpenThread.start()
+        #os.startfile("/tmp/"+fileName)
+        #subprocess.call(["xdg-open", file])
+
+    def checkDirExists(self, dir):
+        if os.path.exists(dir):
+            return True
+
+        else:
+            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+            self.popup.open()
+            return False
+
+
+    def encryptDir(self, d, targetLoc):
+        fs = os.listdir(d)
+        print(d, targetLoc)
+        for item in fs:
+            if os.path.isdir(d+item):
+                try:
+                    self.encryptDir(d+item+"/", targetLoc+"/"+item)
+                except OSError:
+                    pass
+            else:
+                try:
+                    #print(d+item, targetLoc+"/"+item, "AAAAAAAAAAAAAAAAAAAAAA")
+                    self.createFolders(targetLoc+"/")
+                    self.encDecTerminal("y", self.key, d+item, targetLoc+"/"+item)
+                except PermissionError:
+                    pass
+
+    def checkCanEncrypt(self, inp):
+        if ":" in inp:
+            print("COLON")
+            inp = input.split(":")
+            for d in inp:
+                exists = self.checkDirExists(d)
+                if exists:
+                    if os.path.isdir(d):
+                        if d[len(d)-1] != "/":
+                            d += "/"
+                        dSplit = d.split("/")
+                        # print(d, "ISDIR")
+                        self.encryptDir(d, self.currentDir+dSplit[len(dSplit)-2]+"/")
+                    else:
+                        dSplit = d.split("/")
+                        self.encDecTerminal("y", self.key, d, self.currentDir+dSplit[len(dSplit)-1])
+
+
+
+        else:
+            exists = self.checkDirExists(inp)
+            if exists:
+                if os.path.isdir(inp):
+                    if inp[len(inp)-1] != "/":
+                        inp += "/"
+                    inpSplit = inp.split("/")
+                    # print(inp, "ISDIR")
+                    #print(self.outerScreen.currentDir+inpSplit[len(inpSplit)-2]+"/")
+                    self.encryptDir(inp, self.currentDir+inpSplit[len(inpSplit)-2])
+                else:
+                    inpSplit = inp.split("/")
+                    self.encDecTerminal("y", self.key, inp, self.currentDir+inpSplit[len(inpSplit)-1])
+
+
+        self.resetButtons()
+
+
+    def createFolders(self, targetLoc):
+        if not os.path.exists(targetLoc):
+            os.makedirs(targetLoc)
+###########################
+
 
 
 

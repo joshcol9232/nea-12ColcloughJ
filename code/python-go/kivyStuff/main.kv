@@ -34,6 +34,8 @@ ScreenManagement:
     text_size: self.width, None
     height: self.texture_size[1]
 
+<deleteButton@Button>:
+    on_release: root.outerScreen.deleteFile(self.fileDir)
 
 # <SettingsPop@Popup>:
 #     id: settings
@@ -63,7 +65,7 @@ ScreenManagement:
             text: "Yes"
             pos_hint: {"center_x": .75, "center_y": .25}
             size_hint: .4, .3
-            on_release: root.dismiss();root.fileScreen.checkCanEncrypt(root.inputText)
+            on_release: root.dismiss();root.checkCanEncrypt(root.inputText)
 
 <MainScreen>:
     name: "main"
@@ -153,6 +155,18 @@ ScreenManagement:
                 size: 250, 267
                 allow_stretch: True
 
+        Button:
+            id: manuallyRefresh
+            size_hint: .06, .08
+            pos_hint: {"right": 1, "y": 0.76}
+            on_release: root.resetButtons()
+            Image:
+                source: root.getPathForButton("refresh-icon.png")
+                x: self.parent.x - 10
+                y: self.parent.y - 30
+                size: 80, 112
+                allow_stretch: True
+
 
         ProgressBar:
             id: pb1
@@ -220,7 +234,7 @@ ScreenManagement:
             id: cancel
             size_hint: .16, .08
             pos_hint: {"center_x": .5, "center_y": .24}
-            text: "Cancel"
+            text: "Close"
             on_release: root.dismiss()
 
         TextInput:
