@@ -24,6 +24,25 @@ ScreenManagement:
 #     text: root.getSortOrder()
 #     on_release: root.changeSortOrder()
 
+<infoButton@Button>:
+    font_size: 14
+    size_hint: 1, None
+    text:
+    on_release: root.outerScreen.getFileInfo(self.fileReference)
+
+<infoLabel@Label>:
+    text_size: self.width, None
+    height: self.texture_size[1]
+
+
+# <SettingsPop@Popup>:
+#     id: settings
+#     GridLayout:
+#         cols: 2
+#         Label:
+#             size_hint: .32, .08
+#             font_size: 18
+#             text: "Current vault location:"+root.outerScreen.path
 
 <ConfirmationPopup@Popup>:
     title: "Confirmation"
@@ -86,15 +105,15 @@ ScreenManagement:
                 allow_stretch: True
 
         Button:
-            id: goBackFolder
+            id: settings
             size_hint: .06, .08
             pos_hint: {"x": 0.62, "top": 1}
-            on_release: root.goBackFolder()
+            on_release: root.openSettings()
             Image:
-                source: root.getPathForButton("backUpFolder.png")
-                x: self.parent.x - 15
-                y: self.parent.y - 37
-                size: 100, 134
+                source: root.getPathForButton("settings.png")
+                x: self.parent.x + 10
+                y: self.parent.y + 4
+                size: 40, 40
                 allow_stretch: True
 
         Button:     #Padlock
@@ -123,11 +142,12 @@ ScreenManagement:
                 allow_stretch: True
 
         Button:
-            id: removeFile
+            id: goBackFolder
             size_hint: .16, .16
             pos_hint: {"x": 0.68, "top": 1}
+            on_release: root.goBackFolder()
             Image:
-                source: root.getPathForButton("removeFile.png")
+                source: root.getPathForButton("backUpFolder.png")
                 x: self.parent.x - 33
                 y: self.parent.y - 73
                 size: 250, 267

@@ -378,6 +378,7 @@ def decrypt(state, expandedKeys, regularRounds):
     state = invSubBytes(state)
 
     while regularRounds >= 1:
+        print(regularRounds)
         state = addRoundKey(state, expandedKeys[(16 * (regularRounds)):(16 * (regularRounds+1))])
         state = invMixColumns(state)
         state = invShiftRows(state)
@@ -542,9 +543,9 @@ def encryptFileMulCores(key, f, w):
             print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
         buff = fo.read(bufferSize)
 
+    p.close()
     fw.close()
     fo.close()
-
 
 def decryptFileMulCores(key, f, w):
     emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -597,6 +598,7 @@ def decryptFileMulCores(key, f, w):
             print("Buffer too big - reducing buffer. New buffer size:", bufferSize)
         buff = fo.read(bufferSize)
 
+    p.close()
     fw.close()
     fo.close()
 
@@ -627,19 +629,20 @@ if __name__ == "__main__":
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/_67535032_67535031.jpg"
     #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hello.txt"
-    #f = "/run/media/josh/USB/TullamoreGrandCanal.jpg"
+    f = "/run/media/josh/USB/TullamoreGrandCanal.jpg"
     #f = "/run/media/josh/Storage/archlinux-2018.07.01-x86_64.iso"
-    f = "/run/media/josh/USB/File Security program Analysis.odt"
-    a = "/run/media/josh/USB/hello.odt"
+    #f = "/run/media/josh/USB/File Security program Analysis.odt"
+    a = "/run/media/josh/USB/hello.jpg"
 
-    start = time.time()
+    #start = time.time()
     #encryptFileMulCores(b"aaaaaaaaaaaaaaaa", f, w)
-    encryptFile(b"aaaaaaa", f, w)
-    print("Time to encrypt:", (time.time() - start), "s")
-    decryptFile(b"aaaaaaa", w, a)
-    #decryptFileMulCores(b"aaaaaaaaaaaaaaaa", w, a)
+    #encryptFile("aaaaaaa", f, w)
+    #print("Time to encrypt:", (time.time() - start), "s")
+    #decryptFile("aaaaaaa", w, a)
+    key = bytearray([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x00])
+    decryptFileMulCores(key, "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes", "/run/media/josh/USB/hello.jpg")
     # emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    #
+    # #
     # exp = expandKey(b"mynamejeffeleven", emptyExpandedKeys)
     # print(b"hello aaaaaaaaaa")
     # out = encrypt(bytearray(b"hello aaaaaaaaaa"), exp, 9)
@@ -648,3 +651,9 @@ if __name__ == "__main__":
     # print(bytes(re))
 
     #encryptFileTree("/run/media/josh/USB/")
+    # input = bytearray([0x15, 0xb6, 0xef, 0xe9, 0x81, 0x61, 0xe1, 0x83, 0x53, 0x9d, 0x6e, 0xa3, 0xf4, 0x81, 0xdd, 0xe0])
+
+    # exp = expandKey(key, emptyExpandedKeys)
+    # e = encrypt(input, exp, 9)
+    # geeb = decrypt(e, exp, 9)
+    # print(geeb)
