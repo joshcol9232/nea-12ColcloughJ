@@ -1,6 +1,5 @@
 package main
 
-
 import (
   "fmt"
   "os"
@@ -359,7 +358,6 @@ func padKey(key string) ([]byte){
   a = append(a, 0x00)
   }
 
-  fmt.Println(a, "KEY", len(a))
   return a
 }
 
@@ -414,6 +412,18 @@ func getNumOfCores() int {
     return numCPU
 }
 
+func compareSlices(slice1, slice2 []byte) bool {
+  if len(slice1) != len(slice2) {
+    return false
+  } else {
+    for i := 0; i < len(slice1); i++ {
+      if slice1[i] != slice2[i] {
+        return false
+      }
+    }
+  }
+  return true
+}
 
 func encryptFile(stringKey, f, w string) {
   a, err := os.Open(f)
@@ -442,15 +452,22 @@ func encryptFile(stringKey, f, w string) {
   fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
   fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
 
-  buffCount := 0
+  var buffCount int = 0
+
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) //Open file for appending.
+  check(err)
+
+  //Append key to act as checksum
+  e.Write(encrypt(key, expandedKeys, 9))
+  e.Seek(16, 0)
 
   for {                                         //Same as a while buffCount < fileSize: in python3
     if buffCount >= fileSize {
-      fmt.Println(buffCount, fileSize, "BREAK")
+      //fmt.Println(buffCount, fileSize, "BREAK")
       break
     }
     if bufferSize > (fileSize - buffCount) {
-      fmt.Println("Changing buffer.")
+      //fmt.Println("Changing buffer.")
       bufferSize = fileSize - buffCount
     }
 
@@ -464,31 +481,19 @@ func encryptFile(stringKey, f, w string) {
         break
       } else {
         buff = append(buff, 0)
-        fmt.Println("Adding zero.", len(buff), len(buff)%16)
+        //fmt.Println("Adding zero.", len(buff), len(buff)%16)
       }
     }
 
-    var encryptedBuff [][]byte
     for i := 0; i < bufferSize; i += 16 {
-      var encrypted []byte
-      encrypted = encrypt(buff[i:i+16], expandedKeys, 9)
-      encryptedBuff = append(encryptedBuff, encrypted)
+      var encrypted []byte = encrypt(buff[i:i+16], expandedKeys, 9)
+      e.Write(encrypted)
     }
 
-    e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    check(err)
-    if bufferSize <= 16 {
-      e.Write(encryptedBuff[0])
-    } else {
-      for y := 0; y < bufferSize; y += 16 {
-        e.Write(encryptedBuff[y/16])
-      }
-    }
-
-    e.Close()
 
     buffCount += bufferSize
   }
+  e.Close()
 }
 
 
@@ -498,7 +503,7 @@ func decryptFile(stringKey, f, w string) {
   aInfo, err := a.Stat()
   check(err)
 
-  fileSize := int(aInfo.Size())
+  fileSize := int(aInfo.Size())-16 //Take away length of added key for checksum
 
   var key []byte
   var expandedKeys [176]byte
@@ -519,58 +524,101 @@ func decryptFile(stringKey, f, w string) {
   fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
   fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
 
-  buffCount := 0
+  var buffCount int = 0
 
-  for {                                         //Same as a while buffCount < fileSize: in python3
-    if buffCount >= fileSize {
-      fmt.Println(buffCount, fileSize, "BREAK")
-      break
-    }
-    if bufferSize > (fileSize - buffCount) {
-      fmt.Println("Changing buffer.")
-      bufferSize = fileSize - buffCount
-    }
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) //Open file for appending.
+  check(err)
 
-    buff := make([]byte, bufferSize)
-    n1, err := io.ReadFull(a, buff)
-    _ = n1 //Ignore this one, only interested if there is an error.
-    check(err)
+  //Check first block is key
+  firstBlock := make([]byte, 16)
+  n2, err := io.ReadFull(a, firstBlock)
+  _ = n2
+  decFirst := decrypt(firstBlock, expandedKeys, 9)
+  validKey := compareSlices(key, decFirst)
+  a.Seek(16, 0)
 
-
-    var decryptedBuff [][]byte
-    for i := 0; i < bufferSize; i += 16 {
-      var decrypted []byte
-      decrypted = decrypt(buff[i:i+16], expandedKeys, 9)
-      decryptedBuff = append(decryptedBuff, decrypted)
-    }
-
-    e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    check(err)
-    if bufferSize <= 16 {
-      e.Write(decryptedBuff[0])
-    } else {
-      for y := 0; y < bufferSize; y += 16 {
-        e.Write(decryptedBuff[y/16])
+  if validKey {
+    for {                                         //Same as a while buffCount < fileSize: in python3
+      if buffCount >= fileSize {
+        //fmt.Println(buffCount, fileSize, "BREAK")
+        break
       }
+      if bufferSize > (fileSize - buffCount) {
+        //fmt.Println("Changing buffer.")
+        bufferSize = fileSize - buffCount
+      }
+
+      buff := make([]byte, bufferSize)
+      n1, err := io.ReadFull(a, buff)
+      _ = n1 //Ignore this one, only interested if there is an error.
+      check(err)
+
+      for {
+        if len(buff) % 16 == 0 {
+          break
+        } else {
+          buff = append(buff, 0)
+          //fmt.Println("Adding zero.", len(buff), len(buff)%16)
+        }
+      }
+
+
+      for i := 0; i < bufferSize; i += 16 {
+        var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)
+        e.Write(decrypted)
+      }
+
+
+      buffCount += bufferSize
     }
-
-    e.Close()
-
-    buffCount += bufferSize
+  } else {
+    panic("Invalid Key")
   }
+
+  e.Close()
+}
+
+func checkKey(stringKey, f string)  bool{
+  a, err := os.Open(f)
+  check(err)
+
+  var key []byte
+  var expandedKeys [176]byte
+
+  key = padKey(stringKey)
+  expandedKeys = expandKey(key)
+
+  //Check first block is key
+  firstBlock := make([]byte, 16)
+  n2, err := io.ReadFull(a, firstBlock)
+  _ = n2
+  firstDecrypted := decrypt(firstBlock, expandedKeys, 9)
+  validKey := compareSlices(key, firstDecrypted)
+
+  if validKey {
+    return true
+  } else {
+    return false
+  }
+
 }
 
 
-func main(){
-  // w := "/run/media/josh/USB/temp"
-  // //f := "/run/media/josh/USB/hi.txt"
-  // //f := "/run/media/josh/Storage/archlinux-2018.07.01-x86_64.iso"
-  // //f := "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
-  // //f := "/run/media/josh/USB/ANALYSIS.odt"
-  // f := "/run/media/josh/USB/nea-12ColcloughJ-master/code/python-go/testing/Aes/pictures/smile.bmp"
-  // a := "/run/media/josh/Storage/a.bmp"
+
+func main() {
+  //w := "/run/media/josh/Storage/temp"
+  //f := "/run/media/josh/USB/hi.txt"
+  //f := "/run/media/josh/Storage/archlinux-2018.07.01-x86_64.iso"
+  //f := "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
+  //f := "/run/media/josh/USB/ANALYSIS.odt"
+  //f := "/run/media/josh/USB/nea-12ColcloughJ-mfmt.Println("Time taken:", (time.Now()).Sub(start))aster/code/python-go/testing/Aes/pictures/smile.bmp"
+  //a := "/run/media/josh/Storage/a.jpg"
 
 
+  // start := time.Now()
+  // encryptFile("key", f, w)
+  // fmt.Println("Time taken:", (time.Now()).Sub(start))
+  // decryptFile("key", w, a)
 
   arguments := os.Args[1:]
 
@@ -582,8 +630,13 @@ func main(){
     encryptFile(key, f, w)
   } else if encrypt == "n" {
     decryptFile(key, f, w)
+  } else if encrypt == "test"{
+    valid := checkKey(key, f)
+    if !valid {
+      panic("Not valid")
+    }
   } else {
-    fmt.Println("Invalid commandline options.")
+    panic("Invalid commandline options.")
   }
 
 }

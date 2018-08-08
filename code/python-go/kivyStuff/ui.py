@@ -48,6 +48,131 @@ import bluetooth
 
 ############Import AES Module########### -- Replaced with go implementation
 
+######Load config#####
+global sharedPath
+global sharedAssets
+
+startDir = os.path.dirname(os.path.realpath(__file__))+"/"
+tempDir = startDir.split("/")
+del tempDir[len(tempDir)-2]
+startDir = "/".join(tempDir)
+configFile = open(startDir+"config.cfg", "r")
+
+for line in configFile:
+    lineSplit = line.split(":")
+    lineSplit[1] = lineSplit[1].replace("\n", "")
+    if lineSplit[0] == "vaultDir":
+        sharedPath = lineSplit[1]
+    elif lineSplit[0] == "assetsDir":
+        sharedAssets = lineSplit[1]
+configFile.close()
+
+
+class LoginScreen(Screen, FloatLayout):
+    globalKey = StringProperty("")
+
+    def __init__(self, **kwargs):
+        super(LoginScreen, self).__init__(**kwargs)
+        #self.checkButton = Button(size_hint= (.16, .16))
+        #self.btThread = threading.Thread(target=self.startBTServer, daemon=True)
+        # self.lockThread = threading.Thread(target=self.lockThreadFunc, daemon=True)
+        # self.threads.append(self.btThread)
+        # self.threads.append(self.lockThread)
+        #self.btThread.start()
+        # self.lockThread.start()
+
+    def startBTServer(self):
+        lock = self.runServ()
+        if lock == True:
+            print("LOCK")
+        return "done"
+
+    def checkValid(self):   #Bound to checkbutton
+        if len(self.lockList) > 0:
+            print("UNLOCK")
+            return True
+        return False
+
+    def findFile(self, dir):
+        fs = os.listdir(dir)
+        for item in fs:
+            if os.path.isdir(dir+item+"/"):
+                self.findFile(dir+item+"/")
+            else:
+                return dir+item
+
+    def passToTerm(self, key, d):
+        success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES
+        return success
+
+    def getIfValidKey(self, inputKey):
+        if len(inputKey) > 16:
+            pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop.open()
+            return False
+
+        if len(os.listdir(sharedPath)) != 0:
+            decryptTestFile = self.findFile(sharedPath)
+            print(decryptTestFile, "File chosen.")
+            diditwork = self.passToTerm(inputKey, decryptTestFile)
+            print(diditwork)
+            if diditwork == 0: #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def checkKey(self, inputKey):
+        valid = self.getIfValidKey(inputKey)
+        if valid:
+            self.ids.keyInput.text = "" #reset key input if valid
+            self.globalKey = inputKey
+            self.manager.current = "main"
+        else:
+            pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop.open()
+
+    def needToSetKey(self):
+        if len(os.listdir(sharedPath)) == 0:
+            return "Input New Key (Write this down if you have to)"
+        else:
+            return "Input Key"
+
+
+
+
+    # def lockThreadFunc(self):
+    #     while len(self.lockList) == 0:
+    #         pass
+    #     self.unlocc = True
+    #     print("UNLOCK")
+    #     return "done"
+
+
+
+    def runServ(self):
+        hostMACAddress = '00:1a:7d:da:71:0a' # mac of bt adapter
+        port = 5
+        backlog = 1
+        size = 1024
+        s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        s.bind((hostMACAddress, port))
+        s.listen(backlog)
+        try:
+            client, clientInfo = s.accept()
+            while True:
+                data = client.recv(size)
+                if data:
+                    client.send(data) # Echo back to client
+                    print(data)
+                    if data == self.lockCode:
+                        self.lockList.append(data)
+
+        except bluetooth.btcommon.BluetoothError as e:
+            client.close()
+            s.close()
+            return True
 
 
 
@@ -144,36 +269,19 @@ class MainScreen(Screen, FloatLayout):
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
-        self.startDir = os.path.dirname(os.path.realpath(__file__))+"/"
-        tempDir = self.startDir.split("/")
-        del tempDir[len(tempDir)-2]
-        self.startDir = "/".join(tempDir)
-        self.configFile = open(self.startDir+"config.cfg", "r")
-        self.path = "/"
-        self.assetsPath = "/"
         self.sizeCount = 0
         self.ascending = True
         self.addFile = 0
-        self.key = "1234" #Super secret secure key for testing (before bluetooth is added)
+        self.key = StringProperty('')
+        #key = "1234" #Super secret secure key for testing (before bluetooth is added)
         Window.bind(on_dropfile=self.onFileDrop)
 
-        for line in self.configFile:
-            lineSplit = line.split(":")
-            lineSplit[1] = lineSplit[1].replace("\n", "")
-            if lineSplit[0] == "vaultDir":
-                self.path = lineSplit[1]
-            elif lineSplit[0] == "assetsDir":
-                self.assetsPath = lineSplit[1]
-
-
+        self.path = sharedPath
+        self.assetsPath = sharedAssets
         self.currentDir = self.path
-        currentDirShare = self.currentDir
         print(self.currentDir, "CURRENT DIR")
-        self.configFile.close()
         self.scroll = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        #self.encrypt(b"aaaaaaa", "/run/media/josh/USB/File Security program Analysis.odt", "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/temp")
         self.createButtons(self.List(self.currentDir))
-
 
 
     def __repr__(self):
@@ -548,7 +656,7 @@ class MainScreen(Screen, FloatLayout):
 
 ######Encryption Stuff + opening decrypted files######
     def passToTerm(self, type, key, d, targetLoc):
-        os.system("./AES "+type+" "+key+" '"+d+"' '"+targetLoc+"'") #Passes parameters to compiled go AES
+        os.system("./AES "+type+" '"+key+"' '"+d+"' '"+targetLoc+"'") #Passes parameters to compiled go AES
 
     def encDecTerminal(self, type, key, d, targetLoc):
         self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))###get rid
@@ -666,71 +774,6 @@ class MainScreen(Screen, FloatLayout):
         if not os.path.exists(targetLoc):
             os.makedirs(targetLoc)
 ###########################
-
-
-
-
-class LoginScreen(Screen, FloatLayout):
-
-    def __init__(self, **kwargs):
-        super(LoginScreen, self).__init__(**kwargs)
-        self.lockCode = b"1234"
-        self.lockList = []
-        self.unlock = False
-        self.threads = []
-        self.checkButton = Button(size_hint= (.16, .16))
-        self.btThread = threading.Thread(target=self.startBTServer, daemon=True)
-        # self.lockThread = threading.Thread(target=self.lockThreadFunc, daemon=True)
-        # self.threads.append(self.btThread)
-        # self.threads.append(self.lockThread)
-        self.btThread.start()
-        # self.lockThread.start()
-
-    def startBTServer(self):
-        lock = self.runServ()
-        if lock == True:
-            print("LOCK")
-        return "done"
-
-    def checkValid(self):   #Bound to checkbutton
-        if len(self.lockList) > 0:
-            print("UNLOCK")
-            return True
-        return False
-
-
-
-    # def lockThreadFunc(self):
-    #     while len(self.lockList) == 0:
-    #         pass
-    #     self.unlocc = True
-    #     print("UNLOCK")
-    #     return "done"
-
-
-
-    def runServ(self):
-        hostMACAddress = '00:1a:7d:da:71:0a' # mac of bt adapter
-        port = 5
-        backlog = 1
-        size = 1024
-        s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        s.bind((hostMACAddress, port))
-        s.listen(backlog)
-        try:
-            client, clientInfo = s.accept()
-            while True:
-                data = client.recv(size)
-                if data:
-                    client.send(data) # Echo back to client
-                    print(data)
-                    if data == self.lockCode:
-                        self.lockList.append(data)
-
-        except bluetooth.btcommon.BluetoothError as e:
-            client.close()
-            s.close()
-            return True
 
 
 

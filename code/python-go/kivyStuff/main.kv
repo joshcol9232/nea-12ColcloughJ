@@ -3,12 +3,17 @@
 #: import Window kivy.core.window.Window
 
 ScreenManagement:
-    mainScreenManager: mainScreenManager
-    id: mainScreenManager
+    id: screenmanager
     transition: FadeTransition()
     LoginScreen:
+        name: "Login"
+        id: login
+        manager: screenmanager
     MainScreen:
-
+        name: "main"
+        id: main
+        manager: screenmanager
+        key: login.globalKey
 
 <listButton@Button>:
     font_size: 14
@@ -69,10 +74,60 @@ ScreenManagement:
             size_hint: .4, .3
             on_release: root.dismiss();root.checkCanEncrypt(root.inputText)
 
+<LoginScreen>:
+    keyInput: keyInput
+
+    # Label:
+    #     id: labelLogin
+    #     size_hint: .46, .08
+    #     text: "Connect via bluetooth."
+    #     font_size: 22
+    #     pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    # Button:
+    #     id: loginButton
+    #     size_hint: .16, .16
+    #     pos_hint: {"center_x": .5, "center_y": .5}
+    #     on_release: app.root.current = "main";root.lockList = [];root.unlock = False
+    #     text: "bypass"
+
+    # Button:
+    #     id: checkbutton
+    #     size_hint: .16, .16
+    #     pos_hint: {"center_x": .5, "center_y": .34}
+    #     on_release: root.unlock = root.checkValid()
+    #     text: "Check Code Sent"
+
+    Label:
+        id: labelLogin
+        size_hint: .46, .08
+        text: root.needToSetKey()
+        font_size: 22
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    TextInput:
+        id: keyInput
+        size_hint: .7, .08
+        font_size: 22
+        hint_text: "Key (16 characters maximum)"
+        pos_hint: {"center_x": 0.5, "center_y": 0.6}
+        password: True
+        multiline: False
+        on_text_validate: app.root.current = root.checkKey(keyInput.text)
+
+    Button:
+        id: submitKey
+        size_hint: .16, .16
+        font_size: 22
+        text: "Submit"
+        pos_hint: {"center_x": 0.5, "center_y": 0.4}
+        #on_release: app.root.current = root.checkKey(keyInput.text)
+        on_release: root.checkKey(keyInput.text)
+
+
 <MainScreen>:
-    name: "main"
-    id: main
     addFile: addFile
+    key: root.key
 
     FloatLayout:
         id: MainLayout
@@ -186,34 +241,6 @@ ScreenManagement:
         # CheckBox:
         #     pos_hint: {"x": 0.95, "y": 0.5}
         #     size_hint: .05, .05
-
-
-<LoginScreen>:
-    name: "Login"
-    id: login
-
-    Label:
-        id: labelLogin
-        size_hint: .46, .08
-        text: "Connect via bluetooth."
-        font_size: 22
-        pos_hint: {"center_x": 0.5, "y": 0.8}
-
-    Button:
-        id: loginButton
-        size_hint: .16, .16
-        pos_hint: {"center_x": .5, "center_y": .5}
-        on_release: app.root.current = "main";root.lockList = [];root.unlock = False
-        text: "bypass"
-
-    # Button:
-    #     id: checkbutton
-    #     size_hint: .16, .16
-    #     pos_hint: {"center_x": .5, "center_y": .34}
-    #     on_release: root.unlock = root.checkValid()
-    #     text: "Check Code Sent"
-
-
 
 
 
