@@ -46,6 +46,8 @@ ScreenManagement:
 #             font_size: 18
 #             text: "Current vault location:"+root.outerScreen.path
 
+
+
 <ConfirmationPopup@Popup>:
     title: "Confirmation"
     size_hint: .4, .4
@@ -110,7 +112,7 @@ ScreenManagement:
             id: settings
             size_hint: .06, .08
             pos_hint: {"x": 0.62, "top": 1}
-            on_release: root.openSettings()
+            on_release: a = root.SettingsPop(root, title="Settings");a.open()
             Image:
                 source: root.getPathForButton("settings.png")
                 x: self.parent.x + 10
@@ -212,6 +214,9 @@ ScreenManagement:
     #     text: "Check Code Sent"
 
 
+
+
+
 <addFileScreen@Popup>:
     name: "addFile"
     id: addFile
@@ -244,3 +249,45 @@ ScreenManagement:
             hint_text: "Directories"
             pos_hint: {"center_x": 0.5, "center_y": 0.7}
             multiline: False
+
+
+<SettingsPop@Popup>:
+    auto_dismiss: False
+    newLoc: newLoc
+    GridLayout:
+        cols: 2
+        Label:
+            text: "Vault Location:"
+            font_size: 20
+        Label:
+            text: root.outerScreen.path
+            font_size: 14
+        Label:
+            text: "Change Vault Location:"
+            font_size: 16
+        GridLayout:
+            cols: 2
+            TextInput:
+                id: newLoc
+                size_hint_x: .85
+                font_size: 22
+                hint_text: "Location"
+            Button:
+                size_hint_x: .15
+                text: "Submit"
+                on_release: root.changeVaultLoc(newLoc.text)
+
+        Label:
+        Label:
+        Label:
+        Label:
+        Label:
+        Label:
+        Label:
+        Label:
+
+        Button:
+            text: "Exit"
+            font_size: 20
+
+            on_release: root.dismiss()

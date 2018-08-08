@@ -4,6 +4,7 @@ import shutil
 import threading
 import time
 import multiprocessing
+import fileinput
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -57,6 +58,44 @@ class MainScreen(Screen, FloatLayout):
         def __init__(self, mainScreen, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
+
+    class SettingsPop(Popup):
+
+        def __init__(self, mainScreen, **kwargs):
+            self.outerScreen = mainScreen
+            super(Popup, self).__init__(**kwargs)
+
+        def editConfLoc(self, term, dir):
+            for line in fileinput.input(self.outerScreen.startDir+"config.cfg", inplace=1):
+                if term in line:
+                    line = line.replace(line, term+dir+"\n")
+                sys.stdout.write(line)
+
+        def changeVaultLoc(self, inp):
+            if inp == "":
+                pass
+            else:
+                if os.path.exists(inp):
+                    if os.path.isdir(inp):
+                        self.editConfLoc("vaultDir:", inp)
+                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        done.open()
+                else:
+                    try:
+                        os.makedirs(inp)
+                    except FileNotFoundError:
+                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        warn.open()
+                    except PermissionError:
+                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        warn.open()
+                    else:
+                        self.editConfLoc("vaultDir:", inp)
+                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        done.open()
+
+
+
 
     class infoButton(Button):
 
@@ -121,7 +160,7 @@ class MainScreen(Screen, FloatLayout):
         for line in self.configFile:
             lineSplit = line.split(":")
             lineSplit[1] = lineSplit[1].replace("\n", "")
-            if lineSplit[0] == "mainDir":
+            if lineSplit[0] == "vaultDir":
                 self.path = lineSplit[1]
             elif lineSplit[0] == "assetsDir":
                 self.assetsPath = lineSplit[1]
@@ -692,8 +731,6 @@ class LoginScreen(Screen, FloatLayout):
             client.close()
             s.close()
             return True
-
-
 
 
 
