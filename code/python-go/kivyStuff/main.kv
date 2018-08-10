@@ -66,13 +66,13 @@ ScreenManagement:
             text: "No!!!"
             pos_hint: {"center_x": .25, "center_y": .25}
             size_hint: .4, .3
-            on_release: root.dismiss()
+            on_release: root.fileScreen.outerScreen.dismiss()
 
         Button:
             text: "Yes"
             pos_hint: {"center_x": .75, "center_y": .25}
             size_hint: .4, .3
-            on_release: root.dismiss();root.checkCanEncrypt(root.inputText)
+            on_release: root.dismiss();root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
 <LoginScreen>:
     keyInput: keyInput

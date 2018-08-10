@@ -662,22 +662,14 @@ class MainScreen(Screen, FloatLayout):
         self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))###get rid
         self.encryptProcess.start()
 
-    def openFile(self, location):
+    def openFile(self, location, startLoc):
         os.system("xdg-open " + "'"+location+"'")
+        popup = Popup(title="One second...", content=Label(text="Encrypting edited file, please wait."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+        popup.open()
+        self.encDecTerminal("y", self.key, location, startLoc)
+        popup.dismiss()
 
-    def checkThread(self, fileName, startSize, fullPath):
-        print(fullPath)
-        while self.openFileThread.is_alive():
-            pass
 
-        print("DONE THREAD")
-        if os.path.getsize("/tmp/FileMate/"+fileName) != startSize:
-            print("FILE CHANGED")
-            #self.encryptWhenModified("/tmp/FileMate/"+fileName, fullPath)
-            popup = Popup(title="One second :)", content=Label(text="Encrypting edited file, please wait."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-            popup.open()
-            self.encDecTerminal("y", self.key, "/tmp/FileMate/"+fileName, fullPath)
-            popup.dismiss()
 
     def onFileDrop(self, window, file_path):  #Drag + drop files
         self.checkCanEncrypt(file_path.decode())
@@ -690,7 +682,7 @@ class MainScreen(Screen, FloatLayout):
             os.makedirs("/tmp/FileMate/")
         fileLoc = "/tmp/FileMate/"+fileName
         if os.path.exists(fileLoc):
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
         else:
             decryptThread = multiprocessing.Process(target=self.encDecTerminal, args=("n", self.key, fileDir, fileLoc))
@@ -698,11 +690,9 @@ class MainScreen(Screen, FloatLayout):
             print("decrypt")
             decryptThread.join()
 
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc,))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
 
-        checkOpenThread = threading.Thread(target=self.checkThread, args=(fileName, os.path.getsize(fileLoc), fileDir))
-        checkOpenThread.start()
         #os.startfile("/tmp/"+fileName)
         #subprocess.call(["xdg-open", file])
 
