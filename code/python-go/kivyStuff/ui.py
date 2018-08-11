@@ -95,13 +95,20 @@ class LoginScreen(Screen, FloatLayout):
 
     def findFile(self, dir):
         fs = os.listdir(dir)
+        print(dir)
         for item in fs:
             if os.path.isdir(dir+item+"/"):
-                self.findFile(dir+item+"/")
+                if self.count == 0:
+                    self.findFile(dir+item+"/")
+                else:
+                    return
             else:
-                return dir+item
+                self.decryptTestFile = dir+item
+                self.count += 1
+                return
 
     def passToTerm(self, key, d):
+        print(key, d, "Key, D")
         success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES
         return success
 
@@ -112,9 +119,12 @@ class LoginScreen(Screen, FloatLayout):
             return False
 
         if len(os.listdir(sharedPath)) != 0:
-            decryptTestFile = self.findFile(sharedPath)
-            print(decryptTestFile, "File chosen.")
-            diditwork = self.passToTerm(inputKey, decryptTestFile)
+            self.decryptTestFile = ""
+            self.count = 0
+            self.findFile(sharedPath)
+            print("file", self.decryptTestFile)
+            print(self.decryptTestFile, "File chosen.")
+            diditwork = self.passToTerm(inputKey, self.decryptTestFile)
             print(diditwork)
             if diditwork == 0: #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
                 return True
@@ -726,7 +736,7 @@ class MainScreen(Screen, FloatLayout):
     def checkCanEncrypt(self, inp):
         if ":" in inp:
             print("COLON")
-            inp = input.split(":")
+            inp = inp.split(":")
             for d in inp:
                 exists = self.checkDirExists(d)
                 if exists:
