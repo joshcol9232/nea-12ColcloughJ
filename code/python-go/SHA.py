@@ -227,8 +227,13 @@ def getSHAkey(inpKey):
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(16):
         temp[i] = half1[i] ^ half2[i]   #XOR both halves to get a 128 bit output for 128 bit AES
+
+    # result = ""
+    # for x in temp:
+    #     result += hex(x)
+
     return temp
 
 
 if __name__ == "__main__":
-    print(getSHAkey("abc"))
+    print(getSHAkey("b"))

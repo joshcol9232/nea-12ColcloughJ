@@ -4,7 +4,10 @@ import (
   "fmt"
   "os"
   "io"
+  "io/ioutil"
   "runtime"
+  "strings"
+  "strconv"
 )
 
 //Global lookup tables.
@@ -349,17 +352,17 @@ func invMixColumns(state []byte) ([]byte) {
 }
 
 //([16]byte)
-func padKey(key string) ([]byte){
-  a := []byte(key)
-  for {
-    if len(a) > 15 {
-      break
-    }
-  a = append(a, 0x00)
-  }
-
-  return a
-}
+// func padKey(key string) ([]byte){
+//   a := []byte(key)
+//   for {
+//     if len(a) > 15 {
+//       break
+//     }
+//   a = append(a, 0x00)
+//   }
+//
+//   return a
+// }
 
 func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
   state = addRoundKey(state, expandedKeys[:16])
@@ -425,7 +428,7 @@ func compareSlices(slice1, slice2 []byte) bool {
   return true
 }
 
-func encryptFile(stringKey, f, w string) {
+func encryptFile(key []byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -433,10 +436,10 @@ func encryptFile(stringKey, f, w string) {
 
   fileSize := int(aInfo.Size())
 
-  var key []byte
+  //var key []byte
   var expandedKeys [176]byte
 
-  key = padKey(stringKey)
+  //key = padKey(stringKey)
   expandedKeys = expandKey(key)
 
   if _, err := os.Stat(w); err == nil { //If file exists, delete it
@@ -497,18 +500,19 @@ func encryptFile(stringKey, f, w string) {
 }
 
 
-func decryptFile(stringKey, f, w string) {
+func decryptFile(key []byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
   check(err)
 
+  fmt.Println("DECRYPT key", key, "DECRYPT key")
+
   fileSize := int(aInfo.Size())-16 //Take away length of added key for checksum
 
-  var key []byte
   var expandedKeys [176]byte
 
-  key = padKey(stringKey)
+  //key = padKey(stringKey)
   expandedKeys = expandKey(key)
 
   if _, err := os.Stat(w); err == nil { //If file exists, delete it
@@ -578,14 +582,13 @@ func decryptFile(stringKey, f, w string) {
   e.Close()
 }
 
-func checkKey(stringKey, f string)  bool{
+func checkKey(key []byte, f string)  bool{
   a, err := os.Open(f)
   check(err)
 
-  var key []byte
   var expandedKeys [176]byte
 
-  key = padKey(stringKey)
+  //key = padKey(stringKey)
   expandedKeys = expandKey(key)
 
   //Check first block is key
@@ -603,7 +606,10 @@ func checkKey(stringKey, f string)  bool{
 
 }
 
-
+func strToInt(str string) (int, error) {
+    n := strings.Split(str, ".")
+    return strconv.Atoi(n[0])
+}
 
 func main() {
   //w := "/run/media/josh/Storage/temp"
@@ -620,18 +626,35 @@ func main() {
   // fmt.Println("Time taken:", (time.Now()).Sub(start))
   // decryptFile("key", w, a)
 
-  arguments := os.Args[1:]
+  // arguments := os.Args[1:]
+  //
+  // encrypt, key, f, w := arguments[0], arguments[1], arguments[2], arguments[3]
 
-  encrypt, key, f, w := arguments[0], arguments[1], arguments[2], arguments[3]
+  bytes, err := ioutil.ReadAll(os.Stdin)
+  check(err)
+  feilds := strings.Split(string(bytes), ", ")
+  keyString := strings.Split(string(feilds[3]), " ")
 
-  fmt.Println("[Parameters] : ", encrypt, f, w)
+  var key []byte
+  for i := 0; i < len(keyString); i++ {
+    // fmt.Println(keyString[i], reflect.TypeOf(keyString[i]))
+    a, err := strToInt(keyString[i])
+    check(err)
+    key = append(key, byte(a))
+  }
+  // fmt.Println("FINAL KEY", key, "FINAL KEY")
 
-  if encrypt == "y" {
-    encryptFile(key, f, w)
-  } else if encrypt == "n" {
-    decryptFile(key, f, w)
-  } else if encrypt == "test"{
-    valid := checkKey(key, f)
+  fmt.Println("FEILDS", string(feilds[0]), string(feilds[2]), "FEILDS")
+
+  if string(feilds[0]) == "y" {
+    fmt.Println("ENCRYPTING")
+    encryptFile(key, string(feilds[1]), string(feilds[2]))
+  } else if string(feilds[0]) == "n" {
+    fmt.Println("DECRYPTING")
+    decryptFile(key, string(feilds[1]), string(feilds[2]))
+  } else if string(feilds[0]) == "test"{
+    fmt.Println("TESTING")
+    valid := checkKey(key, string(feilds[1]))
     if !valid {
       panic("Not valid")
     }

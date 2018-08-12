@@ -5,6 +5,7 @@ import threading
 import time
 import multiprocessing
 import fileinput
+from subprocess import Popen, PIPE
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -46,11 +47,14 @@ from kivy.lang import Builder
 import bluetooth
 ########################################
 
-############Import AES Module########### -- Replaced with go implementation
+############Import SHA Module###########
+import SHA
+
 
 ######Load config#####
 global sharedPath
 global sharedAssets
+global startDir
 
 startDir = os.path.dirname(os.path.realpath(__file__))+"/"
 tempDir = startDir.split("/")
@@ -108,9 +112,14 @@ class LoginScreen(Screen, FloatLayout):
                 return
 
     def passToTerm(self, key, d):
-        print(key, d, "Key, D")
-        success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES
-        return success
+        goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
+        key = SHA.getSHAkey(key)
+        key = " ".join(str(i) for i in key)
+        print(key)
+        out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
+        #print(id(key), d, "Key, D")
+        #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
+        return err
 
     def getIfValidKey(self, inputKey):
         if len(inputKey) > 16:
@@ -126,7 +135,7 @@ class LoginScreen(Screen, FloatLayout):
             print(self.decryptTestFile, "File chosen.")
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
             print(diditwork)
-            if diditwork == 0: #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
+            if diditwork == None: #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
                 return True
             else:
                 return False
@@ -666,11 +675,19 @@ class MainScreen(Screen, FloatLayout):
 
 ######Encryption Stuff + opening decrypted files######
     def passToTerm(self, type, key, d, targetLoc):
-        os.system("./AES "+type+" '"+key+"' '"+d+"' '"+targetLoc+"'") #Passes parameters to compiled go AES
+        goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
+        key = SHA.getSHAkey(key)
+        key = " ".join(str(i) for i in key)
+        print(key)
+        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+key).encode())
+        if err != None:
+            raise ValueError("Key not valid.")
 
     def encDecTerminal(self, type, key, d, targetLoc):
         self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))###get rid
         self.encryptProcess.start()
+        print("Encrypting")
+        self.encryptProcess.join()
 
     def openFile(self, location, startLoc):
         os.system("xdg-open " + "'"+location+"'")
@@ -697,7 +714,7 @@ class MainScreen(Screen, FloatLayout):
         else:
             decryptThread = multiprocessing.Process(target=self.encDecTerminal, args=("n", self.key, fileDir, fileLoc))
             decryptThread.start()
-            print("decrypt")
+            print("decrypting")
             decryptThread.join()
 
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
