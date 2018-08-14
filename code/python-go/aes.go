@@ -215,7 +215,7 @@ func expandKey(inputKey []byte) ([176]byte) {
 }
 
 func addRoundKey(state []byte, roundKey []byte) ([]byte) {       //is also it's own inverse
-  //fmt.Println(state, roundKey, len(state), len(roundKey), "ADD ROUND KEY")
+  ////fmt.Println(state, roundKey, len(state), len(roundKey), "ADD ROUND KEY")
   for i := 0; i < 16; i++ {
     state[i] ^= roundKey[i]
   }
@@ -452,8 +452,8 @@ func encryptFile(key []byte, f, w string) {
     bufferSize = fileSize
   }
 
-  fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
-  fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
+  //fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
+  //fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
 
   var buffCount int = 0
 
@@ -466,11 +466,11 @@ func encryptFile(key []byte, f, w string) {
 
   for {                                         //Same as a while buffCount < fileSize: in python3
     if buffCount >= fileSize {
-      //fmt.Println(buffCount, fileSize, "BREAK")
+      ////fmt.Println(buffCount, fileSize, "BREAK")
       break
     }
     if bufferSize > (fileSize - buffCount) {
-      //fmt.Println("Changing buffer.")
+      ////fmt.Println("Changing buffer.")
       bufferSize = fileSize - buffCount
     }
 
@@ -484,7 +484,7 @@ func encryptFile(key []byte, f, w string) {
         break
       } else {
         buff = append(buff, 0)
-        //fmt.Println("Adding zero.", len(buff), len(buff)%16)
+        ////fmt.Println("Adding zero.", len(buff), len(buff)%16)
       }
     }
 
@@ -506,7 +506,7 @@ func decryptFile(key []byte, f, w string) {
   aInfo, err := a.Stat()
   check(err)
 
-  fmt.Println("DECRYPT key", key, "DECRYPT key")
+  //fmt.Println("DECRYPT key", key, "DECRYPT key")
 
   fileSize := int(aInfo.Size())-16 //Take away length of added key for checksum
 
@@ -525,8 +525,8 @@ func decryptFile(key []byte, f, w string) {
     bufferSize = fileSize
   }
 
-  fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
-  fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
+  ////fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
+  ////fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
 
   var buffCount int = 0
 
@@ -544,11 +544,11 @@ func decryptFile(key []byte, f, w string) {
   if validKey {
     for {                                         //Same as a while buffCount < fileSize: in python3
       if buffCount >= fileSize {
-        //fmt.Println(buffCount, fileSize, "BREAK")
+        ////fmt.Println(buffCount, fileSize, "BREAK")
         break
       }
       if bufferSize > (fileSize - buffCount) {
-        //fmt.Println("Changing buffer.")
+        ////fmt.Println("Changing buffer.")
         bufferSize = fileSize - buffCount
       }
 
@@ -562,7 +562,7 @@ func decryptFile(key []byte, f, w string) {
           break
         } else {
           buff = append(buff, 0)
-          //fmt.Println("Adding zero.", len(buff), len(buff)%16)
+          ////fmt.Println("Adding zero.", len(buff), len(buff)%16)
         }
       }
 
@@ -617,13 +617,13 @@ func main() {
   //f := "/run/media/josh/Storage/archlinux-2018.07.01-x86_64.iso"
   //f := "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
   //f := "/run/media/josh/USB/ANALYSIS.odt"
-  //f := "/run/media/josh/USB/nea-12ColcloughJ-mfmt.Println("Time taken:", (time.Now()).Sub(start))aster/code/python-go/testing/Aes/pictures/smile.bmp"
+  //f := "/run/media/josh/USB/nea-12ColcloughJ-m//fmt.Println("Time taken:", (time.Now()).Sub(start))aster/code/python-go/testing/Aes/pictures/smile.bmp"
   //a := "/run/media/josh/Storage/a.jpg"
 
 
   // start := time.Now()
   // encryptFile("key", f, w)
-  // fmt.Println("Time taken:", (time.Now()).Sub(start))
+  // //fmt.Println("Time taken:", (time.Now()).Sub(start))
   // decryptFile("key", w, a)
 
   // arguments := os.Args[1:]
@@ -637,29 +637,24 @@ func main() {
 
   var key []byte
   for i := 0; i < len(keyString); i++ {
-    // fmt.Println(keyString[i], reflect.TypeOf(keyString[i]))
+    // //fmt.Println(keyString[i], reflect.TypeOf(keyString[i]))
     a, err := strToInt(keyString[i])
     check(err)
     key = append(key, byte(a))
   }
-  // fmt.Println("FINAL KEY", key, "FINAL KEY")
-
-  fmt.Println("FEILDS", string(feilds[0]), string(feilds[2]), "FEILDS")
+  // //fmt.Println("FINAL KEY", key, "FINAL KEY")
 
   if string(feilds[0]) == "y" {
-    fmt.Println("ENCRYPTING")
     encryptFile(key, string(feilds[1]), string(feilds[2]))
   } else if string(feilds[0]) == "n" {
-    fmt.Println("DECRYPTING")
     decryptFile(key, string(feilds[1]), string(feilds[2]))
   } else if string(feilds[0]) == "test"{
-    fmt.Println("TESTING")
     valid := checkKey(key, string(feilds[1]))
-    if !valid {
-      panic("Not valid")
+    if valid {
+      fmt.Println("-Valid-")
+      //panic("Not valid")
+    } else {
+      fmt.Println("-NotValid-")
     }
-  } else {
-    panic("Invalid commandline options.")
   }
-
 }

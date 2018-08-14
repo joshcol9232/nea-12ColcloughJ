@@ -21,6 +21,11 @@ ScreenManagement:
     text:
     on_release: root.outerScreen.traverseButton(self.text)
 
+<nameSortButton@Button>:
+    size_hint: .7, .015
+    pos_hint: {"x": .005, "y": .805}
+    font_size: 14
+    on_release: root.changeSortOrder()
 
 # <nameSortButton@Button>:
 #     font_size: 14
@@ -179,7 +184,7 @@ ScreenManagement:
             id: LogOut
             size_hint: .16, .16
             pos_hint: {"x": 0, "top": 1}
-            on_release: app.root.current = "Login"
+            on_release: root.clearUpTempFiles();app.root.current = "Login"
             Image:
                 source: root.getPathForButton("padlock.png")
                 x: self.parent.x - 20
@@ -289,6 +294,7 @@ ScreenManagement:
         Label:
             text: root.outerScreen.path
             font_size: 14
+
         Label:
             text: "Change Vault Location:"
             font_size: 16
@@ -303,6 +309,7 @@ ScreenManagement:
                 size_hint_x: .15
                 text: "Submit"
                 on_release: root.changeVaultLoc(newLoc.text)
+
 
         Label:
         Label:

@@ -115,11 +115,11 @@ class LoginScreen(Screen, FloatLayout):
         goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
         key = SHA.getSHAkey(key)
         key = " ".join(str(i) for i in key)
-        print(key)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         #print(id(key), d, "Key, D")
         #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
-        return err
+        print(out, err, "OUTPUT OF PIPE")
+        return out
 
     def getIfValidKey(self, inputKey):
         if len(inputKey) > 16:
@@ -135,7 +135,7 @@ class LoginScreen(Screen, FloatLayout):
             print(self.decryptTestFile, "File chosen.")
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
             print(diditwork)
-            if diditwork == None: #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
+            if diditwork == b"-Valid-\n": #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
                 return True
             else:
                 return False
@@ -210,7 +210,7 @@ class MainScreen(Screen, FloatLayout):
             super(Popup, self).__init__(**kwargs)
 
         def editConfLoc(self, term, dir):
-            for line in fileinput.input(self.outerScreen.startDir+"config.cfg", inplace=1):
+            for line in fileinput.input(startDir+"config.cfg", inplace=1):
                 if term in line:
                     line = line.replace(line, term+dir+"\n")
                 sys.stdout.write(line)
@@ -223,6 +223,9 @@ class MainScreen(Screen, FloatLayout):
                     if os.path.isdir(inp):
                         self.editConfLoc("vaultDir:", inp)
                         done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        self.outerScreen.path = inp
+                        self.outerScreen.currentDir = inp
+                        self.outerScreen.resetButtons()
                         done.open()
                 else:
                     try:
@@ -236,6 +239,9 @@ class MainScreen(Screen, FloatLayout):
                     else:
                         self.editConfLoc("vaultDir:", inp)
                         done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        self.outerScreen.path = inp
+                        self.outerScreen.currentDir = inp
+                        self.outerScreen.resetButtons()
                         done.open()
 
 
@@ -257,6 +263,20 @@ class MainScreen(Screen, FloatLayout):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
             self.fileDir = fileDir
+
+    class nameSortButton(Button):
+
+        def __init__(self, mainScreen, **kwargs):
+            super(Button, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+
+        def changeSortOrder(self):
+            if self.outerScreen.ascending:
+                self.outerScreen.ascending = False
+                self.outerScreen.resetButtons()
+            else:
+                self.outerScreen.ascending = True
+                self.outerScreen.resetButtons()
 
     class addFileScreen(Popup):
 
@@ -306,7 +326,7 @@ class MainScreen(Screen, FloatLayout):
     def __repr__(self):
         return "MainScreen"
 
-    def getSortedFoldersAndFiles(self, array):
+    def getSortedFoldersAndFiles(self, array, inverse=False):
         folders = []
         files = []
         for file in array:
@@ -315,8 +335,14 @@ class MainScreen(Screen, FloatLayout):
             else:
                 files.append(file)
 
-        foldersSort = self.quickSortAlph(folders)
-        filesSort = self.quickSortAlph(files)
+        if inverse:
+            fol = self.quickSortAlph(folders)
+            fil = self.quickSortAlph(files)
+            foldersSort = fol[::-1]
+            filesSort = fil[::-1]
+        else:
+            foldersSort = self.quickSortAlph(folders)
+            filesSort = self.quickSortAlph(files)
         return foldersSort+filesSort
 
 
@@ -387,12 +413,12 @@ class MainScreen(Screen, FloatLayout):
         if self.ascending:
             if sort:
                 sortedArray = self.getSortedFoldersAndFiles(array)
-            btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
+            btn = self.nameSortButton(self, text="^")
             self.add_widget(btn)
         else:
             if sort:
-                pass
-            btn = Button(text="^", size_hint=(.7, .015), pos_hint={"x": .005, "y": .805}, font_size=14)
+                sortedArray = self.getSortedFoldersAndFiles(array, True)
+            btn = self.nameSortButton(self, text="V")
             self.add_widget(btn)
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
@@ -454,6 +480,8 @@ class MainScreen(Screen, FloatLayout):
 
     def getFileInfo(self, fileRef):
         fileFullDir = self.currentDir+fileRef
+        fileViewDir = self.currentDir.replace(self.path, "")+fileRef
+        print(fileViewDir, "fileViewDir")
         isFolder = False
         if os.path.isdir(fileFullDir):
             fileFullDir += "/"
@@ -469,7 +497,7 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text=fileRef, halign="left", valign="middle"))
 
         internalLayout.add_widget(self.infoLabel(text="Current Location:", size_hint_x=.2, halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text="/Vault/"+fileRef, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
 
         if isFolder:
             fileSize = self.getFileSize(folderRef, True) #Do recurse on folders
@@ -678,24 +706,19 @@ class MainScreen(Screen, FloatLayout):
         goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
         key = SHA.getSHAkey(key)
         key = " ".join(str(i) for i in key)
-        print(key)
         out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+key).encode())
         if err != None:
             raise ValueError("Key not valid.")
 
     def encDecTerminal(self, type, key, d, targetLoc):
-        self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))###get rid
+        self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))
         self.encryptProcess.start()
-        print("Encrypting")
         self.encryptProcess.join()
+        #pop.dismiss()
 
     def openFile(self, location, startLoc):
         os.system("xdg-open " + "'"+location+"'")
-        popup = Popup(title="One second...", content=Label(text="Encrypting edited file, please wait."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-        popup.open()
         self.encDecTerminal("y", self.key, location, startLoc)
-        popup.dismiss()
-
 
 
     def onFileDrop(self, window, file_path):  #Drag + drop files
@@ -712,10 +735,7 @@ class MainScreen(Screen, FloatLayout):
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
         else:
-            decryptThread = multiprocessing.Process(target=self.encDecTerminal, args=("n", self.key, fileDir, fileLoc))
-            decryptThread.start()
-            print("decrypting")
-            decryptThread.join()
+            self.encDecTerminal("n", self.key, fileDir, fileLoc)
 
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
@@ -790,6 +810,14 @@ class MainScreen(Screen, FloatLayout):
     def createFolders(self, targetLoc):
         if not os.path.exists(targetLoc):
             os.makedirs(targetLoc)
+
+
+    def clearUpTempFiles(self):
+        print("Deleting temp files.")
+        try:
+            shutil.rmtree("/tmp/FileMate/")
+        except:
+            print("No temp files.")
 ###########################
 
 
