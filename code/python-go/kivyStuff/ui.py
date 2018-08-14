@@ -113,8 +113,6 @@ class LoginScreen(Screen, FloatLayout):
 
     def passToTerm(self, key, d):
         goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
-        key = SHA.getSHAkey(key)
-        key = " ".join(str(i) for i in key)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         #print(id(key), d, "Key, D")
         #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
@@ -122,11 +120,6 @@ class LoginScreen(Screen, FloatLayout):
         return out
 
     def getIfValidKey(self, inputKey):
-        if len(inputKey) > 16:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-            pop.open()
-            return False
-
         if len(os.listdir(sharedPath)) != 0:
             self.decryptTestFile = ""
             self.count = 0
@@ -143,14 +136,21 @@ class LoginScreen(Screen, FloatLayout):
             return True
 
     def checkKey(self, inputKey):
-        valid = self.getIfValidKey(inputKey)
-        if valid:
-            self.ids.keyInput.text = "" #reset key input if valid
-            self.globalKey = inputKey
-            self.manager.current = "main"
-        else:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+        if len(inputKey) > 16:
+            pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
             pop.open()
+            return False
+        else:
+            inputKey = SHA.getSHAkey(inputKey)
+            key = " ".join(str(i) for i in inputKey)
+            valid = self.getIfValidKey(key)
+            if valid:
+                self.ids.keyInput.text = "" #reset key input if valid
+                self.globalKey = key
+                self.manager.current = "main"
+            else:
+                pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+                pop.open()
 
     def needToSetKey(self):
         if len(os.listdir(sharedPath)) == 0:
@@ -704,8 +704,6 @@ class MainScreen(Screen, FloatLayout):
 ######Encryption Stuff + opening decrypted files######
     def passToTerm(self, type, key, d, targetLoc):
         goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
-        key = SHA.getSHAkey(key)
-        key = " ".join(str(i) for i in key)
         out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+key).encode())
         if err != None:
             raise ValueError("Key not valid.")
