@@ -13,7 +13,7 @@ https://kivy.org/doc/stable/installation/installation-linux.html
 
 ### Also install:
 ```
-pip3 install cython kivy pygame
+pip3 install cython kivy pygame-(if no SDL2)
 ```
 You might need some linux headers for PyBluez:
 ### Arch based next steps:
@@ -22,20 +22,27 @@ uname -r
 ```
 To get kernel version, then:
 ```
-sudo pacman -S linux-headers bluez-libs
+sudo pacman -S base-devel linux-headers bluez-libs
 sudo pip3 install pybluez
+chmod +x /where-you-saved-it/code/python-go/AES
 ```
-Then select appropriate headers for your kernel.
+Then select appropriate headers for your kernel, and check you have appropriate graphics drivers installed (for OpenGL).
 ### Debian based next steps:
 ```
 uname -r
 ```
 To get kernel version, then:
 ```
-sudo apt install linux-headers bluez libbluetooth-dev
+sudo apt-get update
+sudo apt-get install linux-headers-<kernalversion> bluez libbluetooth-dev
 sudo pip3 install pybluez
+chmod +x /where-you-saved-it/code/python-go/AES
 ```
-Then select appropriate headers for your kernel.
+Then select appropriate headers for your kernel, and check you have appropriate graphics drivers installed (for OpenGL).
+If you encounter an error relating OpenGl try:
+```
+sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
+```
 
 # Run program:
 Change directory to where you installed it, then cd to "code".
