@@ -1,5 +1,5 @@
-#Dependencies:
-- python3
+# Dependencies:
+- Python 3
 - Kivy (install via pip):
   - Cython
   - sdl2/pygame (either is fine)
