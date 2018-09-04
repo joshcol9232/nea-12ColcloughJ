@@ -1,3 +1,13 @@
+#Dependencies:
+- python3
+- Kivy (install via pip):
+  - Cython
+  - sdl2/pygame (either is fine)
+- PyBluez (install via pip):
+  - Bluez devel package on linux
+
+
+
 # NEA
 This project is for you to complete your project.
 
