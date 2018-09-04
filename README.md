@@ -34,6 +34,14 @@ sudo apt install linux-headers bluez libbluetooth-dev
 ```
 Then select appropriate headers for your kernel.
 
+# Run program:
+Change directory to where you installed it, then cd to "code".
+Then execute:
+```
+python3 start.py
+```
+If it crashes make sure your config file is configured correctly.
+
 # NEA
 This project is for you to complete your project.
 
