@@ -13,25 +13,27 @@ https://kivy.org/doc/stable/installation/installation-linux.html
 
 ### Also install:
 ```
-pip3 install cython kivy pygame pybluez
+pip3 install cython kivy pygame
 ```
 You might need some linux headers for PyBluez:
-### Arch based:
+### Arch based next steps:
 ```
 uname -r
 ```
 To get kernel version, then:
 ```
 sudo pacman -S linux-headers bluez-libs
+sudo pip3 install pybluez
 ```
 Then select appropriate headers for your kernel.
-### Debian based:
+### Debian based next steps:
 ```
 uname -r
 ```
 To get kernel version, then:
 ```
 sudo apt install linux-headers bluez libbluetooth-dev
+sudo pip3 install pybluez
 ```
 Then select appropriate headers for your kernel.
 
