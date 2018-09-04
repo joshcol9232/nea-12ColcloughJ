@@ -362,6 +362,7 @@ def encrypt(state, expandedKeys, regularRounds):
         state = subBytes(state)
         state = shiftRows(state)
         state = mixColumns(state)
+        print(i, expandedKeys[(16 * (i+1)):(16 * (i+2))])
         state = addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
     #Last round
     state = subBytes(state)
@@ -616,7 +617,7 @@ def decryptFile(key, f, w):
 if __name__ == "__main__":
     ####Test Files####
     #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/pictures/smile.bmp"
-    w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/temp"
+    #w = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/temp"
     #w = "/run/media/josh/Storage/AESTemp"
     #f = "/run/media/josh/Storage/Solus-3-Budgie.iso"
     #f = "/run/media/josh/USB/IMPORTANT IMAGES/Pics/Important images/bil/bil/Bill Bailey © William Shaw_0.jpg"
@@ -624,22 +625,20 @@ if __name__ == "__main__":
     #f = "/run/media/josh/USB/nea-12ColcloughJ-master/code/python/testing/Aes/hello.txt"
     #f = "/run/media/josh/USB/TullamoreGrandCanal.jpg"
     #f = "/run/media/josh/Storage/archlinux-2018.07.01-x86_64.iso"
-    f = "/run/media/josh/USB/File Security program Analysis.odt"
-    a = "/run/media/josh/USB/hello.odt"
+    #f = "/run/media/josh/USB/File Security program Analysis.odt"
+    #a = "/run/media/josh/USB/hello.odt"
 
-    start = time.time()
+    #start = time.time()
     #encryptFileMulCores(b"aaaaaaaaaaaaaaaa", f, w)
-    encryptFile(b"aaaaaaa", f, w)
-    print("Time to encrypt:", (time.time() - start), "s")
-    decryptFile(b"aaaaaaa", w, a)
+    #encryptFile(b"aaaaaaa", f, w)
+    #print("Time to encrypt:", (time.time() - start), "s")
+    #decryptFile(b"aaaaaaa", w, a)
     #decryptFileMulCores(b"aaaaaaaaaaaaaaaa", w, a)
-    # emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    #
-    # exp = expandKey(b"mynamejeffeleven", emptyExpandedKeys)
-    # print(b"hello aaaaaaaaaa")
-    # out = encrypt(bytearray(b"hello aaaaaaaaaa"), exp, 9)
-    # print(bytes(out))
-    # re = decrypt(out, exp, 9)
-    # print(bytes(re))
-
+    emptyExpandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    
+    key = padKey(b"mynamejeffeleven")
+    exp = expandKey(key, emptyExpandedKeys)
     #encryptFileTree("/run/media/josh/USB/")
+    #state = bytearray(b"abcdefghijklmnop")
+    #print(encrypt(bytearray(b"abcdefghijklmnop"), exp, 9))
+    print(invMixColumns([84, 52, 241, 44, 57, 81, 155, 73, 95, 55, 254, 37, 58, 65, 155, 75]))

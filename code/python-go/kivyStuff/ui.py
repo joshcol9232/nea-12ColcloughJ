@@ -5,6 +5,7 @@ import threading
 import time
 import multiprocessing
 import fileinput
+import tempfile
 from subprocess import Popen, PIPE
 
 from kivy.config import Config
@@ -34,6 +35,7 @@ from kivy.base import EventLoop
 from kivy.lang import Builder
 
 ##########Import Bluetooth Module##########
+#from bluetooth import *
 # blueDir = str(os.path.dirname(os.path.realpath(__file__)))
 # blueDir = blueDir.split("/")
 # print(blueDir)
@@ -44,46 +46,137 @@ from kivy.lang import Builder
 #
 # sys.path.insert(0, blueDir)
 # import bluetoothMain
-import bluetooth
 ########################################
 
 ############Import SHA Module###########
 import SHA
 
+#######Load OS Specific settings####
+global fileSep #linux has different file separators to windows and different temp dir
+global osTemp
+if sys.platform.startswith("win32"):
+    fileSep = "\\"
+else:          #windows bad
+    fileSep = "/"
+osTemp = tempfile.gettempdir()+fileSep
 
 ######Load config#####
 global sharedPath
 global sharedAssets
 global startDir
+global useBT
+global LOCK
+LOCK = False
+useBT = False
 
-startDir = os.path.dirname(os.path.realpath(__file__))+"/"
-tempDir = startDir.split("/")
+startDir = os.path.dirname(os.path.realpath(__file__))+fileSep
+tempDir = startDir.split(fileSep)
 del tempDir[len(tempDir)-2]
-startDir = "/".join(tempDir)
+startDir = fileSep.join(tempDir)
 configFile = open(startDir+"config.cfg", "r")
 
 for line in configFile:
-    lineSplit = line.split(":")
+    lineSplit = line.split("--")
     lineSplit[1] = lineSplit[1].replace("\n", "")
     if lineSplit[0] == "vaultDir":
         sharedPath = lineSplit[1]
     elif lineSplit[0] == "assetsDir":
         sharedAssets = lineSplit[1]
+    elif lineSplit[0] == "bluetooth":
+        if lineSplit[1] == "True":
+            useBT = True
+        elif lineSplit[1] == "False":
+            useBT = False
+        else:
+            raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+
 configFile.close()
 
+
+###Bluetooth stuff### needs to be accessable by both screens.
+# def runServ(currentLogIn):
+#     server_sock=BluetoothSocket( RFCOMM )
+#     server_sock.bind(("",PORT_ANY))
+#     server_sock.listen(1)
+#
+#     port = server_sock.getsockname()[1]
+#
+#     uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
+#
+#     advertise_service( server_sock, "FileMateServer",
+#                        service_id = uuid,
+#                        service_classes = [ uuid, SERIAL_PORT_CLASS ],
+#                        profiles = [ SERIAL_PORT_PROFILE ],)
+#
+#     print("Waiting for connection on RFCOMM channel %d" % port)
+#
+#     client_sock, client_info = server_sock.accept()
+#     print("Accepted connection from ", client_info)
+#     LOCK = False
+#
+#     numbers = []
+#     append = True
+#
+#     try:
+#         while True:
+#             data = client_sock.recv(1024)
+#             if len(data) == 0: break
+#             print("received [%s]" % data)
+#             if append:
+#                 numbers.append(str(data, "utf-8"))
+#             if b"~" in data:    ##End of message
+#                 append = False
+#                 print(numbers)
+#                 tempNums = "".join(numbers)
+#                 print(tempNums, "join")
+#                 time.sleep(1)
+#                 tempNums = tempNums.replace("#", "")
+#                 tempNums = tempNums.replace("~", "")
+#                 print(tempNums, "tempnums")
+#                 valid = currentLogIn.checkKey(tempNums)
+#                 if valid:
+#                     numbers = []
+#                     append = True
+#                     client_sock.send("1")
+#                     print("Send true.")
+#                     currentLogIn.validBTKey = True
+#                 else:
+#                     numbers = []
+#                     append = True
+#                     client_sock.send("0")
+#                     print("Send false.")
+#                     currentLogIn.validBTKey = False
+#
+#     except IOError as e:
+#         print(e)
+#
+#     print("Closed.")
+#     LOCK = True
+#
+#     client_sock.close()
+#     server_sock.close()
+#     print("all done")
+#
+# validBTKey = False
+# def checkForWhenBTKeyIsValid(self):
+#     while not validBTKey:
+#         time.sleep(1)
+#     print("VALID KEYYYY")
+#     self.parent.current = "main"
+#
+# BTthread = threading.Thread(target=runServ, args=())
+# #BTthread.start()
+# checkBTthread = threading.Thread(target=checkForWhenBTKeyIsValid, daemon=True)
+# #checkBTthread.start()
+# if useBT:
+#     BTthread.start()
+#     checkBTthread.start()
 
 class LoginScreen(Screen, FloatLayout):
     globalKey = StringProperty("")
 
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
-        #self.checkButton = Button(size_hint= (.16, .16))
-        #self.btThread = threading.Thread(target=self.startBTServer, daemon=True)
-        # self.lockThread = threading.Thread(target=self.lockThreadFunc, daemon=True)
-        # self.threads.append(self.btThread)
-        # self.threads.append(self.lockThread)
-        #self.btThread.start()
-        # self.lockThread.start()
 
     def startBTServer(self):
         lock = self.runServ()
@@ -112,7 +205,11 @@ class LoginScreen(Screen, FloatLayout):
                 return
 
     def passToTerm(self, key, d):
-        goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
+        if sys.platform.startswith("win32"):
+            progname = "AESWin"
+        else:
+            progname = "AES"
+        goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         #print(id(key), d, "Key, D")
         #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
@@ -160,6 +257,90 @@ class LoginScreen(Screen, FloatLayout):
 
 
 
+    ##BT attempt##
+    # globalKey = StringProperty("")
+    #
+    # def __init__(self, **kwargs):
+    #     super(LoginScreen, self).__init__(**kwargs)
+    #
+    #
+    # def getWelcomeText(self):
+    #     if useBT:
+    #         return "Connect via bluetooth."
+    #     else:
+    #         return "Enter the key below:"
+    #
+    # def findFile(self, dir):
+    #     fs = os.listdir(dir)
+    #     print(dir)
+    #     for item in fs:
+    #         if os.path.isdir(dir+item+fileSep):
+    #             if self.count == 0:
+    #                 self.findFile(dir+item+fileSep)
+    #             else:
+    #                 return
+    #         else:
+    #             self.decryptTestFile = dir+item
+    #             self.count += 1
+    #             return
+    #
+    # def passToPipe(self, key, d):
+    #     goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
+    #     out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
+    #     #print(id(key), d, "Key, D")
+    #     #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
+    #     print(out, err, "OUTPUT OF PIPE")
+    #     return out
+    #
+    #
+    # def getIfValidKey(self, inputKey):
+    #     if len(os.listdir(sharedPath)) != 0:
+    #         self.decryptTestFile = ""
+    #         self.count = 0
+    #         self.findFile(sharedPath)
+    #         print("file", self.decryptTestFile)
+    #         print(self.decryptTestFile, "File chosen.")
+    #         diditwork = self.passToPipe(inputKey, self.decryptTestFile)
+    #         print(diditwork)
+    #         if diditwork == b"-Valid-\n": #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
+    #             return True
+    #         else:
+    #             return False
+    #     else:
+    #         return True
+    #
+    # def checkKey(self, inputKey):
+    #     if len(inputKey) > 16:
+    #         pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+    #         pop.open()
+    #         return "Login"
+    #     else:
+    #         inputKey = SHA.getSHAkey(inputKey)
+    #         key = " ".join(str(i) for i in inputKey)
+    #         print(key, "KEYYY")
+    #         valid = self.getIfValidKey(key)
+    #         if valid:
+    #             #self.ids.keyInput.text = "" #reset key input if valid
+    #             self.globalKey = key
+    #             return "main"
+    #         else:
+    #             pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+    #             pop.open()
+    #             return "Login"
+    #
+    # # def keyValidated(self):
+    # #     print(self.validBTKey, "validBTKey")
+    # #     if self.validBTKey:
+    # #         return "main"
+    # #     else:
+    # #         return "Login"
+    #
+    # def needToSetKey(self):
+    #     if len(os.listdir(sharedPath)) == 0:
+    #         return "Input New Key (Write this down if you have to)"
+    #     else:
+    #         return "Input Key"
+    #
 
     # def lockThreadFunc(self):
     #     while len(self.lockList) == 0:
@@ -168,30 +349,6 @@ class LoginScreen(Screen, FloatLayout):
     #     print("UNLOCK")
     #     return "done"
 
-
-
-    def runServ(self):
-        hostMACAddress = '00:1a:7d:da:71:0a' # mac of bt adapter
-        port = 5
-        backlog = 1
-        size = 1024
-        s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        s.bind((hostMACAddress, port))
-        s.listen(backlog)
-        try:
-            client, clientInfo = s.accept()
-            while True:
-                data = client.recv(size)
-                if data:
-                    client.send(data) # Echo back to client
-                    print(data)
-                    if data == self.lockCode:
-                        self.lockList.append(data)
-
-        except bluetooth.btcommon.BluetoothError as e:
-            client.close()
-            s.close()
-            return True
 
 
 
@@ -353,7 +510,7 @@ class MainScreen(Screen, FloatLayout):
         for item in fs:
             if os.path.isdir(f+item):
                 try:
-                    self.recursiveSize(f+item+"/")
+                    self.recursiveSize(f+item+fileSep)
                 except OSError:
                     pass
             else:
@@ -464,8 +621,8 @@ class MainScreen(Screen, FloatLayout):
 
     def traverseButton(self, itemName):
         fileName = self.getFileNameFromText(itemName)
-        if os.path.isdir(self.currentDir+fileName+"/"):
-            self.currentDir = self.currentDir+fileName+"/"
+        if os.path.isdir(self.currentDir+fileName+fileSep):
+            self.currentDir = self.currentDir+fileName+fileSep
             currentDirShare = self.currentDir
             self.resetButtons()
         else:
@@ -484,8 +641,8 @@ class MainScreen(Screen, FloatLayout):
         print(fileViewDir, "fileViewDir")
         isFolder = False
         if os.path.isdir(fileFullDir):
-            fileFullDir += "/"
-            folderRef = fileRef + "/"
+            fileFullDir += fileSep
+            folderRef = fileRef + fileSep
             isFolder = True
 
         #print(fileFullDir, "FULL")
@@ -542,9 +699,9 @@ class MainScreen(Screen, FloatLayout):
         return listOfFiles
 
     def getPathBack(self):
-        tempDir = self.currentDir.split("/")
+        tempDir = self.currentDir.split(fileSep)
         del tempDir[len(tempDir)-2]
-        tempDir = "/".join(tempDir)
+        tempDir = fileSep.join(tempDir)
         return tempDir
 
 ###########Sorts + Searches############
@@ -702,20 +859,31 @@ class MainScreen(Screen, FloatLayout):
 ############################
 
 ######Encryption Stuff + opening decrypted files######
-    def passToTerm(self, type, key, d, targetLoc):
-        goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
+    def passToPipe(self, type, key, d, targetLoc):
+        if sys.platform.startswith("win32"):
+            progname = "AESWin"
+        else:
+            progname = "AES"
+        goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+key).encode())
         if err != None:
             raise ValueError("Key not valid.")
 
     def encDecTerminal(self, type, key, d, targetLoc):
-        self.encryptProcess = threading.Thread(target=self.passToTerm, args=(type, key, d, targetLoc))
+        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, key, d, targetLoc))
         self.encryptProcess.start()
         self.encryptProcess.join()
         #pop.dismiss()
-
+    
     def openFile(self, location, startLoc):
-        os.system("xdg-open " + "'"+location+"'")
+        if sys.platform.startswith("win32"):
+            locationTemp = location.split("\\")
+            location = "/".join(locationTemp) #Windows actually accepts forward slashes in terminal
+            command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
+        else:
+            command = "xdg-open "+'"'+location+'"'
+        print("Command:", command)
+        os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         self.encDecTerminal("y", self.key, location, startLoc)
 
 
@@ -726,9 +894,9 @@ class MainScreen(Screen, FloatLayout):
 
 
     def decrypt(self, fileDir, fileName):
-        if not os.path.isdir("/tmp/FileMate/"):
-            os.makedirs("/tmp/FileMate/")
-        fileLoc = "/tmp/FileMate/"+fileName
+        if not os.path.isdir(osTemp+"FileMate"+fileSep):
+            os.makedirs(osTemp+"FileMate"+fileSep)
+        fileLoc = osTemp+"FileMate"+fileSep+fileName
         if os.path.exists(fileLoc):
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
@@ -757,32 +925,32 @@ class MainScreen(Screen, FloatLayout):
         for item in fs:
             if os.path.isdir(d+item):
                 try:
-                    self.encryptDir(d+item+"/", targetLoc+"/"+item)
+                    self.encryptDir(d+item+fileSep, targetLoc+fileSep+item)
                 except OSError:
                     pass
             else:
                 try:
                     #print(d+item, targetLoc+"/"+item, "AAAAAAAAAAAAAAAAAAAAAA")
-                    self.createFolders(targetLoc+"/")
-                    self.encDecTerminal("y", self.key, d+item, targetLoc+"/"+item)
+                    self.createFolders(targetLoc+fileSep)
+                    self.encDecTerminal("y", self.key, d+item, targetLoc+fileSep+item)
                 except PermissionError:
                     pass
 
     def checkCanEncrypt(self, inp):
-        if ":" in inp:
-            print("COLON")
-            inp = inp.split(":")
+        if "--" in inp:
+            print("--")
+            inp = inp.split("--")
             for d in inp:
                 exists = self.checkDirExists(d)
                 if exists:
                     if os.path.isdir(d):
-                        if d[len(d)-1] != "/":
-                            d += "/"
-                        dSplit = d.split("/")
+                        if d[len(d)-1] != fileSep:
+                            d += fileSep
+                        dSplit = d.split(fileSep)
                         # print(d, "ISDIR")
-                        self.encryptDir(d, self.currentDir+dSplit[len(dSplit)-2]+"/")
+                        self.encryptDir(d, self.currentDir+dSplit[len(dSplit)-2]+fileSep)
                     else:
-                        dSplit = d.split("/")
+                        dSplit = d.split(fileSep)
                         self.encDecTerminal("y", self.key, d, self.currentDir+dSplit[len(dSplit)-1])
 
 
@@ -791,14 +959,14 @@ class MainScreen(Screen, FloatLayout):
             exists = self.checkDirExists(inp)
             if exists:
                 if os.path.isdir(inp):
-                    if inp[len(inp)-1] != "/":
-                        inp += "/"
-                    inpSplit = inp.split("/")
+                    if inp[len(inp)-1] != fileSep:
+                        inp += fileSep
+                    inpSplit = inp.split(fileSep)
                     # print(inp, "ISDIR")
                     #print(self.outerScreen.currentDir+inpSplit[len(inpSplit)-2]+"/")
                     self.encryptDir(inp, self.currentDir+inpSplit[len(inpSplit)-2])
                 else:
-                    inpSplit = inp.split("/")
+                    inpSplit = inp.split(fileSep)
                     self.encDecTerminal("y", self.key, inp, self.currentDir+inpSplit[len(inpSplit)-1])
 
 
@@ -813,7 +981,7 @@ class MainScreen(Screen, FloatLayout):
     def clearUpTempFiles(self):
         print("Deleting temp files.")
         try:
-            shutil.rmtree("/tmp/FileMate/")
+            shutil.rmtree(osTemp+"FileMate"+fileSep)
         except:
             print("No temp files.")
 ###########################
@@ -827,7 +995,7 @@ class ScreenManagement(ScreenManager):
     pass
 
 
-presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+"/main.kv")
+presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"main.kv")
 
 class uiApp(App):
 
@@ -838,7 +1006,10 @@ def runUI():
     ui = uiApp()
     ui.run()
     print("Deleting temp files.")
-    shutil.rmtree("/tmp/FileMate/")
+    try:
+        shutil.rmtree(osTemp+"FileMate"+fileSep)
+    except:
+        print("No temp files.")
     print("App closed.")
 
 

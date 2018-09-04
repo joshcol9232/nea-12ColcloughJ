@@ -20,6 +20,7 @@ k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    #Round constants
 
 def makeBitArray(inp):
     bitArray = []
+    print(inp, "INP")
     inp = inp.encode()
     for letter in inp:
         byte = int(letter)
@@ -222,6 +223,7 @@ def sha256(inp):
     return result
 
 def getSHAkey(inpKey):
+    print("getShakey", inpKey)
     out = sha256(inpKey)
     half1, half2 = out[:16], out[16:]
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

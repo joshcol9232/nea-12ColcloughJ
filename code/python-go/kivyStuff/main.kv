@@ -3,6 +3,7 @@
 #: import Window kivy.core.window.Window
 
 ScreenManagement:
+    screenmanager: screenmanager
     id: screenmanager
     transition: FadeTransition()
     LoginScreen:
@@ -128,6 +129,56 @@ ScreenManagement:
         pos_hint: {"center_x": 0.5, "center_y": 0.4}
         #on_release: app.root.current = root.checkKey(keyInput.text)
         on_release: root.checkKey(keyInput.text)
+
+    ####BT attempt####
+    # #keyInput: keyInput
+    # manager: root.parent
+    # Label:
+    #     id: labelLogin
+    #     size_hint: .46, .08
+    #     text: root.getWelcomeText()
+    #     font_size: 22
+    #     pos_hint: {"center_x": 0.5, "y": 0.8}
+    #
+    # # Button:
+    # #     id: loginButton
+    # #     size_hint: .16, .16
+    # #     pos_hint: {"center_x": .5, "center_y": .5}
+    # #     on_release: app.root.current = "main";runServOut = [];root.unlock = False
+    # #     text: "bypass"
+    #
+    # # Button:
+    # #     id: checkbutton
+    # #     size_hint: .16, .16
+    # #     pos_hint: {"center_x": .5, "center_y": .34}
+    # #     text: "Check Code Sent"
+    # #     on_release: app.root.current = root.keyValidated()
+    #
+    # Label:
+    #     id: labelLogin
+    #     size_hint: .46, .08
+    #     text: root.needToSetKey()
+    #     font_size: 22
+    #     pos_hint: {"center_x": 0.5, "y": 0.8}
+    #
+    # TextInput:
+    #     id: keyInput
+    #     size_hint: .7, .08
+    #     font_size: 22
+    #     hint_text: "Key (16 characters maximum)"
+    #     pos_hint: {"center_x": 0.5, "center_y": 0.6}
+    #     password: True
+    #     multiline: False
+    #     on_text_validate: app.root.current = root.checkKey(keyInput.text)
+    #
+    # Button:
+    #     id: submitKey
+    #     size_hint: .16, .16
+    #     font_size: 22
+    #     text: "Submit"
+    #     pos_hint: {"center_x": 0.5, "center_y": 0.4}
+    #     #on_release: app.root.current = root.checkKey(keyInput.text)
+    #     on_release: root.checkKey(keyInput.text)
 
 
 <MainScreen>:
@@ -257,7 +308,7 @@ ScreenManagement:
         Label:
             size_hint: .46, .08
             font_size: 18
-            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with a ':' if you want to do multiple locations."
+            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with '--' if you want to do multiple locations."
             pos_hint: {"center_x": 0.5, "y": 0.8}
 
         Button:
