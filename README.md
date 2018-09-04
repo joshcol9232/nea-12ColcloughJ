@@ -28,6 +28,7 @@ chmod +x /where-you-saved-it/code/python-go/AES
 ```
 Then select appropriate headers for your kernel, and check you have appropriate graphics drivers installed (for OpenGL).
 ### Debian based next steps:
+Tested on Ubuntu 18.04
 ```
 uname -r
 ```
