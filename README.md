@@ -7,10 +7,11 @@
   - Bluez devel package on linux
 
 # Install on Linux
-## Follow install process for kivy:
+## All Distro's:
+### Follow install process for kivy:
 https://kivy.org/doc/stable/installation/installation-linux.html
 
-## All Distro's:
+### Also install:
 ```
 pip3 install cython kivy pygame pybluez
 ```
