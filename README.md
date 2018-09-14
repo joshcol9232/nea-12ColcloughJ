@@ -68,6 +68,9 @@ pip install cython pygame-(if needed) pybluez
 ### Follow install process for kivy:
 https://kivy.org/doc/stable/installation/installation-windows.html
 
+# Run program (Windows):
+Go to **WhereYouSavedIt --> code --> python-go** and open start.py with Python 3.X.
+
 # NEA
 This project is for you to complete your project.
 
