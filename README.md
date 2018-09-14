@@ -46,12 +46,27 @@ sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
 ```
 
 # Run program:
-Change directory to where you installed it, then cd to "code".
-Then execute:
+Execute in shell:
 ```
+cd /WhereYouSavedIt/code/python-go/
 python3 start.py
 ```
 If it crashes make sure your config file is configured correctly.
+
+# Install On Windows
+## Install Dependencies:
+
+### Install Windows SDK for PyBluez if using bluetooth:
+https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk
+
+### Install pip modules:
+```
+cd /WherePythonIsInstalled/Scripts/
+pip install cython pygame-(if needed) pybluez
+```
+
+### Follow install process for kivy:
+https://kivy.org/doc/stable/installation/installation-windows.html
 
 # NEA
 This project is for you to complete your project.
