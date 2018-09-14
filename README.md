@@ -45,14 +45,6 @@ If you encounter an error relating OpenGl try:
 sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
 ```
 
-# Run program:
-Execute in shell:
-```
-cd /WhereYouSavedIt/code/python-go/
-python3 start.py
-```
-If it crashes make sure your config file is configured correctly.
-
 # Install On Windows
 ## Install Dependencies:
 
@@ -68,7 +60,16 @@ pip install cython pygame-(if needed) pybluez
 ### Follow install process for kivy:
 https://kivy.org/doc/stable/installation/installation-windows.html
 
-# Run program (Windows):
+# Run program:
+## Linux:
+Execute in shell:
+```
+cd /WhereYouSavedIt/code/python-go/
+python3 start.py
+```
+If it crashes make sure your config file is configured correctly.
+
+## Windows:
 Go to **WhereYouSavedIt --> code --> python-go** and open start.py with Python 3.X.
 
 # NEA
