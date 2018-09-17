@@ -464,11 +464,8 @@ func encryptFile(key []byte, f, w string) {
   e.Write(encrypt(key, expandedKeys, 9))
   e.Seek(16, 0)
 
-  for {                                         //Same as a while buffCount < fileSize: in python3
-    if buffCount >= fileSize {
+  for buffCount < fileSize {                                         //Same as a while buffCount < fileSize: in python3 {
       ////fmt.Println(buffCount, fileSize, "BREAK")
-      break
-    }
     if bufferSize > (fileSize - buffCount) {
       ////fmt.Println("Changing buffer.")
       bufferSize = fileSize - buffCount
@@ -542,11 +539,7 @@ func decryptFile(key []byte, f, w string) {
   a.Seek(16, 0)
 
   if validKey {
-    for {                                         //Same as a while buffCount < fileSize: in python3
-      if buffCount >= fileSize {
-        ////fmt.Println(buffCount, fileSize, "BREAK")
-        break
-      }
+    for buffCount < fileSize {                                         //Same as a while buffCount < fileSize: in python3
       if bufferSize > (fileSize - buffCount) {
         ////fmt.Println("Changing buffer.")
         bufferSize = fileSize - buffCount

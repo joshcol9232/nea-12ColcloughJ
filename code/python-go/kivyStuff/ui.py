@@ -73,6 +73,13 @@ startDir = os.path.dirname(os.path.realpath(__file__))+fileSep
 tempDir = startDir.split(fileSep)
 del tempDir[len(tempDir)-2]
 startDir = fileSep.join(tempDir)
+print(tempDir, "TEMP DIR")
+for i in range(2):
+    del tempDir[len(tempDir)-2]
+
+tempDir = fileSep.join(tempDir)
+tempDir += "assets"+fileSep+"exports"+fileSep
+sharedAssets = tempDir
 configFile = open(startDir+"config.cfg", "r")
 
 for line in configFile:
@@ -80,8 +87,6 @@ for line in configFile:
     lineSplit[1] = lineSplit[1].replace("\n", "")
     if lineSplit[0] == "vaultDir":
         sharedPath = lineSplit[1]
-    elif lineSplit[0] == "assetsDir":
-        sharedAssets = lineSplit[1]
     elif lineSplit[0] == "bluetooth":
         if lineSplit[1] == "True":
             useBT = True
@@ -233,21 +238,30 @@ class LoginScreen(Screen, FloatLayout):
             return True
 
     def checkKey(self, inputKey):
-        if len(inputKey) > 16:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+        try:
+            int(inputKey)
+        except:
+            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key only has numbers."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
             pop.open()
-            return False
+            return "Login"
         else:
-            inputKey = SHA.getSHAkey(inputKey)
-            key = " ".join(str(i) for i in inputKey)
-            valid = self.getIfValidKey(key)
-            if valid:
-                self.ids.keyInput.text = "" #reset key input if valid
-                self.globalKey = key
-                self.manager.current = "main"
-            else:
-                pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            if len(inputKey) > 16:
+                pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                 pop.open()
+                return "Login"
+            else:
+                inputKey = SHA.getSHAkey(inputKey)
+                key = " ".join(str(i) for i in inputKey)
+                valid = self.getIfValidKey(key)
+                if valid:
+                    self.ids.keyInput.text = "" #reset key input if valid
+                    self.globalKey = key
+                    self.manager.current = "main"
+                    return "main"
+                else:
+                    pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+                    pop.open()
+                    return "Login"
 
     def needToSetKey(self):
         if len(os.listdir(sharedPath)) == 0:
@@ -874,7 +888,7 @@ class MainScreen(Screen, FloatLayout):
         self.encryptProcess.start()
         self.encryptProcess.join()
         #pop.dismiss()
-    
+
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
             locationTemp = location.split("\\")
