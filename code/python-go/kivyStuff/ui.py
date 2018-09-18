@@ -399,12 +399,15 @@ class MainScreen(Screen, FloatLayout):
                         self.outerScreen.resetButtons()
                         done.open()
                 else:
-                    try:
-                        os.makedirs(inp)
-                    except FileNotFoundError:
+                    if fileSep not in inp:
                         warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                         warn.open()
+                    try:
+                        os.makedirs(inp)
                     except PermissionError:
+                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        warn.open()
+                    except:
                         warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                         warn.open()
                     else:
