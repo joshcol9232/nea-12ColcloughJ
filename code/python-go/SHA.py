@@ -20,6 +20,7 @@ k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    #Round constants
 
 def makeBitArray(inp):
     bitArray = []
+    #print(inp, "INP")
     inp = inp.encode()
     for letter in inp:
         byte = int(letter)
@@ -85,7 +86,7 @@ def notArray(array, l=32):
             temp[i] = 1
     return temp
 
-def xorBitArrays(array1, array2):
+def xorArrays(array1, array2):
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] ^ array2[i]
@@ -137,22 +138,22 @@ def ShL(x, n):
     return temp
 
 def SigExpansion0(x):
-    return xorBitArrays(xorBitArrays(RotR(x, 7), RotR(x, 18)), ShR(x, 3))
+    return xorArrays(xorArrays(RotR(x, 7), RotR(x, 18)), ShR(x, 3))
 
 def SigExpansion1(x):
-    return xorBitArrays(xorBitArrays(RotR(x, 17), RotR(x, 19)), ShR(x, 10))
+    return xorArrays(xorArrays(RotR(x, 17), RotR(x, 19)), ShR(x, 10))
 
 def Sig0(x):
-    return xorBitArrays(xorBitArrays(RotR(x, 2), RotR(x, 13)), RotR(x, 22))
+    return xorArrays(xorArrays(RotR(x, 2), RotR(x, 13)), RotR(x, 22))
 
 def Sig1(x):
-    return xorBitArrays(xorBitArrays(RotR(x, 6), RotR(x, 11)), RotR(x, 25))
+    return xorArrays(xorArrays(RotR(x, 6), RotR(x, 11)), RotR(x, 25))
 
 def Ch(x, y, z):
-    return xorBitArrays(andBitArrays(x, y), andBitArrays(notArray(x), z))
+    return xorArrays(andBitArrays(x, y), andBitArrays(notArray(x), z))
 
 def Maj(x, y, z):
-    return xorBitArrays(xorBitArrays(andBitArrays(x, y), andBitArrays(x, z)), andBitArrays(y, z))
+    return xorArrays(xorArrays(andBitArrays(x, y), andBitArrays(x, z)), andBitArrays(y, z))
 
 def sha256(inp):
     #Initial hash values - https://csrc.nist.gov/csrc/media/publications/fips/180/4/archive/2012-03-06/documents/fips180-4.pdf section 5.3.3
@@ -221,8 +222,9 @@ def sha256(inp):
         result.append(bitsToInt(byte))
     return result
 
-def getSHAkey(inpKey):
-    out = sha256(inpKey)
+def getSHA128of16(data):
+    #print("getShakey", inpKey)
+    out = sha256(data)
     half1, half2 = out[:16], out[16:]
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(16):
@@ -234,6 +236,34 @@ def getSHAkey(inpKey):
 
     return temp
 
+def roundUpOnly(fl):    #for rounding up numbers only. Accepts float
+    fl = str(fl)
+    temp = fl.split(".")
+    if temp[1] != 0:
+        return int(temp[0])+1
+    else:
+        return int(temp[0])
+
+def xorBlocks(inp):
+    while len(inp) != 1:
+        inp[0] = xorArrays(inp[0], inp[1])
+        del inp[1]
+    return inp
+
+def feed(data):         #accepts string
+    if len(data) > 16:
+        arrayOfOut = []
+        for i in range(roundUpOnly(len(data)/16)):
+            arrayOfOut.append(sha256(data[(i*16):((i+1)*16)]))
+        #xor each 32 bytes with each other to produce a 32 byte output
+        return xorBlocks(arrayOfOut)
+
+    else:
+        return sha256(data)
+
 
 if __name__ == "__main__":
-    print(getSHAkey("b"))
+    print(len("123456789012345678901234567890121234567890123456789012345689012 "))
+    geg = feed("123456789012345678901234567890121234567890123456789012345689012")
+    for i in geg:
+        print(i, len(i))

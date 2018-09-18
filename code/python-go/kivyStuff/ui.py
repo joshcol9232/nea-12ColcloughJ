@@ -6,6 +6,7 @@ import time
 import multiprocessing
 import fileinput
 import tempfile
+import pickle
 from subprocess import Popen, PIPE
 
 from kivy.config import Config
@@ -23,7 +24,8 @@ from kivy.uix.label import Label
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.screenmanager import FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.popup import Popup
@@ -51,6 +53,9 @@ from kivy.lang import Builder
 ############Import SHA Module###########
 import SHA
 
+###########Import filename encryption###
+import aesFName
+
 #######Load OS Specific settings####
 global fileSep #linux has different file separators to windows and different temp dir
 global osTemp
@@ -60,13 +65,12 @@ else:          #windows bad
     fileSep = "/"
 osTemp = tempfile.gettempdir()+fileSep
 
-######Load config#####
+######Load config and define shared variables#####
 global sharedPath
 global sharedAssets
 global startDir
 global useBT
-global LOCK
-LOCK = False
+#global root #For use like root.x in kv file
 useBT = False
 
 startDir = os.path.dirname(os.path.realpath(__file__))+fileSep
@@ -97,6 +101,10 @@ for line in configFile:
 
 configFile.close()
 
+
+###TO DO LIST###
+#~ Bluetooth
+#~ SHA names of files - store encrypted tree of files
 
 ###Bluetooth stuff### needs to be accessable by both screens.
 # def runServ(currentLogIn):
@@ -177,8 +185,19 @@ configFile.close()
 #     BTthread.start()
 #     checkBTthread.start()
 
+def runUI():
+    global ui
+    ui = uiApp()
+    ui.run()
+    print("Deleting temp files.")
+    try:
+        shutil.rmtree(osTemp+"FileMate"+fileSep)
+    except:
+        print("No temp files.")
+    print("App closed.")
+
 class LoginScreen(Screen, FloatLayout):
-    globalKey = StringProperty("")
+    globalKey = StringProperty('')
 
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
@@ -218,7 +237,7 @@ class LoginScreen(Screen, FloatLayout):
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         #print(id(key), d, "Key, D")
         #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
-        print(out, err, "OUTPUT OF PIPE")
+        #print(out, err, "OUTPUT OF PIPE")
         return out
 
     def getIfValidKey(self, inputKey):
@@ -229,7 +248,7 @@ class LoginScreen(Screen, FloatLayout):
             print("file", self.decryptTestFile)
             print(self.decryptTestFile, "File chosen.")
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
-            print(diditwork)
+            #print(diditwork)
             if diditwork == b"-Valid-\n": #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
                 return True
             else:
@@ -241,27 +260,24 @@ class LoginScreen(Screen, FloatLayout):
         try:
             int(inputKey)
         except:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key only has numbers."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
             pop.open()
-            return "Login"
         else:
             if len(inputKey) > 16:
                 pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                 pop.open()
-                return "Login"
+                return False
             else:
-                inputKey = SHA.getSHAkey(inputKey)
+                inputKey = SHA.getSHA128of16(inputKey)
                 key = " ".join(str(i) for i in inputKey)
                 valid = self.getIfValidKey(key)
                 if valid:
                     self.ids.keyInput.text = "" #reset key input if valid
                     self.globalKey = key
                     self.manager.current = "main"
-                    return "main"
                 else:
                     pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                     pop.open()
-                    return "Login"
 
     def needToSetKey(self):
         if len(os.listdir(sharedPath)) == 0:
@@ -329,7 +345,7 @@ class LoginScreen(Screen, FloatLayout):
     #         pop.open()
     #         return "Login"
     #     else:
-    #         inputKey = SHA.getSHAkey(inputKey)
+    #         inputKey = SHA.getSHA128of16(inputKey)
     #         key = " ".join(str(i) for i in inputKey)
     #         print(key, "KEYYY")
     #         valid = self.getIfValidKey(key)
@@ -399,15 +415,12 @@ class MainScreen(Screen, FloatLayout):
                         self.outerScreen.resetButtons()
                         done.open()
                 else:
-                    if fileSep not in inp:
-                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        warn.open()
                     try:
                         os.makedirs(inp)
-                    except PermissionError:
-                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                    except FileNotFoundError:
+                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                         warn.open()
-                    except:
+                    except PermissionError:
                         warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                         warn.open()
                     else:
@@ -479,35 +492,46 @@ class MainScreen(Screen, FloatLayout):
 
 
 
+    key = StringProperty('')
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         self.sizeCount = 0
         self.ascending = True
         self.addFile = 0
-        self.key = StringProperty('')
+        self.key = ""
+        #self.key = StringProperty('')
         #key = "1234" #Super secret secure key for testing (before bluetooth is added)
         Window.bind(on_dropfile=self.onFileDrop)
-
         self.path = sharedPath
         self.assetsPath = sharedAssets
         self.currentDir = self.path
         print(self.currentDir, "CURRENT DIR")
         self.scroll = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        self.createButtons(self.List(self.currentDir))
+        self.waitThread = threading.Thread(target=self.waitForKey, daemon=True)
+        self.waitThread.start()
+
 
 
     def __repr__(self):
         return "MainScreen"
 
+    def waitForKey(self):   #Waits for the key so that file names can be shown (as they need to be decrypted)
+        while self.key == "":
+            time.sleep(0.1)
+
+        print("CHANGED TO MAIN")
+        return self.createButtons(self.List(self.currentDir))
+
     def getSortedFoldersAndFiles(self, array, inverse=False):
         folders = []
         files = []
-        for file in array:
-            if os.path.isdir(self.currentDir+file):
-                folders.append(file)
+        for i in range(len(array)):
+            array[i] = aesFName.decryptFileName(self.key, array[i])
+            if os.path.isdir(self.currentDir+array[i]):
+                folders.append(array[i])
             else:
-                files.append(file)
+                files.append(array[i])
 
         if inverse:
             fol = self.quickSortAlph(folders)
@@ -525,6 +549,7 @@ class MainScreen(Screen, FloatLayout):
         fs = os.listdir(f)
         #print(f)
         for item in fs:
+            item = aesFName.encryptFileName(self.key, item)
             if os.path.isdir(f+item):
                 try:
                     self.recursiveSize(f+item+fileSep)
@@ -538,6 +563,7 @@ class MainScreen(Screen, FloatLayout):
 
 
     def getFileSize(self, item, recurse=False):
+        item = aesFName.encryptFileName(self.key, item)
         if os.path.isdir(self.currentDir+item):
             if recurse:
                 self.totalSize = 0
@@ -638,6 +664,8 @@ class MainScreen(Screen, FloatLayout):
 
     def traverseButton(self, itemName):
         fileName = self.getFileNameFromText(itemName)
+        fileName = aesFName.encryptFileName(self.key, fileName)
+        print("AAAA traverse", self.currentDir+fileName+fileSep)
         if os.path.isdir(self.currentDir+fileName+fileSep):
             self.currentDir = self.currentDir+fileName+fileSep
             currentDirShare = self.currentDir
@@ -653,9 +681,10 @@ class MainScreen(Screen, FloatLayout):
                 os.remove(location)
 
     def getFileInfo(self, fileRef):
+        hexName = aesFName.encryptFileName(self.key, fileRef)
         fileFullDir = self.currentDir+fileRef
         fileViewDir = self.currentDir.replace(self.path, "")+fileRef
-        print(fileViewDir, "fileViewDir")
+        #print(fileViewDir, "fileViewDir")
         isFolder = False
         if os.path.isdir(fileFullDir):
             fileFullDir += fileSep
@@ -876,18 +905,41 @@ class MainScreen(Screen, FloatLayout):
 ############################
 
 ######Encryption Stuff + opening decrypted files######
-    def passToPipe(self, type, key, d, targetLoc):
+    def passToPipe(self, type, d, targetLoc, newName=None):
+        print("PIPE INPUTS:", self, type, d, targetLoc, newName)
         if sys.platform.startswith("win32"):
             progname = "AESWin"
         else:
             progname = "AES"
-        goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+key).encode())
-        if err != None:
-            raise ValueError("Key not valid.")
 
-    def encDecTerminal(self, type, key, d, targetLoc):
-        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, key, d, targetLoc))
+        tempDir = d.split(fileSep)
+        fileName = tempDir[len(tempDir)-1]
+        print("File name given:", fileName)
+        if type == "y":
+            ##need to encrypt file name too if enc
+
+            #replace file name with new hex
+            tempTargetLoc = targetLoc.split(fileSep)
+            tempTargetLoc[len(tempTargetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
+            targetLoc = fileSep.join(tempTargetLoc)
+            print("New targetLoc", targetLoc)
+
+        elif type == "n":   #Need to decrypt file name if decrypting
+            tempTargetLoc = targetLoc.split(fileSep)
+            tempTargetLoc[len(tempTargetLoc)-1] = newName #Stops you from doing it twice in decrypt()
+            targetLoc = fileSep.join(tempTargetLoc)
+            print("New targetLoc", targetLoc)
+
+
+        goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetloc for file name and self.key for self.key
+        if err != None:
+            raise ValueError("key not valid.")
+        return out
+
+    def encDecTerminal(self, type, d, targetLoc, newName=None):
+        print("encDecTerminal inp:", type, d, targetLoc, newName)
+        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,))
         self.encryptProcess.start()
         self.encryptProcess.join()
         #pop.dismiss()
@@ -898,10 +950,10 @@ class MainScreen(Screen, FloatLayout):
             location = "/".join(locationTemp) #Windows actually accepts forward slashes in terminal
             command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
         else:
-            command = "xdg-open "+'"'+location+'"'
-        print("Command:", command)
+            command = "xdg-open "+'"'+location+'"'      #Quotation marks for if the dir has spaces in it
+        #print("Command:", command)
         os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
-        self.encDecTerminal("y", self.key, location, startLoc)
+        self.encDecTerminal("y", location, startLoc)
 
 
     def onFileDrop(self, window, file_path):  #Drag + drop files
@@ -909,16 +961,17 @@ class MainScreen(Screen, FloatLayout):
         self.resetButtons()
         return "Done"
 
-
     def decrypt(self, fileDir, fileName):
+        print(fileName, "name given in decrypt")
+        fileNormName = aesFName.decryptFileName(self.key, fileName)
         if not os.path.isdir(osTemp+"FileMate"+fileSep):
             os.makedirs(osTemp+"FileMate"+fileSep)
-        fileLoc = osTemp+"FileMate"+fileSep+fileName
+        fileLoc = osTemp+"FileMate"+fileSep+fileNormName
         if os.path.exists(fileLoc):
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
         else:
-            self.encDecTerminal("n", self.key, fileDir, fileLoc)
+            self.encDecTerminal("n", fileDir, fileLoc, fileNormName)
 
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
             self.openFileThread.start()
@@ -937,8 +990,14 @@ class MainScreen(Screen, FloatLayout):
 
 
     def encryptDir(self, d, targetLoc):
+        print(targetLoc, "LINE 1008 targetLoc encryptDir")
+
         fs = os.listdir(d)
-        print(d, targetLoc)
+        #print(d, targetLoc)
+        targetLoc = targetLoc.split(fileSep)
+        targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
+        targetLoc = fileSep.join(targetLoc)
+        print("NEW TARGET LOC encryptDir", targetLoc)
         for item in fs:
             if os.path.isdir(d+item):
                 try:
@@ -949,13 +1008,13 @@ class MainScreen(Screen, FloatLayout):
                 try:
                     #print(d+item, targetLoc+"/"+item, "AAAAAAAAAAAAAAAAAAAAAA")
                     self.createFolders(targetLoc+fileSep)
-                    self.encDecTerminal("y", self.key, d+item, targetLoc+fileSep+item)
+                    self.encDecTerminal("y", d+item, targetLoc+fileSep+item)
                 except PermissionError:
                     pass
 
     def checkCanEncrypt(self, inp):
         if "--" in inp:
-            print("--")
+            #print("--")
             inp = inp.split("--")
             for d in inp:
                 exists = self.checkDirExists(d)
@@ -968,7 +1027,7 @@ class MainScreen(Screen, FloatLayout):
                         self.encryptDir(d, self.currentDir+dSplit[len(dSplit)-2]+fileSep)
                     else:
                         dSplit = d.split(fileSep)
-                        self.encDecTerminal("y", self.key, d, self.currentDir+dSplit[len(dSplit)-1])
+                        self.encDecTerminal("y", d, self.currentDir+dSplit[len(dSplit)-1])
 
 
 
@@ -984,7 +1043,7 @@ class MainScreen(Screen, FloatLayout):
                     self.encryptDir(inp, self.currentDir+inpSplit[len(inpSplit)-2])
                 else:
                     inpSplit = inp.split(fileSep)
-                    self.encDecTerminal("y", self.key, inp, self.currentDir+inpSplit[len(inpSplit)-1])
+                    self.encDecTerminal("y", inp, self.currentDir+inpSplit[len(inpSplit)-1])
 
 
         self.resetButtons()
@@ -1018,16 +1077,6 @@ class uiApp(App):
 
     def build(self):
         return presentation
-
-def runUI():
-    ui = uiApp()
-    ui.run()
-    print("Deleting temp files.")
-    try:
-        shutil.rmtree(osTemp+"FileMate"+fileSep)
-    except:
-        print("No temp files.")
-    print("App closed.")
 
 
 if __name__ == "__main__":

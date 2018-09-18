@@ -128,7 +128,7 @@ ScreenManagement:
         text: "Submit"
         pos_hint: {"center_x": 0.5, "center_y": 0.4}
         #on_release: app.root.current = root.checkKey(keyInput.text)
-        on_release: root.checkKey(keyInput.text)
+        on_release: app.root.current = root.checkKey(keyInput.text)
 
     ####BT attempt####
     # #keyInput: keyInput
@@ -183,6 +183,7 @@ ScreenManagement:
 
 <MainScreen>:
     addFile: addFile
+    manager: root
     key: root.key
 
     FloatLayout:
