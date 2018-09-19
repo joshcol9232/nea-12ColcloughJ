@@ -500,6 +500,7 @@ class MainScreen(Screen, FloatLayout):
         self.ascending = True
         self.addFile = 0
         self.key = ""
+        self.currentDecList = []
         #self.key = StringProperty('')
         #key = "1234" #Super secret secure key for testing (before bluetooth is added)
         Window.bind(on_dropfile=self.onFileDrop)
@@ -684,12 +685,18 @@ class MainScreen(Screen, FloatLayout):
         hexName = aesFName.encryptFileName(self.key, fileRef)
         fileFullDir = self.currentDir+fileRef
         fileViewDir = self.currentDir.replace(self.path, "")+fileRef
+        fileViewTemp = fileViewDir.split(fileSep)
+        print(fileViewTemp, "FILE VIEW TEMP")
+        for i in range(len(fileViewTemp)):
+            if i != (len(fileViewTemp)-1):
+                fileViewTemp[i] = aesFName.decryptFileName(self.key, fileViewTemp[i])
+        fileViewDir = fileSep.join(fileViewTemp)
         #print(fileViewDir, "fileViewDir")
         isFolder = False
         if os.path.isdir(fileFullDir):
             fileFullDir += fileSep
             folderRef = fileRef + fileSep
-            isFolder = True
+            isFolder = Trueinfo
 
         #print(fileFullDir, "FULL")
         internalView = ScrollView()
@@ -735,13 +742,16 @@ class MainScreen(Screen, FloatLayout):
         #print(dir, "LIST DIR")
         fs = os.listdir(dir)
         count = 0
+        self.currentDecList = []
         listOfFiles = []
         for item in fs:
             if os.path.isdir(dir+item):
                 listOfFiles.append(item)
+                self.currentDecList.append(aesFName.decryptFileName(self.key, item))
         for item in fs:
             if not os.path.isdir(dir+item):
                 listOfFiles.append(item)
+                self.currentDecList.append(aesFName.decryptFileName(self.key, item))
         return listOfFiles
 
     def getPathBack(self):
@@ -845,7 +855,7 @@ class MainScreen(Screen, FloatLayout):
             #     self.traverseFileTree(self.currentDir+item)
 
             if file == item:
-                self.searchResults = [item] + self.searchResults
+                self.searchResults = [aesFName.encryptFileName(self.key, item)] + self.searchResults
                 self.removeButtons()
                 self.createButtons(self.searchResults)
             elif loc != -1:
