@@ -457,6 +457,6 @@ def decryptFileName(key, hexIn):
 
 
 if __name__ == "__main__":
-    geg = encryptFileName("150 154 68 138 165 123 85 25 232 13 24 221 53 157 182 147", "Important images")
+    geg = encryptFileName("150 154 68 138 165 123 85 25 232 13 24 221 53 157 182 147", "Steam")
     print(geg)
     print(decryptFileName("150 154 68 138 165 123 85 25 232 13 24 221 53 157 182 147", geg))

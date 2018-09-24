@@ -546,24 +546,25 @@ class MainScreen(Screen, FloatLayout):
 
 
 ##########Getting File Information##########
-    def recursiveSize(self, f):
+    def recursiveSize(self, f, encrypt=False):
         fs = os.listdir(f)
         #print(f)
         for item in fs:
-            item = aesFName.encryptFileName(self.key, item)
-            if os.path.isdir(f+item):
+            if encrypt:
+                item = aesFName.encryptFileName(self.key, item)
+            if os.path.isdir(f+fileSep+item):
                 try:
-                    self.recursiveSize(f+item+fileSep)
+                    self.recursiveSize(f+fileSep+item)
                 except OSError:
                     pass
             else:
                 try:
-                    self.totalSize += os.path.getsize(f+item)
+                    self.totalSize += os.path.getsize(f+fileSep+item)
                 except PermissionError:
                     pass
 
 
-    def getFileSize(self, item, recurse=False):
+    def getFileSize(self, item, recurse=True):
         item = aesFName.encryptFileName(self.key, item)
         if os.path.isdir(self.currentDir+item):
             if recurse:
@@ -783,7 +784,7 @@ class MainScreen(Screen, FloatLayout):
         elif len(string1) < len(string2):
             return False
         else:
-            print("bit of a problem -------------------------------EROOR")
+            raise ValueError("Two strings are the same in compareStrings.")
             print(string2, string1, len(string2), len(string1))
 
 
@@ -860,6 +861,7 @@ class MainScreen(Screen, FloatLayout):
                 self.createButtons(self.searchResults)
             elif loc != -1:
                 unsorted.append((loc, file))
+                
 
 
         if len(unsorted) > 0:
