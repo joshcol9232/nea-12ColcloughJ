@@ -28,6 +28,7 @@ ScreenManagement:
     font_size: 14
     on_release: root.changeSortOrder()
 
+
 # <nameSortButton@Button>:
 #     font_size: 14
 #     size_hint: .7, .015
@@ -80,8 +81,18 @@ ScreenManagement:
             size_hint: .4, .3
             on_release: root.dismiss();root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
+
 <LoginScreen>:
+
     keyInput: keyInput
+
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
 
     # Label:
     #     id: labelLogin
@@ -185,6 +196,14 @@ ScreenManagement:
     addFile: addFile
     manager: root
     key: root.key
+
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,2
+            Rectangle:
+                pos: self.pos
+                size: self.size
 
     FloatLayout:
         id: MainLayout

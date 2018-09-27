@@ -21,11 +21,11 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
+from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
-from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.uix.screenmanager import FadeTransition
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.popup import Popup
@@ -491,7 +491,6 @@ class MainScreen(Screen, FloatLayout):
         #         print("Submit button already there.")
 
 
-
     key = StringProperty('')
 
     def __init__(self, **kwargs):
@@ -652,7 +651,7 @@ class MainScreen(Screen, FloatLayout):
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
                 self.grid.add_widget(fileS)
-            self.scroll = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.scroll = ScrollView(size_hint=(None, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
             self.scroll.add_widget(self.grid)
             self.add_widget(self.scroll)
 
@@ -683,7 +682,10 @@ class MainScreen(Screen, FloatLayout):
                 os.remove(location)
 
     def getFileInfo(self, fileRef):
+        print(fileRef, "File ref")
         hexName = aesFName.encryptFileName(self.key, fileRef)
+        self.hexDir = self.currentDir+hexName
+        print(self.currentDir+hexName, "AAAA MAYBE")
         fileFullDir = self.currentDir+fileRef
         fileViewDir = self.currentDir.replace(self.path, "")+fileRef
         fileViewTemp = fileViewDir.split(fileSep)
@@ -701,7 +703,7 @@ class MainScreen(Screen, FloatLayout):
 
         #print(fileFullDir, "FULL")
         internalView = ScrollView()
-        infoPopup = Popup(title="File Information", content=internalView, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.8, .4))
+        self.infoPopup = Popup(title="File Information", content=internalView, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.8, .4))
         internalLayout = GridLayout(cols=2, size_hint_y=None)
 
         internalLayout.add_widget(self.infoLabel(text="File Name:", size_hint_x=.2, halign="left", valign="middle"))
@@ -717,10 +719,29 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileSize), halign="left", valign="middle"))
 
+        internalLayout.add_widget(self.infoLabel(text=str(fileSize), halign="left", valign="middle"))
+
+        delBtn = Button(text="Delete", size_hint_x=.2)
+        delBtn.bind(on_press=self.deleteFile)
+        #delBtn.bind(on_press=self.deleteFile, args=(hexDir))
+        internalLayout.add_widget(delBtn)
+
         internalView.add_widget(internalLayout)
-        infoPopup.open()
+        self.infoPopup.open()
 
 
+    def deleteFile(self, button):   #Can't pass more than self in bind
+        print("INPUTS TO DELET", self, button)
+        print("Deleting,", self.hexDir)
+        if os.path.exists(self.hexDir):
+            if os.path.isdir(self.hexDir):
+                shutil.rmtree(self.hexDir)
+            else:
+                os.remove(self.hexDir)
+            self.resetButtons()
+            self.infoPopup.dismiss()
+        else:
+            raise FileNotFoundError(self.hexDir, "Not a file, can't delete.")
 
     def goBackFolder(self):
         if self.currentDir != self.path:
@@ -1080,7 +1101,8 @@ class ScreenManagement(ScreenManager):
     # LoginScreen = ObjectProperty(None)
     # MainScreen = ObjectProperty(None)
     # addFileScreen = ObjectProperty(None)
-    pass
+    def update(self, dt):
+        self.current_screen.update(dt)
 
 
 presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"main.kv")
