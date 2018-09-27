@@ -262,11 +262,12 @@ class LoginScreen(Screen, FloatLayout):
         except:
             pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
             pop.open()
+            return "Login"
         else:
-            if len(inputKey) > 16:
+            if len(str(inputKey)) > 16:
                 pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                 pop.open()
-                return False
+                return "Login"
             else:
                 inputKey = SHA.getSHA128of16(inputKey)
                 key = " ".join(str(i) for i in inputKey)
@@ -274,10 +275,12 @@ class LoginScreen(Screen, FloatLayout):
                 if valid:
                     self.ids.keyInput.text = "" #reset key input if valid
                     self.globalKey = key
-                    self.manager.current = "main"
+                    #self.manager.current = "main"
+                    return "main"
                 else:
                     pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                     pop.open()
+                    return "Login"
 
     def needToSetKey(self):
         if len(os.listdir(sharedPath)) == 0:

@@ -4,7 +4,6 @@ import (
   "fmt"
   "os"
   "io"
-  "io/ioutil"
   "runtime"
   "strings"
   "strconv"
@@ -429,7 +428,8 @@ func compareSlices(slice1, slice2 []byte) bool {
   return true
 }
 
-func encryptFile(key []byte, f, w string) {
+func encryptFile(f, w string) {
+  key := []byte{0x00,0x0b,0x16,0x1d,0x2c,0x27,0x3a,0x31,0x58,0x53,0x4e,0x45,0x74,0x7f,0x62,0x69}
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -494,8 +494,8 @@ func encryptFile(key []byte, f, w string) {
   e.Close()
 }
 
-
-func decryptFile(key []byte, f, w string) {
+func decryptFile(f, w string) {
+  key := []byte{0x00,0x0b,0x16,0x1d,0x2c,0x27,0x3a,0x31,0x58,0x53,0x4e,0x45,0x74,0x7f,0x62,0x69}
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -551,22 +551,25 @@ func decryptFile(key []byte, f, w string) {
 
       for i := 0; i < bufferSize; i += 16 {
         var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)
+        fmt.Println(fileSize - i, "EEEE")
         if fileSize - i == 16 {
           var focus int = int(decrypted[len(decrypted)-1])
           var focusCount int = 0
 
+          fmt.Println(focus, "FOCUS")
           if focus < 16 {
             for j := 15; int(decrypted[j]) == focus; j-- {
               if int(decrypted[j]) == focus {focusCount++}
             }
             if focus == focusCount {
+              fmt.Println(decrypted, "BEFORE")
+              fmt.Println(decrypted[:(16-focus)], "RESULT")
               decrypted = decrypted[:(16-focus)]
             }
           }
         }
         e.Write(decrypted)
       }
-
 
 
       buffCount += bufferSize
@@ -684,49 +687,20 @@ func main() {
   //f := "/run/media/josh/USB/ANALYSIS.odt"
   //f := "/run/media/josh/USB/nea-12ColcloughJ-m//fmt.Println("Time taken:", (time.Now()).Sub(start))aster/code/python-go/testing/Aes/pictures/smile.bmp"
   //a := "/run/media/josh/Storage/a.jpg"
+  f := "/home/josh/geg.txt"
+  w := "/home/josh/temp"
+  a := "/home/josh/dec.txt"
 
 
-  // start := time.Now()
-  // encryptFile("key", f, w)
+  // start := time.Now() 
+  //geg := []byte{0x00,0x0b,0x16,0x1d,0x2c,0x27,0x3a,0x31,0x58,0x53,0x4e,0x45,0x74,0x7f,0x62,0x69}
+
+  encryptFile(f, w)
   // //fmt.Println("Time taken:", (time.Now()).Sub(start))
-  // decryptFile("key", w, a)
+  decryptFile(w, a)
 
   // arguments := os.Args[1:]
   //
   // encrypt, key, f, w := arguments[0], arguments[1], arguments[2], arguments[3]
 
-  bytes, err := ioutil.ReadAll(os.Stdin)
-  check(err)
-  feilds := strings.Split(string(bytes), ", ")
-  keyString := strings.Split(string(feilds[3]), " ")
-
-  var key []byte
-  for i := 0; i < len(keyString); i++ {
-    // //fmt.Println(keyString[i], reflect.TypeOf(keyString[i]))
-    a, err := strToInt(keyString[i])
-    check(err)
-    key = append(key, byte(a))
-  }
-  // //fmt.Println("FINAL KEY", key, "FINAL KEY")
-
-  if string(feilds[0]) == "y" {
-    encryptFile(key, string(feilds[1]), string(feilds[2]))
-  } else if string(feilds[0]) == "n" {
-    decryptFile(key, string(feilds[1]), string(feilds[2]))
-  } else if string(feilds[0]) == "test" {
-    valid := checkKey(key, string(feilds[1]))
-    if valid {
-      fmt.Println("-Valid-")
-      //panic("Not valid")
-    } else {
-      fmt.Println("-NotValid-")
-    }
-  } else if string(feilds[0]) == "encFileName" {
-    fmt.Println(encryptFileName(key, string(feilds[2])))
-  } else if string(feilds[0]) == "decFileName" {
-    fmt.Println("File name given:", string(feilds[2]))
-    fmt.Println(decryptFileName(key, string(feilds[2])))
-  } else {
-    panic("Invalid options.")
-  }
 }
