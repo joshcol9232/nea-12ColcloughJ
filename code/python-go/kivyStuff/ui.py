@@ -507,7 +507,7 @@ class MainScreen(Screen, FloatLayout):
         self.assetsPath = sharedAssets
         self.currentDir = self.path
         print(self.currentDir, "CURRENT DIR")
-        self.scroll = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
         self.waitThread = threading.Thread(target=self.waitForKey, daemon=True)
         self.waitThread.start()
 
@@ -636,7 +636,7 @@ class MainScreen(Screen, FloatLayout):
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
                 self.grid.add_widget(fileS)
-            self.scroll = ScrollView(size_hint=(.9, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
             self.scroll.add_widget(self.grid)
             self.add_widget(self.scroll)
         else:
@@ -651,7 +651,7 @@ class MainScreen(Screen, FloatLayout):
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
                 self.grid.add_widget(fileS)
-            self.scroll = ScrollView(size_hint=(None, None), size=(Window.width, Window.height), pos_hint={"x": .005, "y": -.21})
+            self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
             self.scroll.add_widget(self.grid)
             self.add_widget(self.scroll)
 
