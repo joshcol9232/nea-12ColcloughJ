@@ -69,6 +69,7 @@ osTemp = tempfile.gettempdir()+fileSep
 global sharedPath
 global sharedAssets
 global startDir
+global searchRecursively
 global useBT
 #global root #For use like root.x in kv file
 useBT = False
@@ -91,6 +92,13 @@ for line in configFile:
     lineSplit[1] = lineSplit[1].replace("\n", "")
     if lineSplit[0] == "vaultDir":
         sharedPath = lineSplit[1]
+    elif lineSplit[0] == "searchRecursively":
+        if lineSplit[1] == "True":
+            searchRecursively = True
+        elif lineSplit[1] == "False":
+            searchRecursively = False
+        else:
+            raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
     elif lineSplit[0] == "bluetooth":
         if lineSplit[1] == "True":
             useBT = True
@@ -498,8 +506,6 @@ class MainScreen(Screen, FloatLayout):
                         done.open()
 
 
-
-
     class infoButton(Button):
 
         def __init__(self, mainScreen, fileReference, **kwargs):
@@ -602,7 +608,7 @@ class MainScreen(Screen, FloatLayout):
             return ("%.2f" % bytes) + divisions[divCount]
 
     def getSortedFoldersAndFiles(self, fileObjects, inverse=False):
-        print(fileObjects, "ARRAY GIVEN getSortedFoldersAndFiles")
+        #print(fileObjects, "ARRAY GIVEN getSortedFoldersAndFiles")
         folders = []
         files = []
         for i in range(len(fileObjects)):
@@ -611,7 +617,7 @@ class MainScreen(Screen, FloatLayout):
             else:
                 files.append(fileObjects[i])
 
-        print(files, folders, "arrays")
+        #print(files, folders, "arrays")
 
         if inverse:
             fol = self.quickSortAlph(folders)
@@ -825,7 +831,7 @@ class MainScreen(Screen, FloatLayout):
 
     def refreshButtons(self):
         self.removeButtons()
-        self.createButtons(self.currentList)
+        self.createButtons(self.currentList, False)
 
 
 ####File Handling####
@@ -939,9 +945,7 @@ class MainScreen(Screen, FloatLayout):
 
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName) #Updates currentX variables
-        print(dirName, "DIRNAME")
         for fileObj in files:
-            print(fileObj.name, "Checking")
             loc = fileObj.name.find(item)
 
             if fileObj.name == item:
@@ -950,10 +954,10 @@ class MainScreen(Screen, FloatLayout):
                 self.createButtons(self.searchResults)
             elif loc != -1:
                 self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
-                print(self.unsorted)
+                #print(self.unsorted)
 
-            if fileObj.isDir:
-                print("Isdir:", fileObj.hexPath)
+            if fileObj.isDir and searchRecursively:
+                #print("Isdir:", fileObj.hexPath)
                 self.findAndSortCore(fileObj.hexPath, item)
 
 
