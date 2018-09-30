@@ -196,6 +196,60 @@ def runUI():
         print("No temp files.")
     print("App closed.")
 
+
+class File:
+
+    def __init__(self, screen, hexPath, hexName, isDir=False, name=None, path=None):
+        self.outerScreen = screen
+        self.hexPath, self.hexName, self.isDir = hexPath, hexName, isDir
+        self.size = self.getFileSize()
+        self.isDir = isDir
+        if path == None:
+            self.path = self.getNormDir(self.hexPath)
+        else:
+            self.path = path
+        if name == None:
+            self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
+        else:
+            self.name = name
+
+        if self.isDir:
+            self.hexPath += fileSep
+            self.path += fileSep
+
+
+    def getNormDir(self, hexDir):
+        noPath = hexDir.replace(self.outerScreen.path, "")
+        noPath = noPath.split(fileSep)
+        for i in range(len(noPath)):
+            noPath[i] = aesFName.decryptFileName(self.outerScreen.key, noPath[i])
+
+        return fileSep.join(noPath)
+
+    def getFileSize(self, recurse=True):
+        if self.isDir:
+            if recurse:
+                self.outerScreen.totalSize = 0
+                self.outerScreen.recursiveSize(self.hexPath)
+                size = self.outerScreen.getGoodUnit(self.outerScreen.totalSize)
+                if size == 0:
+                    return " -"
+                else:
+                    return size
+            else:
+                return " -"
+        else:
+            try:
+                size = self.outerScreen.getGoodUnit(os.path.getsize(self.hexPath))
+                if size == 0:
+                    return " -"
+                else:
+                    return size
+            except Exception as e:
+                print(e, "couldn't get size.")
+                return " -"
+
+
 class LoginScreen(Screen, FloatLayout):
     globalKey = StringProperty('')
 
@@ -389,9 +443,18 @@ class MainScreen(Screen, FloatLayout):
 
     class listButton(Button):
 
-        def __init__(self, mainScreen, **kwargs):
+        def __init__(self, mainScreen, fileObj, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
+            self.fileObj = fileObj
+
+
+    class searchResultButton(Button):
+
+        def __init__(self, mainScreen, fullDir, **kwargs):
+            super(Button, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.fullDir = fullDir
 
     class SettingsPop(Popup):
 
@@ -526,15 +589,29 @@ class MainScreen(Screen, FloatLayout):
         print("CHANGED TO MAIN")
         return self.createButtons(self.List(self.currentDir))
 
-    def getSortedFoldersAndFiles(self, array, inverse=False):
+    def getGoodUnit(self, bytes):
+        if bytes == " -":
+            return " -"
+        else:
+            divCount = 0
+            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+            while bytes > 1000:
+                bytes = bytes/1000
+                divCount += 1
+
+            return ("%.2f" % bytes) + divisions[divCount]
+
+    def getSortedFoldersAndFiles(self, fileObjects, inverse=False):
+        print(fileObjects, "ARRAY GIVEN getSortedFoldersAndFiles")
         folders = []
         files = []
-        for i in range(len(array)):
-            array[i] = aesFName.decryptFileName(self.key, array[i])
-            if os.path.isdir(self.currentDir+array[i]):
-                folders.append(array[i])
+        for i in range(len(fileObjects)):
+            if fileObjects[i].isDir:
+                folders.append(fileObjects[i])
             else:
-                files.append(array[i])
+                files.append(fileObjects[i])
+
+        print(files, folders, "arrays")
 
         if inverse:
             fol = self.quickSortAlph(folders)
@@ -566,75 +643,76 @@ class MainScreen(Screen, FloatLayout):
                     pass
 
 
-    def getFileSize(self, item, recurse=True):
-        item = aesFName.encryptFileName(self.key, item)
-        if os.path.isdir(self.currentDir+item):
-            if recurse:
-                self.totalSize = 0
-                self.recursiveSize(self.currentDir+item)
-                size = self.getGoodUnit(self.totalSize)
-                if size == 0:
-                    return " -"
-                else:
-                    return size
-            else:
-                return " -"
-        else:
-            try:
-                size = self.getGoodUnit(os.path.getsize(self.currentDir+item))
-                if size == 0:
-                    return " -"
-                else:
-                    return size
-            except Exception as e:
-                print(e, "couldn't get size.")
-                return " -"
+    # def getFileSize(self, item, recurse=True):
+    #     item = aesFName.encryptFileName(self.key, item)
+    #     if os.path.isdir(self.currentDir+item):
+    #         if recurse:
+    #             self.totalSize = 0
+    #             self.recursiveSize(self.currentDir+item)
+    #             size = self.getGoodUnit(self.totalSize)
+    #             if size == 0:
+    #                 return " -"
+    #             else:
+    #                 return size
+    #         else:
+    #             return " -"
+    #     else:
+    #         try:
+    #             size = self.getGoodUnit(os.path.getsize(self.currentDir+item))
+    #             if size == 0:
+    #                 return " -"
+    #             else:
+    #                 return size
+    #         except Exception as e:
+    #             print(e, "couldn't get size.")
+    #             return " -"
 
-    def getGoodUnit(self, bytes):
-        if bytes == " -":
-            return " -"
-        else:
-            divCount = 0
-            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-            while bytes > 1000:
-                bytes = bytes/1000
-                divCount += 1
+    # def getGoodUnit(self, bytes):
+    #     if bytes == " -":
+    #         return " -"
+    #     else:
+    #         divCount = 0
+    #         divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+    #         while bytes > 1000:
+    #             bytes = bytes/1000
+    #             divCount += 1
 
-            return ("%.2f" % bytes) + divisions[divCount]
+    #         return ("%.2f" % bytes) + divisions[divCount]
 
-    def deleteFile(self, location):
-        if os.path.exists(location):
-            if os.path.isdir(location):
-                shutil.rmtree(location)
-            else:
-                os.remove(location)
+    # def deleteFile(self, location):
+    #     if os.path.exists(location):
+    #         if os.path.isdir(location):
+    #             shutil.rmtree(location)
+    #         else:
+    #             os.remove(location)
 
 ############################################
 
 #######Button Creation and button functions#######
 
-    def createButtons(self, array, sort=True):
+    def createButtons(self, fileObjects, sort=True):
+        self.currentList = []
         if self.ascending:
             if sort:
-                sortedArray = self.getSortedFoldersAndFiles(array)
+                sortedArray = self.getSortedFoldersAndFiles(fileObjects)
             btn = self.nameSortButton(self, text="^")
             self.add_widget(btn)
         else:
             if sort:
-                sortedArray = self.getSortedFoldersAndFiles(array, True)
+                sortedArray = self.getSortedFoldersAndFiles(fileObjects, True)
             btn = self.nameSortButton(self, text="V")
             self.add_widget(btn)
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
         if sort:
+            self.currentList = sortedArray
             for item in sortedArray:
-                fileSize = self.getFileSize(item)
-                btn = self.listButton(self, text=("    "+item), height=30, halign="left", valign="middle")
+                btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
                 btn.bind(size=btn.setter("text_size"))
                 info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
                 info.bind(size=info.setter("text_size"))
-                fileS = Label(text=" "+str(fileSize), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
                 fileS.bind(size=fileS.setter("text_size"))
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
@@ -643,13 +721,13 @@ class MainScreen(Screen, FloatLayout):
             self.scroll.add_widget(self.grid)
             self.add_widget(self.scroll)
         else:
-            for item in array:
-                fileSize = self.getFileSize(item)
-                btn = self.listButton(self, text=("    "+item), height=30, halign="left", valign="middle")
+            self.currentList = fileObjects
+            for item in fileObjects:
+                btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
                 btn.bind(size=btn.setter("text_size"))
                 info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
                 info.bind(size=info.setter("text_size"))
-                fileS = Label(text=" "+str(fileSize), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
                 fileS.bind(size=fileS.setter("text_size"))
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
@@ -663,19 +741,21 @@ class MainScreen(Screen, FloatLayout):
         self.remove_widget(self.scroll)
         self.scroll = 0
 
+
     def getFileNameFromText(self, itemName):
         return itemName[4:]
 
-    def traverseButton(self, itemName):
-        fileName = self.getFileNameFromText(itemName)
-        fileName = aesFName.encryptFileName(self.key, fileName)
-        print("AAAA traverse", self.currentDir+fileName+fileSep)
-        if os.path.isdir(self.currentDir+fileName+fileSep):
-            self.currentDir = self.currentDir+fileName+fileSep
+
+    def traverseButton(self, fileObj):
+        print("traversing:", fileObj)
+        print(fileObj.isDir, "ISDIR n baib", fileObj.name, "Name")
+        print(self.currentDir, "Current dir")
+        if fileObj.isDir:
+            self.currentDir = fileObj.hexPath
             currentDirShare = self.currentDir
             self.resetButtons()
         else:
-            self.decrypt(self.currentDir+fileName, fileName)
+            self.decrypt(fileObj)
 
     def deleteFile(self, location):
         if os.path.exists(location):
@@ -684,25 +764,10 @@ class MainScreen(Screen, FloatLayout):
             else:
                 os.remove(location)
 
-    def getFileInfo(self, fileRef):
-        print(fileRef, "File ref")
-        hexName = aesFName.encryptFileName(self.key, fileRef)
-        self.hexDir = self.currentDir+hexName
-        print(self.currentDir+hexName, "AAAA MAYBE")
-        fileFullDir = self.currentDir+fileRef
-        fileViewDir = self.currentDir.replace(self.path, "")+fileRef
-        fileViewTemp = fileViewDir.split(fileSep)
-        print(fileViewTemp, "FILE VIEW TEMP")
-        for i in range(len(fileViewTemp)):
-            if i != (len(fileViewTemp)-1):
-                fileViewTemp[i] = aesFName.decryptFileName(self.key, fileViewTemp[i])
-        fileViewDir = fileSep.join(fileViewTemp)
+    def getFileInfo(self, fileObj):
+        fileViewDir = fileObj.path.replace(self.path, "")
+        print(fileViewDir, "FILE VIEW Dir")
         #print(fileViewDir, "fileViewDir")
-        isFolder = False
-        if os.path.isdir(fileFullDir):
-            fileFullDir += fileSep
-            folderRef = fileRef + fileSep
-            isFolder = Trueinfo
 
         #print(fileFullDir, "FULL")
         internalView = ScrollView()
@@ -710,19 +775,16 @@ class MainScreen(Screen, FloatLayout):
         internalLayout = GridLayout(cols=2, size_hint_y=None)
 
         internalLayout.add_widget(self.infoLabel(text="File Name:", size_hint_x=.2, halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=fileRef, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
         internalLayout.add_widget(self.infoLabel(text="Current Location:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
 
-        if isFolder:
-            fileSize = self.getFileSize(folderRef, True) #Do recurse on folders
-        else:
-            fileSize = self.getFileSize(fileRef)
-        internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=str(fileSize), halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text=str(fileSize), halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
+
+        internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
         delBtn = Button(text="Delete", size_hint_x=.2)
         delBtn.bind(on_press=self.deleteFile)
@@ -733,18 +795,18 @@ class MainScreen(Screen, FloatLayout):
         self.infoPopup.open()
 
 
-    def deleteFile(self, button):   #Can't pass more than self in bind
-        print("INPUTS TO DELET", self, button)
-        print("Deleting,", self.hexDir)
-        if os.path.exists(self.hexDir):
-            if os.path.isdir(self.hexDir):
-                shutil.rmtree(self.hexDir)
+    def deleteFile(self, fileObj):   #Can't pass more than self in bind
+        print("INPUTS TO DELET", fileObj)
+        print("Deleting,", fileObj.hexPath)
+        if os.path.exists(fileObj.hexPath):
+            if fileObj.isDir:
+                shutil.rmtree(fileObj.hexPath)
             else:
-                os.remove(self.hexDir)
+                os.remove(fileObj.hexPath)
             self.resetButtons()
             self.infoPopup.dismiss()
         else:
-            raise FileNotFoundError(self.hexDir, "Not a file, can't delete.")
+            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
 
     def goBackFolder(self):
         if self.currentDir != self.path:
@@ -757,69 +819,75 @@ class MainScreen(Screen, FloatLayout):
     def getPathForButton(self, item):
         return self.assetsPath+item
 
-    def resetButtons(self):
+    def resetButtons(self): #Goes back to self.currentDir, different to search.
         self.removeButtons()
         self.createButtons(self.List(self.currentDir))
 
+    def refreshButtons(self):
+        self.removeButtons()
+        self.createButtons(self.currentList)
+
 
 ####File Handling####
+
     def List(self, dir):
         #print(dir, "LIST DIR")
         fs = os.listdir(dir)
         count = 0
-        self.currentDecList = []
         listOfFiles = []
         for item in fs:
             if os.path.isdir(dir+item):
-                listOfFiles.append(item)
-                self.currentDecList.append(aesFName.decryptFileName(self.key, item))
+                listOfFiles.append(File(self, dir+item, item, True))
         for item in fs:
             if not os.path.isdir(dir+item):
-                listOfFiles.append(item)
-                self.currentDecList.append(aesFName.decryptFileName(self.key, item))
+                listOfFiles.append(File(self, dir+item, item))
         return listOfFiles
 
     def getPathBack(self):
         tempDir = self.currentDir.split(fileSep)
+        print(tempDir, "TEMPDIR")
         del tempDir[len(tempDir)-2]
         tempDir = fileSep.join(tempDir)
         return tempDir
 
 ###########Sorts + Searches############
-    def compareStrings(self, string1, string2):     #returns True if string1 < string2 alphabetically, and "Found" if string1 == string2
+    def compareStrings(self, fileObj, string2):     #returns True if string1 < string2 alphabetically, and "Found" if string1 == string2
         count = 0
-        while not (count >= len(string1) or count >= len(string2)):
-            if ord(string2[count].lower()) < ord(string1[count].lower()):
+        while not (count >= len(fileObj.name) or count >= len(string2)):
+            if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
                 return True
-            elif ord(string2[count].lower()) > ord(string1[count].lower()):
+            elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
                 return False
             else:
-                if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+                if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
                     return True
-                elif ord(string2[count]) > ord(string1[count]):
+                elif ord(string2[count]) > ord(fileObj.name[count]):
                     return False
                 else:
-                    if string2 == string1:
+                    if string2 == fileObj.name:
                         return "Found"
                     else:
                         count += 1
-        if len(string1) > len(string2):
+        if len(fileObj.name) > len(string2):
             return True
-        elif len(string1) < len(string2):
+        elif len(fileObj.name) < len(string2):
             return False
         else:
             raise ValueError("Two strings are the same in compareStrings.")
-            print(string2, string1, len(string2), len(string1))
+            print(string2, fileObj.name, len(string2), len(fileObj.name))
 
 
-    def quickSortAlph(self, myList):
+    def quickSortAlph(self, myList, fileObjects=True):
         if len(myList) > 1:
             left = []
             right = []  #Make seperate l+r lists, and add on at the end.
             middle = []
             pivot = myList[int(len(myList)/2)]
             for item in myList:
-                leftSide = self.compareStrings(pivot, item)
+                if fileObjects:
+                    leftSide = self.compareStrings(pivot, item.name)
+                else:
+                    leftSide = self.compareStrings(pivot, item)
                 if leftSide == "Found":
                     middle.append(item)
                 elif leftSide:
@@ -869,27 +937,33 @@ class MainScreen(Screen, FloatLayout):
         else:
             return tuples
 
+    def findAndSortCore(self, dirName, item):
+        files = self.List(dirName) #Updates currentX variables
+        print(dirName, "DIRNAME")
+        for fileObj in files:
+            print(fileObj.name, "Checking")
+            loc = fileObj.name.find(item)
 
-    def findAndSort(self, myList, item):
-        unsorted = []
-        self.temp = []
-        for file in myList:
-            loc = file.find(item)
-
-            # if os.path.isdir(self.currentDir+item):
-            #     self.traverseFileTree(self.currentDir+item)
-
-            if file == item:
-                self.searchResults = [aesFName.encryptFileName(self.key, item)] + self.searchResults
+            if fileObj.name == item:
+                self.searchResults = [fileObj] + self.searchResults
                 self.removeButtons()
                 self.createButtons(self.searchResults)
             elif loc != -1:
-                unsorted.append((loc, file))
-                
+                self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
+                print(self.unsorted)
+
+            if fileObj.isDir:
+                print("Isdir:", fileObj.hexPath)
+                self.findAndSortCore(fileObj.hexPath, item)
 
 
-        if len(unsorted) > 0:
-            sorted = self.quickSortTuples(unsorted)
+    def findAndSort(self, item):
+        self.unsorted = []
+
+        self.findAndSortCore(self.currentDir, item)
+
+        if len(self.unsorted) > 0:
+            sorted = self.quickSortTuples(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i[1])
             self.removeButtons()
@@ -908,8 +982,8 @@ class MainScreen(Screen, FloatLayout):
     #                 self.findAndSort()
 
 
-    def searchThread(self, myList, item):
-        self.findAndSort(myList, item)
+    def searchThread(self, item):
+        self.findAndSort(item)
         return "Done"
 
 
@@ -932,10 +1006,10 @@ class MainScreen(Screen, FloatLayout):
     # def printStuff(self, val): #test
     #     print(val)
 
-    def searchForItem(self, array, item):
+    def searchForItem(self, item):
         self.resetButtons()
         self.searchResults = []
-        self.t = threading.Thread(target=self.searchThread, args=(array, item,), daemon=True)
+        self.t = threading.Thread(target=self.searchThread, args=(item,), daemon=True)
         self.t.start()
 
 ############################
@@ -997,19 +1071,17 @@ class MainScreen(Screen, FloatLayout):
         self.resetButtons()
         return "Done"
 
-    def decrypt(self, fileDir, fileName):
-        print(fileName, "name given in decrypt")
-        fileNormName = aesFName.decryptFileName(self.key, fileName)
+    def decrypt(self, fileObj):
         if not os.path.isdir(osTemp+"FileMate"+fileSep):
             os.makedirs(osTemp+"FileMate"+fileSep)
-        fileLoc = osTemp+"FileMate"+fileSep+fileNormName
+        fileLoc = osTemp+"FileMate"+fileSep+fileObj.name
         if os.path.exists(fileLoc):
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileObj,))
             self.openFileThread.start()
         else:
-            self.encDecTerminal("n", fileDir, fileLoc, fileNormName)
+            self.encDecTerminal("n", fileObj.path, fileLoc, fileObj.name)
 
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileDir))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.path))
             self.openFileThread.start()
 
         #os.startfile("/tmp/"+fileName)

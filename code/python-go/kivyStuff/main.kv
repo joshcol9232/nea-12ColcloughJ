@@ -20,7 +20,13 @@ ScreenManagement:
     font_size: 14
     size_hint: 1, None
     text:
-    on_release: root.outerScreen.traverseButton(self.text)
+    on_release: root.outerScreen.traverseButton(self.fileObj)
+
+<searchResultButton@Button>:
+    font_size: 14
+    size_hint: 1, None
+    text:
+    on_release: root.outerScreen.traverseButton(self.text, True, self.fullDir)
 
 <nameSortButton@Button>:
     size_hint: .7, .015
@@ -216,7 +222,7 @@ ScreenManagement:
             hint_text: "Search"
             pos_hint: {"x": 0.16, "top": 1}
             multiline: False
-            on_text_validate: root.searchForItem(root.currentDecList, self.text)
+            on_text_validate: root.searchForItem(self.text)
 
 
         # Button:
@@ -292,7 +298,7 @@ ScreenManagement:
             id: manuallyRefresh
             size_hint: .06, .08
             pos_hint: {"right": 1, "y": 0.76}
-            on_release: root.resetButtons()
+            on_release: root.refreshButtons()
             Image:
                 source: root.getPathForButton("refresh-icon.png")
                 x: self.parent.x - 10

@@ -420,7 +420,7 @@ def encryptFileName(key, name):
     return outString
 
 def convHexDigestToBytes(hexIn):
-    print(hexIn, "HEX GIVEN", len(hexIn))
+    #print(hexIn, "HEX GIVEN", len(hexIn))
     hexList = []
     # while len(hexIn)/2 % 16 != 0:
     #     hexIn += "00"
