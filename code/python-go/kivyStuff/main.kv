@@ -29,10 +29,12 @@ ScreenManagement:
     on_release: root.outerScreen.traverseButton(self.text, True, self.fullDir)
 
 <nameSortButton@Button>:
-    size_hint: .7, .015
-    pos_hint: {"x": .005, "y": .805}
     font_size: 14
     on_release: root.changeSortOrder()
+
+<sizeSortButton@Button>:
+    font_size: 14
+    on_release: root.changeSizeOrder()
 
 
 # <nameSortButton@Button>:
@@ -53,7 +55,7 @@ ScreenManagement:
     height: self.texture_size[1]
 
 <deleteButton@Button>:
-    on_release: root.outerScreen.deleteFile(self.fileDir)
+    on_release: root.outerScreen.deleteFile(self.fileObj)
 
 # <SettingsPop@Popup>:
 #     id: settings
@@ -363,7 +365,6 @@ ScreenManagement:
 <SettingsPop@Popup>:
     auto_dismiss: False
     newLoc: newLoc
-    recurseSearch: recurseSearch
     GridLayout:
         cols: 2
         Label:

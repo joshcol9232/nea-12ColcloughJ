@@ -74,6 +74,7 @@ global useBT
 #global root #For use like root.x in kv file
 useBT = False
 
+##Check if config file is in /home/user/.config/FileMate/config
 startDir = os.path.dirname(os.path.realpath(__file__))+fileSep
 tempDir = startDir.split(fileSep)
 del tempDir[len(tempDir)-2]
@@ -85,7 +86,21 @@ for i in range(2):
 tempDir = fileSep.join(tempDir)
 tempDir += "assets"+fileSep+"exports"+fileSep
 sharedAssets = tempDir
-configFile = open(startDir+"config.cfg", "r")
+
+configFile = None
+try:
+    home = os.listdir(os.path.expanduser("~/.config/FileMate/"))
+except:
+    print("No config file in .config")
+else:
+    if "config" in home:
+        configFile = open(os.path.expanduser("~/.config/FileMate/config"), "r")
+
+if configFile == None:
+    try:
+        configFile = open(startDir+"config.cfg", "r")
+    except Exception as e:
+        print(e, "Config file not found.")
 
 for line in configFile:
     lineSplit = line.split("--")
@@ -210,7 +225,8 @@ class File:
     def __init__(self, screen, hexPath, hexName, isDir=False, name=None, path=None):
         self.outerScreen = screen
         self.hexPath, self.hexName, self.isDir = hexPath, hexName, isDir
-        self.size = self.getFileSize()
+        self.rawSize = self.getFileSize()
+        self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
         if path == None:
             self.path = self.getNormDir(self.hexPath)
@@ -239,7 +255,7 @@ class File:
             if recurse:
                 self.outerScreen.totalSize = 0
                 self.outerScreen.recursiveSize(self.hexPath)
-                size = self.outerScreen.getGoodUnit(self.outerScreen.totalSize)
+                size = self.outerScreen.totalSize
                 if size == 0:
                     return " -"
                 else:
@@ -248,7 +264,7 @@ class File:
                 return " -"
         else:
             try:
-                size = self.outerScreen.getGoodUnit(os.path.getsize(self.hexPath))
+                size = os.path.getsize(self.hexPath)
                 if size == 0:
                     return " -"
                 else:
@@ -278,7 +294,7 @@ class LoginScreen(Screen, FloatLayout):
 
     def findFile(self, dir):
         fs = os.listdir(dir)
-        print(dir)
+        #print(dir)
         for item in fs:
             if os.path.isdir(dir+item+"/"):
                 if self.count == 0:
@@ -307,8 +323,8 @@ class LoginScreen(Screen, FloatLayout):
             self.decryptTestFile = ""
             self.count = 0
             self.findFile(sharedPath)
-            print("file", self.decryptTestFile)
-            print(self.decryptTestFile, "File chosen.")
+            #print("file", self.decryptTestFile)
+            #print(self.decryptTestFile, "File chosen.")
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
             #print(diditwork)
             if diditwork == b"-Valid-\n": #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
@@ -518,10 +534,10 @@ class MainScreen(Screen, FloatLayout):
 
     class deleteButton(Button):
 
-        def __init__(self, mainScreen, fileDir, **kwargs):
+        def __init__(self, mainScreen, fileObj, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
-            self.fileDir = fileDir
+            self.fileObj = fileObj
 
     class nameSortButton(Button):
 
@@ -530,12 +546,58 @@ class MainScreen(Screen, FloatLayout):
             self.outerScreen = mainScreen
 
         def changeSortOrder(self):
-            if self.outerScreen.ascending:
-                self.outerScreen.ascending = False
-                self.outerScreen.resetButtons()
+            self.outerScreen.ascending = not self.outerScreen.ascending
+            self.outerScreen.resetButtons()
+
+    class sizeSortButton(Button):
+
+        def __init__(self, mainScreen, **kwargs):
+            super(Button, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.text = " "
+            print(len(self.text), "WHERE IS IT")
+            self.ascending = True
+
+        def quickSortSize(self, fileObjects):
+            if len(fileObjects) > 1:
+                left = []
+                right = []  #Make seperate l+r lists, and add on at the end.
+                middle = []
+                pivot = fileObjects[int(len(fileObjects)/2)]
+                for i in fileObjects:
+                    if i.rawSize < pivot.rawSize:
+                        left.append(i)
+                    elif i.rawSize > pivot.rawSize:
+                        right.append(i)
+                    else:
+                        middle.append(i)
+                return self.quickSortSize(left)+middle+self.quickSortSize(right)
             else:
-                self.outerScreen.ascending = True
-                self.outerScreen.resetButtons()
+                return fileObjects
+
+        def sortBySize(self, asc=True):
+            sortList = self.quickSortSize(self.outerScreen.currentList)
+            if not asc:
+                sortList = sortList[::-1]
+
+            self.outerScreen.removeButtons()
+            self.outerScreen.createButtons(sortList, False)
+
+        def changeSizeOrder(self):
+            if self.text == " ":
+                print("IS NOTHING")
+                self.text = "V"
+                self.ascending = False
+                print(self.text, "Changed", self.ascending)
+            if self.text == "V":
+                self.text = "^"
+                self.ascending = True
+            else:
+                self.text = "V"
+                self.ascending = False
+
+            print(self.ascending, "Self.ascending")
+            self.sortBySize(self.ascending)
 
     class addFileScreen(Popup):
 
@@ -701,16 +763,21 @@ class MainScreen(Screen, FloatLayout):
         if self.ascending:
             if sort:
                 sortedArray = self.getSortedFoldersAndFiles(fileObjects)
-            btn = self.nameSortButton(self, text="^")
-            self.add_widget(btn)
+            nameSortText = "^"
         else:
             if sort:
                 sortedArray = self.getSortedFoldersAndFiles(fileObjects, True)
-            btn = self.nameSortButton(self, text="V")
-            self.add_widget(btn)
+            nameSortText = "V"
+        if not sort:
+            nameSortText = ""
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
+        sortsGrid = GridLayout(cols=3, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})
+        nameSort = self.nameSortButton(self, text=nameSortText)
+        sortsGrid.add_widget(nameSort)
+        self.add_widget(sortsGrid)
+
         if sort:
             self.currentList = sortedArray
             for item in sortedArray:
@@ -753,9 +820,9 @@ class MainScreen(Screen, FloatLayout):
 
 
     def traverseButton(self, fileObj):
-        print("traversing:", fileObj)
-        print(fileObj.isDir, "ISDIR n baib", fileObj.name, "Name")
-        print(self.currentDir, "Current dir")
+        #print("traversing:", fileObj)
+        #print(fileObj.isDir, "ISDIR n baib", fileObj.name, "Name")
+        #print(self.currentDir, "Current dir")
         if fileObj.isDir:
             self.currentDir = fileObj.hexPath
             currentDirShare = self.currentDir
@@ -792,8 +859,7 @@ class MainScreen(Screen, FloatLayout):
 
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
-        delBtn = Button(text="Delete", size_hint_x=.2)
-        delBtn.bind(on_press=self.deleteFile)
+        delBtn = self.deleteButton(self, fileObj,text="Delete", size_hint_x=.2)
         #delBtn.bind(on_press=self.deleteFile, args=(hexDir))
         internalLayout.add_widget(delBtn)
 
@@ -802,7 +868,7 @@ class MainScreen(Screen, FloatLayout):
 
 
     def deleteFile(self, fileObj):   #Can't pass more than self in bind
-        print("INPUTS TO DELET", fileObj)
+        #print("INPUTS TO DELET", fileObj)
         print("Deleting,", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath):
             if fileObj.isDir:
@@ -851,7 +917,7 @@ class MainScreen(Screen, FloatLayout):
 
     def getPathBack(self):
         tempDir = self.currentDir.split(fileSep)
-        print(tempDir, "TEMPDIR")
+        #print(tempDir, "TEMPDIR")
         del tempDir[len(tempDir)-2]
         tempDir = fileSep.join(tempDir)
         return tempDir
@@ -902,24 +968,6 @@ class MainScreen(Screen, FloatLayout):
                     right.append(item)
 
             return self.quickSortAlph(left)+middle+self.quickSortAlph(right)
-        else:
-            return myList
-
-
-    def quickSortNums(self, myList):
-        if len(myList) > 1:
-            left = []
-            right = []  #Make seperate l+r lists, and add on at the end.
-            middle = []
-            pivot = myList[int(len(myList)/2)]
-            for i in myList:
-                if i < pivot:
-                    left.append(i)
-                elif i > pivot:
-                    right.append(i)
-                else:
-                    middle.append(i)
-            return self.quickSortByLength(left)+middle+self.quickSortByLength(right)
         else:
             return myList
 
@@ -1020,7 +1068,7 @@ class MainScreen(Screen, FloatLayout):
 
 ######Encryption Stuff + opening decrypted files######
     def passToPipe(self, type, d, targetLoc, newName=None):
-        print("PIPE INPUTS:", self, type, d, targetLoc, newName)
+        #print("PIPE INPUTS:", self, type, d, targetLoc, newName)
         if sys.platform.startswith("win32"):
             progname = "AESWin"
         else:
@@ -1028,7 +1076,7 @@ class MainScreen(Screen, FloatLayout):
 
         tempDir = d.split(fileSep)
         fileName = tempDir[len(tempDir)-1]
-        print("File name given:", fileName)
+        #print("File name given:", fileName)
         if type == "y":
             ##need to encrypt file name too if enc
 
@@ -1036,13 +1084,13 @@ class MainScreen(Screen, FloatLayout):
             tempTargetLoc = targetLoc.split(fileSep)
             tempTargetLoc[len(tempTargetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
             targetLoc = fileSep.join(tempTargetLoc)
-            print("New targetLoc", targetLoc)
+            #print("New targetLoc", targetLoc)
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempTargetLoc = targetLoc.split(fileSep)
             tempTargetLoc[len(tempTargetLoc)-1] = newName #Stops you from doing it twice in decrypt()
             targetLoc = fileSep.join(tempTargetLoc)
-            print("New targetLoc", targetLoc)
+            #print("New targetLoc", targetLoc)
 
 
         goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
@@ -1052,11 +1100,23 @@ class MainScreen(Screen, FloatLayout):
         return out
 
     def encDecTerminal(self, type, d, targetLoc, newName=None):
-        print("encDecTerminal inp:", type, d, targetLoc, newName)
+        #print("encDecTerminal inp:", type, d, targetLoc, newName)
+        self.encPop = None
+        print(type, "TYPE GIVEN")
+        if type == "y":
+            popText = "Encrypting..."
+        elif type == "n":
+            popText = "Decrypting..."
+
+        if type == "y" or "n":
+            self.encPop = Popup(title="Please wait...", content=Label(text=popText), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False)
+            self.encPop.open()
+
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,))
         self.encryptProcess.start()
         self.encryptProcess.join()
-        #pop.dismiss()
+        if self.encPop != None:
+            self.encPop.dismiss()
 
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
@@ -1070,8 +1130,8 @@ class MainScreen(Screen, FloatLayout):
         self.encDecTerminal("y", location, startLoc)
 
 
-    def onFileDrop(self, window, file_path):  #Drag + drop files
-        self.checkCanEncrypt(file_path.decode())
+    def onFileDrop(self, window, filePath):  #Drag + drop files
+        self.checkCanEncrypt(filePath.decode())
         self.resetButtons()
         return "Done"
 
@@ -1080,12 +1140,12 @@ class MainScreen(Screen, FloatLayout):
             os.makedirs(osTemp+"FileMate"+fileSep)
         fileLoc = osTemp+"FileMate"+fileSep+fileObj.name
         if os.path.exists(fileLoc):
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileObj,))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath))
             self.openFileThread.start()
         else:
-            self.encDecTerminal("n", fileObj.path, fileLoc, fileObj.name)
+            self.encDecTerminal("n", fileObj.hexPath, fileLoc, fileObj.name)
 
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.path))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath))
             self.openFileThread.start()
 
         #os.startfile("/tmp/"+fileName)
@@ -1102,14 +1162,14 @@ class MainScreen(Screen, FloatLayout):
 
 
     def encryptDir(self, d, targetLoc):
-        print(targetLoc, "LINE 1008 targetLoc encryptDir")
+        #print(targetLoc, "LINE 1008 targetLoc encryptDir")
 
         fs = os.listdir(d)
         #print(d, targetLoc)
         targetLoc = targetLoc.split(fileSep)
         targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
         targetLoc = fileSep.join(targetLoc)
-        print("NEW TARGET LOC encryptDir", targetLoc)
+        #print("NEW TARGET LOC encryptDir", targetLoc)
         for item in fs:
             if os.path.isdir(d+item):
                 try:
