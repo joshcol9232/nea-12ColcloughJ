@@ -21,3 +21,6 @@ def runServer():
         client.close()
         s.close()
         return True
+
+if __name__ == "__main__":
+    runServer()
