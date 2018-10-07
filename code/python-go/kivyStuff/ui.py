@@ -6,7 +6,7 @@ import time
 import multiprocessing
 import fileinput
 import tempfile
-import pickle
+from functools import partial
 from subprocess import Popen, PIPE
 
 from kivy.config import Config
@@ -22,6 +22,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.clock import Clock
+from kivy.clock import mainthread
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
@@ -35,20 +36,6 @@ from kivy.properties import StringProperty
 #import kivy.uix.contextmenu
 from kivy.base import EventLoop
 from kivy.lang import Builder
-
-##########Import Bluetooth Module##########
-#from bluetooth import *
-# blueDir = str(os.path.dirname(os.path.realpath(__file__)))
-# blueDir = blueDir.split("/")
-# print(blueDir)
-# del blueDir[len(blueDir)-1]
-# blueDir = "/".join(blueDir)
-# blueDir += "/bluetoothStuff"
-# print(blueDir, "egg")
-#
-# sys.path.insert(0, blueDir)
-# import bluetoothMain
-########################################
 
 ############Import SHA Module###########
 import SHA
@@ -129,84 +116,6 @@ configFile.close()
 #~ Bluetooth
 #~ Polish some stuffs
 
-###Bluetooth stuff### needs to be accessable by both screens.
-def runServ(currentLogIn):
-    server_sock=BluetoothSocket( RFCOMM )
-    server_sock.bind(("",PORT_ANY))
-    server_sock.listen(1)
-
-    port = server_sock.getsockname()[1]
-
-    uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
-
-    advertise_service( server_sock, "FileMateServer",
-                       service_id = uuid,
-                       service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                       profiles = [ SERIAL_PORT_PROFILE ],)
-
-    print("Waiting for connection on RFCOMM channel %d" % port)
-
-    client_sock, client_info = server_sock.accept()
-    print("Accepted connection from ", client_info)
-    LOCK = False
-
-    numbers = []
-    append = True
-
-    try:
-        while True:
-            data = client_sock.recv(1024)
-            if len(data) == 0: break
-            print("received [%s]" % data)
-            if append:
-                numbers.append(str(data, "utf-8"))
-            if b"~" in data:    ##End of message
-                append = False
-                print(numbers)
-                tempNums = "".join(numbers)
-                print(tempNums, "join")
-                time.sleep(1)
-                tempNums = tempNums.replace("#", "")
-                tempNums = tempNums.replace("~", "")
-                print(tempNums, "tempnums")
-                valid = currentLogIn.checkKey(tempNums)
-                if valid:
-                    numbers = []
-                    append = True
-                    client_sock.send("1")
-                    print("Send true.")
-                    currentLogIn.validBTKey = True
-                else:
-                    numbers = []
-                    append = True
-                    client_sock.send("0")
-                    print("Send false.")
-                    currentLogIn.validBTKey = False
-
-    except IOError as e:
-        print(e)
-
-    print("Closed.")
-    LOCK = True
-
-    client_sock.close()
-    server_sock.close()
-    print("all done")
-
-validBTKey = False
-def checkForWhenBTKeyIsValid(self):
-    while not validBTKey:
-        time.sleep(1)
-    print("VALID KEYYYY")
-    self.parent.current = "main"
-
-BTthread = threading.Thread(target=runServ, args=())
-#BTthread.start()
-checkBTthread = threading.Thread(target=checkForWhenBTKeyIsValid, daemon=True)
-#checkBTthread.start()
-if useBT:
-    BTthread.start()
-    checkBTthread.start()
 
 def runUI():
     global ui
@@ -356,115 +265,111 @@ class LoginScreen(Screen, FloatLayout):
             return "Input Key"
 
 
-class LoginScreenBT(LoginScreen, Screen, FloatLayout):
 
-    def __init__(self, **kwargs):
-        super(LoginScreenBT, self).__init__(**kwargs)
+###Bluetooth stuff### needs to be accessable by both screens.
+if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
+    from bluetooth import *
 
 
-    def startBTServer(self):
-        lock = runServ()
-        if lock == True:
-            print("LOCK")
-        return "done"
+    class LoginScreenBT(LoginScreen, Screen, FloatLayout):
 
-    def checkValid(self):   #Bound to checkbutton
-        if len(self.lockList) > 0:
-            print("UNLOCK")
-            return True
-        return False
+        def __init__(self, **kwargs):
+            super(LoginScreenBT, self).__init__(**kwargs)
+            self.validBTKey = False
+            start = Clock.schedule_once(self.startSrv, 0.7)
+            start()
 
-    ##BT attempt##
-    # globalKey = StringProperty("")
-    #
-    # def __init__(self, **kwargs):
-    #     super(LoginScreen, self).__init__(**kwargs)
-    #
-    #
-    # def getWelcomeText(self):
-    #     if useBT:
-    #         return "Connect via bluetooth."
-    #     else:
-    #         return "Enter the key below:"
-    #
-    # def findFile(self, dir):
-    #     fs = os.listdir(dir)
-    #     print(dir)
-    #     for item in fs:
-    #         if os.path.isdir(dir+item+fileSep):
-    #             if self.count == 0:
-    #                 self.findFile(dir+item+fileSep)
-    #             else:
-    #                 return
-    #         else:
-    #             self.decryptTestFile = dir+item
-    #             self.count += 1
-    #             return
-    #
-    # def passToPipe(self, key, d):
-    #     goproc = Popen(startDir+"AES", stdin=PIPE, stdout=PIPE)
-    #     out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
-    #     #print(id(key), d, "Key, D")
-    #     #success = os.system("./AES test '"+key+"' '"+d+"' '0'") #Passes parameters to compiled go AES.
-    #     print(out, err, "OUTPUT OF PIPE")
-    #     return out
-    #
-    #
-    # def getIfValidKey(self, inputKey):
-    #     if len(os.listdir(sharedPath)) != 0:
-    #         self.decryptTestFile = ""
-    #         self.count = 0
-    #         self.findFile(sharedPath)
-    #         print("file", self.decryptTestFile)
-    #         print(self.decryptTestFile, "File chosen.")
-    #         diditwork = self.passToPipe(inputKey, self.decryptTestFile)
-    #         print(diditwork)
-    #         if diditwork == b"-Valid-\n": #if error code is 0 then it worked, as in aes.go I added a panic() if it was invalid
-    #             return True
-    #         else:
-    #             return False
-    #     else:
-    #         return True
-    #
-    # def checkKey(self, inputKey):
-    #     if len(inputKey) > 16:
-    #         pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-    #         pop.open()
-    #         return "Login"
-    #     else:
-    #         inputKey = SHA.getSHA128of16(inputKey)
-    #         key = " ".join(str(i) for i in inputKey)
-    #         print(key, "KEYYY")
-    #         valid = self.getIfValidKey(key)
-    #         if valid:
-    #             #self.ids.keyInput.text = "" #reset key input if valid
-    #             self.globalKey = key
-    #             return "main"
-    #         else:
-    #             pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-    #             pop.open()
-    #             return "Login"
-    #
-    # # def keyValidated(self):
-    # #     print(self.validBTKey, "validBTKey")
-    # #     if self.validBTKey:
-    # #         return "main"
-    # #     else:
-    # #         return "Login"
-    #
-    # def needToSetKey(self):
-    #     if len(os.listdir(sharedPath)) == 0:
-    #         return "Input New Key (Write this down if you have to)"
-    #     else:
-    #         return "Input Key"
-    #
 
-    # def lockThreadFunc(self):
-    #     while len(self.lockList) == 0:
-    #         pass
-    #     self.unlocc = True
-    #     print("UNLOCK")
-    #     return "done"
+        def checkKey(self, inputKey):
+            try:
+                int(inputKey)
+            except:
+                return False
+            else:
+                if len(str(inputKey)) > 16:
+                    return False
+                else:
+                    inputKey = SHA.getSHA128of16(inputKey)
+                    key = " ".join(str(i) for i in inputKey)
+                    valid = self.getIfValidKey(key)
+                    if valid:
+                        self.ids.keyInput.text = "" #reset key input if valid
+                        self.globalKey = key
+                        #self.manager.current = "main"
+                        return True
+                    else:
+                        return False
+
+
+        def startSrv(self, dt=None):
+            self.runServLogin()
+
+        def runServLogin(self):
+            server_sock = BluetoothSocket( RFCOMM )
+            server_sock.bind(("",PORT_ANY))
+            server_sock.listen(1)
+
+            port = server_sock.getsockname()[1]
+
+            uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
+
+            advertise_service( server_sock, "FileMateServer",
+                               service_id = uuid,
+                               service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                               profiles = [ SERIAL_PORT_PROFILE ],)
+
+            print("[BT]: Waiting for connection on RFCOMM channel", port)
+
+            client_sock, client_info = server_sock.accept()
+            print("[BT]: Accepted connection from ", client_info)
+            LOCK = False
+
+            numbers = []
+            append = True
+
+            try:
+                while True:
+                    data = client_sock.recv(1024)
+                    if len(data) == 0: break
+                    print("[BT]: received [", data, "]")
+                    if append:
+                        numbers.append(str(data, "utf-8"))
+                    if b"~" in data:    ##End of message
+                        append = False
+                        print(numbers)
+                        tempNums = "".join(numbers)
+                        print(tempNums, "join")
+                        time.sleep(1)
+                        tempNums = tempNums.replace("#", "")
+                        tempNums = tempNums.replace("~", "")
+                        print(tempNums, "tempnums")
+                        valid = self.checkKey(tempNums)
+                        if valid:
+                            numbers = []
+                            append = True
+                            client_sock.send("1")
+                            print("[BT]: Send true.")
+                            self.validBTKey = True
+                            client_sock.close()
+                            server_sock.close()
+                            print("[BT]: Shutting down for mainscreen check.")
+                            self.manager.current = "main"
+                        else:
+                            numbers = []
+                            append = True
+                            client_sock.send("0")
+                            print("[BT]: Send false.")
+                            self.validBTKey = False
+
+            except IOError as e:
+                print(e)
+
+            print("Closed.")
+            LOCK = True
+
+            client_sock.close()
+            server_sock.close()
+            print("all done")
 
 
 
@@ -652,16 +557,67 @@ class MainScreen(Screen, FloatLayout):
         self.waitThread.start()
 
 
-
     def __repr__(self):
         return "MainScreen"
+
+    def runServMain(self):
+        server_sock = BluetoothSocket( RFCOMM )
+        server_sock.bind(("",PORT_ANY))
+        server_sock.listen(1)
+
+        port = server_sock.getsockname()[1]
+
+        uuid = "80677070-a2f5-11e8-b568-0800200c9a66" #Random UUID from https://www.famkruithof.net/uuid/uuidgen
+
+        advertise_service( server_sock, "FileMateServer",
+                           service_id = uuid,
+                           service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                           profiles = [ SERIAL_PORT_PROFILE ],)
+
+        print("[BT]: Waiting for connection on RFCOMM channel", port)
+
+        client_sock, client_info = server_sock.accept()
+        print("[BT]: Accepted connection from ", client_info)
+        LOCK = False
+
+        try:
+            while self.manager.current == "main":
+                data = client_sock.recv(1024)
+
+        except IOError as e:
+            print(e ,"Connection lost")
+            client_sock.close()
+            server_sock.close()
+            print("BT sockets closed.")
+            return
+
+    def checkServerStatus(self):
+        while self.serverThread.is_alive() and self.manager.current == "main":
+            print("Server is alive")
+            time.sleep(0.1)
+        self.serverThread.join(1)
+        print("Locking...")
+        self.clearUpTempFiles()
+        return mainthread(self.changeToLogin())
+
+    @mainthread
+    def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
+        self.manager.current = "Login"
+
+    def startBT(self):
+        if useBT:
+            self.serverThread = threading.Thread(target=self.runServMain, daemon=True)
+            #self.serverStopped = threading.Event()
+            self.serverCheckThread = threading.Thread(target=self.checkServerStatus, daemon=True)
+            self.serverThread.start()
+            self.serverCheckThread.start()
 
     def waitForKey(self):   #Waits for the key so that file names can be shown (as they need to be decrypted)
         while self.key == "":
             time.sleep(0.1)
 
         print("CHANGED TO MAIN")
-        return self.createButtons(self.List(self.currentDir))
+        return self.createButtons(self.List(self.currentDir)), self.startBT()
 
     def getGoodUnit(self, bytes):
         if bytes == " -":
@@ -1118,7 +1074,7 @@ class MainScreen(Screen, FloatLayout):
             self.encPop = Popup(title="Please wait...", content=Label(text=popText), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False)
             self.encPop.open()
 
-        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,))
+        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
         self.encryptProcess.start()
         self.encryptProcess.join()
         if self.encPop != None:
@@ -1146,12 +1102,12 @@ class MainScreen(Screen, FloatLayout):
             os.makedirs(osTemp+"FileMate"+fileSep)
         fileLoc = osTemp+"FileMate"+fileSep+fileObj.name
         if os.path.exists(fileLoc):
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath), daemon=True)
             self.openFileThread.start()
         else:
             self.encDecTerminal("n", fileObj.hexPath, fileLoc, fileObj.name)
 
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath))
+            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath), daemon=True)
             self.openFileThread.start()
 
         #os.startfile("/tmp/"+fileName)
@@ -1243,14 +1199,16 @@ class MainScreen(Screen, FloatLayout):
 
 
 class ScreenManagement(ScreenManager):
-    pass
+    
+    def changeScreen(self, screen):
+        self.current = screen
 
 
 if useBT:
     presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"mainBT.kv")
 else:
     print("Using:", os.path.dirname(os.path.realpath(__file__))+fileSep+"mainNoBT.kv")
-    presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"mainNoBT.kv")    
+    presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"mainNoBT.kv")
 
 class uiApp(App):
 
