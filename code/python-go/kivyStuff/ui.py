@@ -90,6 +90,7 @@ if configFile == None:
         print(e, "Config file not found.")
 
 for line in configFile:
+    print(line)
     lineSplit = line.split("--")
     lineSplit[1] = lineSplit[1].replace("\n", "")
     if lineSplit[0] == "vaultDir":
@@ -102,6 +103,7 @@ for line in configFile:
         else:
             raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
     elif lineSplit[0] == "bluetooth":
+        print(lineSplit[1], "Bluetooth config adb ahdhinaadsajdaujdahhdahdhuhyu")
         if lineSplit[1] == "True":
             useBT = True
         elif lineSplit[1] == "False":
@@ -276,8 +278,10 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
         def __init__(self, **kwargs):
             super(LoginScreenBT, self).__init__(**kwargs)
             self.validBTKey = False
-            start = Clock.schedule_once(self.startSrv, 0.7)
-            start()
+            print(useBT, "USE BT ADAHDHAHDAHYHYU")
+
+        def on_enter(self):
+            Clock.schedule_once(self.startSrv, 0.7)
 
 
         def checkKey(self, inputKey):
@@ -383,7 +387,6 @@ class MainScreen(Screen, FloatLayout):
             self.outerScreen = mainScreen
             self.fileObj = fileObj
 
-
     class searchResultButton(Button):
 
         def __init__(self, mainScreen, fullDir, **kwargs):
@@ -432,7 +435,6 @@ class MainScreen(Screen, FloatLayout):
                         self.outerScreen.resetButtons()
                         done.open()
 
-
     class infoButton(Button):
 
         def __init__(self, mainScreen, fileReference, **kwargs):
@@ -458,15 +460,20 @@ class MainScreen(Screen, FloatLayout):
 
         def changeSortOrder(self):
             self.outerScreen.ascending = not self.outerScreen.ascending
-            self.outerScreen.resetButtons()
+            if self.outerScreen.ascending:
+                self.text = "^"
+                self.outerScreen.removeButtons()
+                self.outerScreen.createButtons(self.outerScreen.currentList, True)
+            else:
+                self.text = "V"
+                self.outerScreen.removeButtons()
+                self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
 
     class sizeSortButton(Button):
 
         def __init__(self, mainScreen, **kwargs):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
-            self.text = " "
-            print(len(self.text), "WHERE IS IT")
             self.ascending = True
 
         def quickSortSize(self, fileObjects):
@@ -495,17 +502,11 @@ class MainScreen(Screen, FloatLayout):
             self.outerScreen.createButtons(sortList, False)
 
         def changeSizeOrder(self):
-            if self.text == " ":
-                print("IS NOTHING")
+            self.ascending = not self.ascending
+            if self.ascending:
                 self.text = "V"
-                self.ascending = False
-                print(self.text, "Changed", self.ascending)
-            if self.text == "V":
-                self.text = "^"
-                self.ascending = True
             else:
-                self.text = "V"
-                self.ascending = False
+                self.text = "^"
 
             print(self.ascending, "Self.ascending")
             self.sortBySize(self.ascending)
@@ -553,12 +554,13 @@ class MainScreen(Screen, FloatLayout):
         self.currentDir = self.path
         print(self.currentDir, "CURRENT DIR")
         self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
-        self.waitThread = threading.Thread(target=self.waitForKey, daemon=True)
-        self.waitThread.start()
+        #self.waitThread = threading.Thread(target=self.waitForKey, daemon=True)
+        #self.waitThread.start() #Wait for the key so that the file names can be decrypted.
 
 
     def __repr__(self):
         return "MainScreen"
+
 
     def runServMain(self):
         server_sock = BluetoothSocket( RFCOMM )
@@ -605,19 +607,34 @@ class MainScreen(Screen, FloatLayout):
         self.manager.current = "Login"
 
     def startBT(self):
+        self.serverThread = threading.Thread(target=self.runServMain, daemon=True)
+        #self.serverStopped = threading.Event()
+        self.serverCheckThread = threading.Thread(target=self.checkServerStatus, daemon=True)
+        self.serverThread.start()
+        self.serverCheckThread.start()
+
+    def setupSortButtons(self):
+        self.sortsGrid = GridLayout(cols=3, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})
+        self.nameSort = self.nameSortButton(self, text="^", size_hint_x=6.66) #Not sure why it has to be the devil
+        self.sizeSort = self.sizeSortButton(self)
+        print("Re-drawn")
+        self.sortsGrid.add_widget(self.nameSort)
+        self.sortsGrid.add_widget(self.sizeSort)
+        self.add_widget(self.sortsGrid)
+
+    def on_enter(self):
+        self.setupSortButtons()
+        self.createButtons(self.List(self.currentDir))
         if useBT:
-            self.serverThread = threading.Thread(target=self.runServMain, daemon=True)
-            #self.serverStopped = threading.Event()
-            self.serverCheckThread = threading.Thread(target=self.checkServerStatus, daemon=True)
-            self.serverThread.start()
-            self.serverCheckThread.start()
+            self.startBT()
 
-    def waitForKey(self):   #Waits for the key so that file names can be shown (as they need to be decrypted)
-        while self.key == "":
-            time.sleep(0.1)
+    ###Replaced with on_enter
+    # def waitForKey(self):   #Waits for the key so that file names can be shown (as they need to be decrypted)
+    #     while self.key == "":
+    #         time.sleep(0.1)
 
-        print("CHANGED TO MAIN")
-        return self.createButtons(self.List(self.currentDir)), self.startBT()
+    #     print("CHANGED TO MAIN")
+    #     return self.createButtons(self.List(self.currentDir)), self.startBT()
 
     def getGoodUnit(self, bytes):
         if bytes == " -":
@@ -673,72 +690,17 @@ class MainScreen(Screen, FloatLayout):
                     pass
 
 
-    # def getFileSize(self, item, recurse=True):
-    #     item = aesFName.encryptFileName(self.key, item)
-    #     if os.path.isdir(self.currentDir+item):
-    #         if recurse:
-    #             self.totalSize = 0
-    #             self.recursiveSize(self.currentDir+item)
-    #             size = self.getGoodUnit(self.totalSize)
-    #             if size == 0:
-    #                 return " -"
-    #             else:
-    #                 return size
-    #         else:
-    #             return " -"
-    #     else:
-    #         try:
-    #             size = self.getGoodUnit(os.path.getsize(self.currentDir+item))
-    #             if size == 0:
-    #                 return " -"
-    #             else:
-    #                 return size
-    #         except Exception as e:
-    #             print(e, "couldn't get size.")
-    #             return " -"
-
-    # def getGoodUnit(self, bytes):
-    #     if bytes == " -":
-    #         return " -"
-    #     else:
-    #         divCount = 0
-    #         divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-    #         while bytes > 1000:
-    #             bytes = bytes/1000
-    #             divCount += 1
-
-    #         return ("%.2f" % bytes) + divisions[divCount]
-
-    # def deleteFile(self, location):
-    #     if os.path.exists(location):
-    #         if os.path.isdir(location):
-    #             shutil.rmtree(location)
-    #         else:
-    #             os.remove(location)
-
 ############################################
 
 #######Button Creation and button functions#######
 
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
-        if self.ascending:
-            if sort:
-                sortedArray = self.getSortedFoldersAndFiles(fileObjects)
-            nameSortText = "^"
-        else:
-            if sort:
-                sortedArray = self.getSortedFoldersAndFiles(fileObjects, True)
-            nameSortText = "V"
-        if not sort:
-            nameSortText = ""
+        if sort:
+            sortedArray = self.getSortedFoldersAndFiles(fileObjects)
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
-        sortsGrid = GridLayout(cols=3, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})
-        nameSort = self.nameSortButton(self, text=nameSortText)
-        sortsGrid.add_widget(nameSort)
-        self.add_widget(sortsGrid)
 
         if sort:
             self.currentList = sortedArray
@@ -855,6 +817,8 @@ class MainScreen(Screen, FloatLayout):
 
     def resetButtons(self): #Goes back to self.currentDir, different to search.
         self.removeButtons()
+        self.nameSort.text = "^"
+        self.sizeSort.text = ""
         self.createButtons(self.List(self.currentDir))
 
     def refreshButtons(self):
