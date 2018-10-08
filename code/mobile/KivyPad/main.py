@@ -41,6 +41,7 @@ class PadScreen(Screen, FloatLayout):
             self.outerScreen = padScreen
             super(Popup, self).__init__(**kwargs)
             self.view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+            self.devName = ""
             self.setupDevButtons(self.getDeviceList())
 
         def setupDevButtons(self, listOfDevs):
@@ -73,6 +74,7 @@ class PadScreen(Screen, FloatLayout):
                     socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
                     rStream = socket.getInputStream()   #Recieving data
                     sStream = socket.getOutputStream()  #Sending data
+                    self.devName = devName
                     found = True
                     break   #Stop when device found
             if found:
@@ -102,7 +104,7 @@ class PadScreen(Screen, FloatLayout):
     def addNum(self, num):
         if len(self.nums) < 16:
             self.nums.append(int(num))
-            self.numsString += num
+            self.numsString += "*"
             self.updateDisplay()
 
     def updateDisplay(self):
@@ -144,6 +146,8 @@ class PadScreen(Screen, FloatLayout):
                 print u"Valid"
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 corPop.open()
+                self.deviceSelection.setupBT(self.deviceSelection.devName)
+
             elif data == 48:
                 print u"Invalid."
                 pop.dismiss()
