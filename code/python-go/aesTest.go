@@ -476,10 +476,17 @@ func encryptFile(f, w string) {
     _ = n1 //Ignore this one, only interested if there is an error.
     check(err)
 
-    var extraNeeded byte = byte(16 - len(buff))
+    var extraNeeded int
+    var l int = len(buff)
+    for l % 16 != 0 {
+      l++
+      extraNeeded++
+    }
+    fmt.Println(extraNeeded, "Extra needed.")
+    fmt.Println(len(buff), "Length of buffer")
 
     for len(buff) % 16 != 0{
-      buff = append(buff, extraNeeded)
+      buff = append(buff, byte(extraNeeded))
       ////fmt.Println("Adding zero.", len(buff), len(buff)%16)
     }
 
@@ -557,6 +564,7 @@ func decryptFile(f, w string) {
           var focusCount int = 0
 
           fmt.Println(focus, "FOCUS")
+          fmt.Println(decrypted, "Decrypted")
           if focus < 16 {
             for j := 15; int(decrypted[j]) == focus; j-- {
               if int(decrypted[j]) == focus {focusCount++}

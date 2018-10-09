@@ -476,10 +476,15 @@ func encryptFile(key []byte, f, w string) {
     _ = n1 //Ignore this one, only interested if there is an error.
     check(err)
 
-    var extraNeeded byte = byte(16 - len(buff))
+    var extraNeeded int
+    var l int = len(buff)
+    for l % 16 != 0 {
+      l++
+      extraNeeded++
+    }
 
     for len(buff) % 16 != 0{
-      buff = append(buff, extraNeeded)
+      buff = append(buff, byte(extraNeeded))
       ////fmt.Println("Adding zero.", len(buff), len(buff)%16)
     }
 

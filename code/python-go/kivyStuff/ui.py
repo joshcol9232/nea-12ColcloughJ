@@ -465,7 +465,7 @@ class MainScreen(Screen, FloatLayout):
                 self.outerScreen.removeButtons()
                 self.outerScreen.createButtons(self.outerScreen.currentList, True)
             else:
-                self.text = "V"
+                self.text = "v"
                 self.outerScreen.removeButtons()
                 self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
 
@@ -504,11 +504,11 @@ class MainScreen(Screen, FloatLayout):
         def changeSizeOrder(self):
             self.ascending = not self.ascending
             if self.ascending:
-                self.text = "V"
+                self.text = "v"
             else:
                 self.text = "^"
 
-            print(self.ascending, "Self.ascending")
+            #print(self.ascending, "Self.ascending")
             self.sortBySize(self.ascending)
 
     class addFileScreen(Popup):
@@ -735,7 +735,10 @@ class MainScreen(Screen, FloatLayout):
 
     def removeButtons(self):
         self.grid = 0
-        self.remove_widget(self.scroll)
+        try:
+            self.remove_widget(self.scroll)
+        except Exception as e:
+            print(e, "Already removed?")
         self.scroll = 0
 
 
@@ -1027,6 +1030,7 @@ class MainScreen(Screen, FloatLayout):
 
     def encDecTerminal(self, type, d, targetLoc, newName=None):
         #print("encDecTerminal inp:", type, d, targetLoc, newName)
+
         self.encPop = None
         #print(type, "TYPE GIVEN")
         if type == "y":
@@ -1039,10 +1043,17 @@ class MainScreen(Screen, FloatLayout):
             self.encPop.open()
 
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
+        #Clock.schedule_once(self.scheduleStart, 0.5)
         self.encryptProcess.start()
         self.encryptProcess.join()
+        #print(self.encPop, "encPop")
         if self.encPop != None:
             self.encPop.dismiss()
+            self.encPop = None
+
+    def scheduleStart(self, dt): #Had to make to handle dt variable
+        self.encryptProcess.start()
+        self.encryptProcess.join()
 
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
