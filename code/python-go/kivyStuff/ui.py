@@ -251,9 +251,7 @@ class LoginScreen(Screen, FloatLayout):
                 for i in range(len(inputKey)):
                     inputKeyTemp.append(int(inputKey[i]))
                 inputKey = inputKeyTemp
-                print(inputKey)
                 inputKey = SHA.getSHA128of16(inputKey)
-                print(inputKey)
                 key = " ".join(str(i) for i in inputKey)
                 valid = self.getIfValidKey(key)
                 if valid:
@@ -293,7 +291,6 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
         def checkKey(self, inputKey):
             inputKey = inputKey.split(",")
             inputKey = inputKey[:len(inputKey)-1]
-            print(inputKey, "CHECK KEY INPUT")
             key = " ".join(str(i) for i in inputKey)    #Formatting for AES
             valid = self.getIfValidKey(key)
             if valid:
@@ -335,18 +332,15 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
                 while True:
                     data = client_sock.recv(1024)
                     if len(data) == 0: break
-                    print("[BT]: received [", data, "]")
+                    print("[BT]: Received data.")
                     if append:
                         numbers.append(str(data, "utf-8"))
                     if b"~" in data:    ##End of message
                         append = False
-                        print(numbers)
                         tempNums = "".join(numbers)
-                        print(tempNums, "join")
                         time.sleep(1)
                         tempNums = tempNums.replace("#", "")
                         tempNums = tempNums.replace("~", "")
-                        print(tempNums, "tempnums")
                         valid = self.checkKey(tempNums)
                         if valid:
                             numbers = []
