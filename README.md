@@ -104,13 +104,15 @@ To do this, you will need Virtualbox, an android device, and some patience.
 
 8. Make sure the buildozer.spec file is in that folder. If it isn't, download it.
 
-9. Plug your device into your computer.
+9. Make a folder on the desktop called "VMOUT". This will hold the built application before it is put on the device.
 
-10. Go to Devices --> USB at the top of the virtualbox window, and click your device on the list.
+10. Plug your device into your computer.
 
-11. You will probably have to tap allow on your device, so make sure you have your device unlocked ready.
+11. Go to Devices --> USB at the top of the virtualbox window, and click your device on the list.
 
-12. Once you can navigate to the device in the file manager of the VM, run the following command in the terminal we opened earlier:
+12. You will probably have to tap allow on your device, so make sure you have your device unlocked ready.
+
+13. Once you can navigate to the device in the file manager of the VM, run the following command in the terminal we opened earlier:
 
 ```bash
 buildozer android debug deploy
@@ -119,11 +121,11 @@ and wait. The first time you run this, it may have to download the Android SDK, 
 
 "android" is the target, "debug" will build the code into an android package, and "deploy" will install it on your device.
 
-13. Once this has finished, the app should be installed on your device. You can now shutdown the VM and unplug your device.
+14. Once this has finished, the app should be installed on your device. You can now shutdown the VM and unplug your device.
 
-14. You will find the app in your applications menu on your device, as a home screen shortcut is not automatically made.
+15. You will find the app in your applications menu on your device, as a home screen shortcut is not automatically made.
 
-15. If you are having issues, you can debug the program by running:
+16. If you are having issues, you can debug the program by running:
 ```bash
 buildozer android debug deploy run && buildozer android logcat | grep "python"
 ```
