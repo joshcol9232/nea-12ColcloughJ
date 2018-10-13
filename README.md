@@ -113,7 +113,8 @@ To do this, you will need Virtualbox, an android device, and some patience.
 ```bash
 buildozer android debug deploy
 ```
-and wait.
+and wait. The first time you run this, it may have to download the Android SDK, which will take a while depending on your internet speed.
+
 "android" is the target, "debug" will build the code into an android package, and "deploy" will install it on your device.
 
 12. Once this has finished, the app should be installed on your device. You can now shutdown the VM and unplug your device.

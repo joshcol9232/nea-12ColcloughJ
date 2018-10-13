@@ -1,7 +1,7 @@
 [app]
 
 # (str) Title of your application
-title = App
+title = FM Pad
 # (str) Package name
 package.name = PadApp
 
