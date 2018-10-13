@@ -88,27 +88,29 @@ Since the app is not (yet) available on the Google play store, you have to build
 ## Instructions:
 To do this, you will need Virtualbox, an android device, and some patience.
 
-1. Go to this site: https://kivy.org/#download and download the Buildozer virtual machine (scroll down to the bottom and it is in the "Vitual Machine (for Android/buildozer)" section).
+1. Enable USB debugging on your mobile device (look it up for your device).
 
-2. Extract the zip, and click on the "Buildozer VM.ovf" file, and open it with virtualbox.
+2. Go to this site: https://kivy.org/#download and download the Buildozer virtual machine (scroll down to the bottom and it is in the "Vitual Machine (for Android/buildozer)" section).
 
-3. Follow the steps on Virtualbox.
+3. Extract the zip, and click on the "Buildozer VM.ovf" file, and open it with virtualbox.
 
-4. Start the VM. Once in the login screen, the password is "kivy".
+4. Follow the steps on Virtualbox.
 
-5. Copy the KivyPad folder from the source code of this project onto the VM somehow (either using shared folders, clipboard or drag and drop settings in Virtualbox).
+5. Start the VM. Once in the login screen, the password is "kivy".
 
-6. Open the terminal and navigate to where the KivyPad folder is.
+6. Copy the KivyPad folder from the source code of this project onto the VM somehow (either using shared folders, clipboard or drag and drop settings in Virtualbox).
 
-7. Make sure the buildozer.spec file is in that folder. If it isn't, download it.
+7. Open the terminal and navigate to where the KivyPad folder is.
 
-8. Plug your device into your computer.
+8. Make sure the buildozer.spec file is in that folder. If it isn't, download it.
 
-9. Go to Devices --> USB at the top of the virtualbox window, and click your device on the list.
+9. Plug your device into your computer.
 
-10. You will probably have to tap allow on your device, so make sure you have your device unlocked ready.
+10. Go to Devices --> USB at the top of the virtualbox window, and click your device on the list.
 
-11. Once you can navigate to the device in the file manager of the VM, run the following command in the terminal we opened earlier:
+11. You will probably have to tap allow on your device, so make sure you have your device unlocked ready.
+
+12. Once you can navigate to the device in the file manager of the VM, run the following command in the terminal we opened earlier:
 
 ```bash
 buildozer android debug deploy
@@ -117,11 +119,11 @@ and wait. The first time you run this, it may have to download the Android SDK, 
 
 "android" is the target, "debug" will build the code into an android package, and "deploy" will install it on your device.
 
-12. Once this has finished, the app should be installed on your device. You can now shutdown the VM and unplug your device.
+13. Once this has finished, the app should be installed on your device. You can now shutdown the VM and unplug your device.
 
-13. You will find the app in your applications menu on your device, as a home screen shortcut is not automatically made.
+14. You will find the app in your applications menu on your device, as a home screen shortcut is not automatically made.
 
-14. If you are having issues, you can debug the program by running:
+15. If you are having issues, you can debug the program by running:
 ```bash
 buildozer android debug deploy run && buildozer android logcat | grep "python"
 ```
