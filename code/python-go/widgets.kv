@@ -187,12 +187,12 @@
         #     on_release: root.changeSortOrder()
 
         Button:
-            id: goBackArrow
+            id: home
             size_hint: .06, .08
             pos_hint: {"x": .62, "y": 0.84}
-            on_release: root.resetButtons()
+            on_release: root.goHome()
             Image:
-                source: root.getPathForButton("backArrows.png")
+                source: root.getPathForButton("home.png")
                 x: self.parent.x + 5
                 y: self.parent.y
                 size: 50, 50

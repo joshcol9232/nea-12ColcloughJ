@@ -1,0 +1,8 @@
+#####Test 1 - no optimisation##### (On laptop i7-3537U)
+Enc = 0.672195573 seconds
+Dec = 0.692521561 seconds
+
+Size of file = 2,655,319 bytes
+
+Enc speed = 3950217.922664004 bytes/second == 3.95 MiB/s
+Dec speed = 3834276.287608611 bytes/second == 3.83 MiB/s

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from jnius import autoclass
 
 import time
+import SHA
 
 import kivy
 from kivy.app import App
@@ -14,11 +15,12 @@ from kivy.uix.textinput import TextInput
 from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.config import Config
 
 
-####Bluetooth stuff####
+####Bluetooth stuff in android accessed via jnius####
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
 BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
 BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
@@ -40,20 +42,30 @@ class PadScreen(Screen, FloatLayout):
         def __init__(self, padScreen, **kwargs):
             self.outerScreen = padScreen
             super(Popup, self).__init__(**kwargs)
-            self.view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
             self.devName = ""
-            self.setupDevButtons(self.getDeviceList())
+            self.connected = False
+            self.setupAll()
+
+        def setupAll(self, instance=None):
+            paired = self.getDeviceList()
+            if paired:
+                self.setupDevButtons(paired)
+            else:
+                grid = GridLayout(cols=1)
+                info = Label(text="No paired devices found.\nPlease make sure your Bluetooth\nis on, you are in range of\nyour device, and you are paired\nto your device.")
+                btn = Button(text="Retry", size_hint_y=.2)
+                btn.bind(self.setupAll)
+                self.content = grid
 
         def setupDevButtons(self, listOfDevs):
-            self.layout = GridLayout(cols=1, spacing=20, size_hint_y=None, height=Window.height * 1.5)
+            self.layout = GridLayout(cols=1, spacing=20, size_hint_y=None)
             self.layout.bind(minimum_height=self.layout.setter("height"))
-            self.layout.add_widget(Label(text="Select device:", font_size=80))
+
             for devName in listOfDevs:
-                btn = self.DeviceButton(self, text=devName, size_hint_y=None, halign="left", valign="middle")
+                btn = self.DeviceButton(self, text=devName, size_hint_y=None, height=Window.height/10, halign="left", valign="middle")
                 self.layout.add_widget(btn)
 
-
-            self.view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+            self.view = ScrollView(size_hint=(1, 1))
             self.view.add_widget(self.layout)
             self.content = self.view
 
@@ -62,7 +74,12 @@ class PadScreen(Screen, FloatLayout):
             pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
             for dev in pairedDevs:
                 result.append(dev.getName())
+
             return result
+
+        # print u"Can't connect to device."
+        # noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
+        # noConnect.open()
 
         def createSocketStream(self, devName):
             pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
@@ -83,13 +100,26 @@ class PadScreen(Screen, FloatLayout):
             else:
                 raise ConnectionAbortedError(u"Couldn't find + connect to device.")
 
+        def changeToDeviceList(self, instance=None):
+            self.content = self.view
+
         def setupBT(self, devName):
             try:
                 self.outerScreen.rStream, self.outerScreen.sStream = self.createSocketStream(devName)
             except Exception, e:
-                print e, u"Can't connect."
+                print u"Can't connect to device."
+                self.connected = False
+                grid = GridLayout(cols=1)
+                info = Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app.")
+                btn = Button(text="Retry", size_hint_y=.2)
+                btn.bind(on_press=self.changeToDeviceList)
+                grid.add_widget(info)
+                grid.add_widget(btn)
+                self.content = grid
             else:
                 print u"Connected to:", devName
+                self.connected = True
+                self.dismiss()
 
 
     def __init__(self, **kwargs):
@@ -98,8 +128,8 @@ class PadScreen(Screen, FloatLayout):
         self.numsString = u""
         self.rStream = None
         self.sStream = None
-        self.deviceSelection = self.DeviceSelectionPopup(self, title="Select your device.", size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
-        self.deviceSelection.open()
+        self.deviceSelection = self.DeviceSelectionPopup(self, title="Select your device:", title_align="center", size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
+        Clock.schedule_once(self.deviceSelection.open, 0.5)
 
     def addNum(self, num):
         if len(self.nums) < 16:
@@ -121,8 +151,10 @@ class PadScreen(Screen, FloatLayout):
         pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
         if self.rStream != None and self.sStream != None:
             self.sStream.write("{}".format("#"))
+            print self.nums, u"self.nums"
+            self.nums = SHA.getSHA128of16(self.nums)
             for num in self.nums:
-                self.sStream.write("{}".format(num))
+                self.sStream.write("{},".format(num))
                 print u"Sent", num
             self.sStream.write("{}".format("~"))
             self.sStream.flush()
@@ -146,7 +178,10 @@ class PadScreen(Screen, FloatLayout):
                 print u"Valid"
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 corPop.open()
-                self.deviceSelection.setupBT(self.deviceSelection.devName)
+                self.deviceSelection.connected = False #Reset connected value, as you are disconnected when the screens change.
+                print self.deviceSelection.connected, u"connected var"
+                while not self.deviceSelection.connected:
+                    self.deviceSelection.setupBT(self.deviceSelection.devName)
 
             elif data == 48:
                 print u"Invalid."
@@ -156,6 +191,9 @@ class PadScreen(Screen, FloatLayout):
             else:
                 print type(data), "AAA data"
         else:
+            print u"Can't connect to device."
+            noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
+            noConnect.open()
             self.deviceSelection.open()
 
 # class ConfirmationScreen(Screen, FloatLayout):

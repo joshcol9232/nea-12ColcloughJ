@@ -6,7 +6,7 @@ import time
 import multiprocessing
 import fileinput
 import tempfile
-from functools import partial
+#from functools import partial
 from subprocess import Popen, PIPE
 
 from kivy.config import Config
@@ -247,7 +247,13 @@ class LoginScreen(Screen, FloatLayout):
                 pop.open()
                 return "Login"
             else:
+                inputKeyTemp = []
+                for i in range(len(inputKey)):
+                    inputKeyTemp.append(int(inputKey[i]))
+                inputKey = inputKeyTemp
+                print(inputKey)
                 inputKey = SHA.getSHA128of16(inputKey)
+                print(inputKey)
                 key = " ".join(str(i) for i in inputKey)
                 valid = self.getIfValidKey(key)
                 if valid:
@@ -285,24 +291,18 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
 
 
         def checkKey(self, inputKey):
-            try:
-                int(inputKey)
-            except:
-                return False
+            inputKey = inputKey.split(",")
+            inputKey = inputKey[:len(inputKey)-1]
+            print(inputKey, "CHECK KEY INPUT")
+            key = " ".join(str(i) for i in inputKey)    #Formatting for AES
+            valid = self.getIfValidKey(key)
+            if valid:
+                self.ids.keyInput.text = "" #reset key input if valid
+                self.globalKey = key
+                #self.manager.current = "main"
+                return True
             else:
-                if len(str(inputKey)) > 16:
-                    return False
-                else:
-                    inputKey = SHA.getSHA128of16(inputKey)
-                    key = " ".join(str(i) for i in inputKey)
-                    valid = self.getIfValidKey(key)
-                    if valid:
-                        self.ids.keyInput.text = "" #reset key input if valid
-                        self.globalKey = key
-                        #self.manager.current = "main"
-                        return True
-                    else:
-                        return False
+                return False
 
 
         def startSrv(self, dt=None):
@@ -584,23 +584,42 @@ class MainScreen(Screen, FloatLayout):
 
         try:
             while self.manager.current == "main":
+                # print("Sending ping")
+                # try:
+                #     client_sock.send("ping")
+                # except:
+                #     print("AAAAA PING NOT WORKING")
+                #     client_sock.close()
+                #     server_sock.close()
+                #     self.clearUpTempFiles()
+                #     return mainthread(self.changeToLogin())
+
                 data = client_sock.recv(1024)
+                #if len(data) < 0:   #Will be -1 when connection lost
+                print(e ,"Connection lost")
+                client_sock.close()
+                server_sock.close()
+                print("BT sockets closed.")
+                self.clearUpTempFiles()
+                return mainthread(self.changeToLogin())
+                #time.sleep(1)
 
         except IOError as e:
             print(e ,"Connection lost")
             client_sock.close()
             server_sock.close()
             print("BT sockets closed.")
-            return
+            self.clearUpTempFiles()
+            return mainthread(self.changeToLogin())
 
-    def checkServerStatus(self):
-        while self.serverThread.is_alive() and self.manager.current == "main":
-            print("Server is alive")
-            time.sleep(0.1)
-        self.serverThread.join(1)
-        print("Locking...")
-        self.clearUpTempFiles()
-        return mainthread(self.changeToLogin())
+    # def checkServerStatus(self):
+    #     while self.serverThread.is_alive() and self.manager.current == "main":
+    #         print("Server is alive")
+    #         time.sleep(0.1)
+    #     self.serverThread.join(1)
+    #     print("Locking...")
+    #     self.clearUpTempFiles()
+    #     return mainthread(self.changeToLogin())
 
     @mainthread
     def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
@@ -609,9 +628,9 @@ class MainScreen(Screen, FloatLayout):
     def startBT(self):
         self.serverThread = threading.Thread(target=self.runServMain, daemon=True)
         #self.serverStopped = threading.Event()
-        self.serverCheckThread = threading.Thread(target=self.checkServerStatus, daemon=True)
+        #self.serverCheckThread = threading.Thread(target=self.checkServerStatus, daemon=True)
         self.serverThread.start()
-        self.serverCheckThread.start()
+        #self.serverCheckThread.start()
 
     def setupSortButtons(self):
         self.sortsGrid = GridLayout(cols=3, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})
@@ -828,21 +847,27 @@ class MainScreen(Screen, FloatLayout):
         self.removeButtons()
         self.createButtons(self.currentList, False)
 
+    def goHome(self):
+        self.removeButtons()
+        self.nameSort.text = "^"
+        self.sizeSort.text = ""
+        self.currentDir = self.path
+        self.createButtons(self.List(self.currentDir))
+
 
 ####File Handling####
 
     def List(self, dir):
-        #print(dir, "LIST DIR")
         fs = os.listdir(dir)
         count = 0
+        listOfFolders = []
         listOfFiles = []
         for item in fs:
             if os.path.isdir(dir+item):
-                listOfFiles.append(File(self, dir+item, item, True))
-        for item in fs:
-            if not os.path.isdir(dir+item):
+                listOfFolders.append(File(self, dir+item, item, True))
+            else:
                 listOfFiles.append(File(self, dir+item, item))
-        return listOfFiles
+        return listOfFolders+listOfFiles
 
     def getPathBack(self):
         tempDir = self.currentDir.split(fileSep)
@@ -901,9 +926,7 @@ class MainScreen(Screen, FloatLayout):
             return myList
 
 
-    def quickSortTuples(self, tuples):    # def encrypt(self, key, dir, outputDir):
-    #     encryptThread = multiprocessing.Process(target=AES.encryptFile, args=(key, dir, outputDir))
-    #     encryptThread.start()
+    def quickSortTuples(self, tuples):
         if len(tuples) > 1:
             left = []
             right = []  #Make seperate l+r lists, and add on at the end.
@@ -997,56 +1020,46 @@ class MainScreen(Screen, FloatLayout):
 
 ######Encryption Stuff + opening decrypted files######
     def passToPipe(self, type, d, targetLoc, newName=None):
-        #print("PIPE INPUTS:", self, type, d, targetLoc, newName)
         if sys.platform.startswith("win32"):
-            progname = "AESWin"
+            progname = "AESWin.exe"
         else:
             progname = "AES"
 
         tempDir = d.split(fileSep)
         fileName = tempDir[len(tempDir)-1]
-        #print("File name given:", fileName)
         if type == "y":
-            ##need to encrypt file name too if enc
-
             #replace file name with new hex
-            tempTargetLoc = targetLoc.split(fileSep)
-            tempTargetLoc[len(tempTargetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
-            targetLoc = fileSep.join(tempTargetLoc)
-            #print("New targetLoc", targetLoc)
+            targetLoc = targetLoc.split(fileSep)
+            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
+            targetLoc = fileSep.join(targetLoc)
 
         elif type == "n":   #Need to decrypt file name if decrypting
-            tempTargetLoc = targetLoc.split(fileSep)
-            tempTargetLoc[len(tempTargetLoc)-1] = newName #Stops you from doing it twice in decrypt()
-            targetLoc = fileSep.join(tempTargetLoc)
-            #print("New targetLoc", targetLoc)
+            targetLoc = targetLoc.split(fileSep)
+            targetLoc[len(targetLoc)-1] = newName #Stops you from doing it twice in decrypt()
+            targetLoc = fileSep.join(targetLoc)
 
 
         goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetloc for file name and self.key for self.key
         if err != None:
-            raise ValueError("key not valid.")
+            raise ValueError("Key not valid.")
         return out
 
     def encDecTerminal(self, type, d, targetLoc, newName=None):
-        #print("encDecTerminal inp:", type, d, targetLoc, newName)
-
         self.encPop = None
-        #print(type, "TYPE GIVEN")
-        if type == "y":
-            popText = "Encrypting..."
-        elif type == "n":
-            popText = "Decrypting..."
 
         if type == "y" or "n":
+            if type == "y":
+                popText = "Encrypting..."
+            elif type == "n":
+                popText = "Decrypting..."
+
             self.encPop = Popup(title="Please wait...", content=Label(text=popText), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False)
             self.encPop.open()
 
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
-        #Clock.schedule_once(self.scheduleStart, 0.5)
         self.encryptProcess.start()
         self.encryptProcess.join()
-        #print(self.encPop, "encPop")
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
@@ -1057,12 +1070,11 @@ class MainScreen(Screen, FloatLayout):
 
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
-            locationTemp = location.split("\\")
-            location = "/".join(locationTemp) #Windows actually accepts forward slashes in terminal
+            location = location.split("\\")
+            location = "/".join(location) #Windows actually accepts forward slashes in terminal
             command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
         else:
             command = "xdg-open "+'"'+location+'"'      #Quotation marks for if the dir has spaces in it
-        #print("Command:", command)
         os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         self.encDecTerminal("y", location, startLoc)
 
@@ -1085,13 +1097,10 @@ class MainScreen(Screen, FloatLayout):
             self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath), daemon=True)
             self.openFileThread.start()
 
-        #os.startfile("/tmp/"+fileName)
-        #subprocess.call(["xdg-open", file])
 
     def checkDirExists(self, dir):
         if os.path.exists(dir):
             return True
-
         else:
             self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
             self.popup.open()
@@ -1099,14 +1108,10 @@ class MainScreen(Screen, FloatLayout):
 
 
     def encryptDir(self, d, targetLoc):
-        #print(targetLoc, "LINE 1008 targetLoc encryptDir")
-
         fs = os.listdir(d)
-        #print(d, targetLoc)
         targetLoc = targetLoc.split(fileSep)
         targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
         targetLoc = fileSep.join(targetLoc)
-        #print("NEW TARGET LOC encryptDir", targetLoc)
         for item in fs:
             if os.path.isdir(d+item):
                 try:
@@ -1126,8 +1131,7 @@ class MainScreen(Screen, FloatLayout):
             #print("--")
             inp = inp.split("--")
             for d in inp:
-                exists = self.checkDirExists(d)
-                if exists:
+                if self.checkDirExists(d):
                     if os.path.isdir(d):
                         if d[len(d)-1] != fileSep:
                             d += fileSep
@@ -1141,8 +1145,7 @@ class MainScreen(Screen, FloatLayout):
 
 
         else:
-            exists = self.checkDirExists(inp)
-            if exists:
+            if self.checkDirExists(inp):
                 if os.path.isdir(inp):
                     if inp[len(inp)-1] != fileSep:
                         inp += fileSep
@@ -1178,6 +1181,14 @@ class ScreenManagement(ScreenManager):
     def changeScreen(self, screen):
         self.current = screen
 
+try:
+    import bluetooth
+    bluetooth.BluetoothSocket( bluetooth.RFCOMM )
+except Exception as e:
+    print(e, "Reverting to no-bluetooth.")
+    useBT = False
+else:
+    print("Worked")
 
 if useBT:
     presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"mainBT.kv")
