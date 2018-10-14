@@ -2,11 +2,7 @@ import os
 import sys
 import shutil
 import threading
-import time
-import multiprocessing
-import fileinput
-import tempfile
-#from functools import partial
+from tempfile import gettempdir
 from subprocess import Popen, PIPE
 
 from kivy.config import Config
@@ -28,12 +24,8 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
-from kivy.uix.checkbox import CheckBox
 from kivy.uix.popup import Popup
-from kivy.uix.widget import WidgetException
-from kivy.properties import ObjectProperty
 from kivy.properties import StringProperty
-#import kivy.uix.contextmenu
 from kivy.base import EventLoop
 from kivy.lang import Builder
 
@@ -41,22 +33,19 @@ from kivy.lang import Builder
 import SHA
 
 ###########Import filename encryption###
-import aesFName
+import aesFName     #AES easier to use when written in python, but slower, which isn't much of an issue for file names hence why this part is python.
 
 #######Load OS Specific settings####
 global fileSep #linux has different file separators to windows and different temp dir
-global osTemp
+global osTemp  #Different OS have different temp folder locations.
 if sys.platform.startswith("win32"):
     fileSep = "\\"
 else:          #windows bad
     fileSep = "/"
-osTemp = tempfile.gettempdir()+fileSep
+osTemp = gettempdir()+fileSep #From tempfile module
 
 ######Load config and define shared variables#####
-global sharedPath
-global sharedAssets
 global startDir
-global searchRecursively
 global useBT
 #global root #For use like root.x in kv file
 useBT = False
@@ -88,6 +77,7 @@ if configFile == None:
         configFile = open(startDir+"config.cfg", "r")
     except Exception as e:
         print(e, "Config file not found.")
+        raise FildNotFoundError("No config file found. Refer to the README if you need help.")
 
 for line in configFile:
     print(line)
@@ -113,10 +103,16 @@ for line in configFile:
 
 configFile.close()
 
+# try:
+#     from bluetooth import *
+#     a = get_acl_conn_handle()
 
-###TO DO LIST###
-#~ Bluetooth
-#~ Polish some stuffs
+
+# except Exception as e:
+#     print(e, "Reverting to no-bluetooth.")
+#     useBT = False
+# else:
+#     print("Worked")
 
 
 def runUI():
@@ -154,12 +150,12 @@ class File:
 
 
     def getNormDir(self, hexDir):
-        noPath = hexDir.replace(self.outerScreen.path, "")
-        noPath = noPath.split(fileSep)
-        for i in range(len(noPath)):
-            noPath[i] = aesFName.decryptFileName(self.outerScreen.key, noPath[i])
+        hexDir = hexDir.replace(self.outerScreen.path, "")
+        hexDir = hexDir.split(fileSep)
+        for i in range(len(hexDir)):
+            hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
 
-        return fileSep.join(noPath)
+        return fileSep.join(hexDir)
 
     def getFileSize(self, recurse=True):
         if self.isDir:
@@ -282,7 +278,7 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
         def __init__(self, **kwargs):
             super(LoginScreenBT, self).__init__(**kwargs)
             self.validBTKey = False
-            print(useBT, "USE BT ADAHDHAHDAHYHYU")
+            #print(useBT, "USE BT ADAHDHAHDAHYHYU")
 
         def on_enter(self):
             Clock.schedule_once(self.startSrv, 0.7)
@@ -296,7 +292,6 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
             if valid:
                 self.ids.keyInput.text = "" #reset key input if valid
                 self.globalKey = key
-                #self.manager.current = "main"
                 return True
             else:
                 return False
@@ -306,31 +301,30 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
             self.runServLogin()
 
         def runServLogin(self):
-            server_sock = BluetoothSocket( RFCOMM )
-            server_sock.bind(("",PORT_ANY))
-            server_sock.listen(1)
+            serverSock = BluetoothSocket( RFCOMM )
+            serverSock.bind(("",PORT_ANY))
+            serverSock.listen(1)
 
-            port = server_sock.getsockname()[1]
+            port = serverSock.getsockname()[1]
 
             uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
 
-            advertise_service( server_sock, "FileMateServer",
-                               service_id = uuid,
-                               service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                               profiles = [ SERIAL_PORT_PROFILE ],)
+            advertise_service(serverSock, "FileMateServer",
+                              service_id = uuid,
+                              service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                              profiles = [ SERIAL_PORT_PROFILE ],)
 
             print("[BT]: Waiting for connection on RFCOMM channel", port)
 
-            client_sock, client_info = server_sock.accept()
-            print("[BT]: Accepted connection from ", client_info)
-            LOCK = False
+            clientSock, clientInfo = serverSock.accept()
+            print("[BT]: Accepted connection from ", clientInfo)
 
             numbers = []
             append = True
 
             try:
                 while True:
-                    data = client_sock.recv(1024)
+                    data = clientSock.recv(1024)
                     if len(data) == 0: break
                     print("[BT]: Received data.")
                     if append:
@@ -338,24 +332,24 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
                     if b"~" in data:    ##End of message
                         append = False
                         tempNums = "".join(numbers)
-                        time.sleep(1)
+                        #time.sleep(1)
                         tempNums = tempNums.replace("#", "")
                         tempNums = tempNums.replace("~", "")
                         valid = self.checkKey(tempNums)
                         if valid:
                             numbers = []
                             append = True
-                            client_sock.send("1")
+                            clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            client_sock.close()
-                            server_sock.close()
+                            clientSock.close()
+                            serverSock.close()
                             print("[BT]: Shutting down for mainscreen check.")
                             self.manager.current = "main"
                         else:
                             numbers = []
                             append = True
-                            client_sock.send("0")
+                            clientSock.send("0")
                             print("[BT]: Send false.")
                             self.validBTKey = False
 
@@ -363,10 +357,9 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
                 print(e)
 
             print("Closed.")
-            LOCK = True
 
-            client_sock.close()
-            server_sock.close()
+            clientSock.close()
+            serverSock.close()
             print("all done")
 
 
@@ -557,51 +550,41 @@ class MainScreen(Screen, FloatLayout):
 
 
     def runServMain(self):
-        server_sock = BluetoothSocket( RFCOMM )
-        server_sock.bind(("",PORT_ANY))
-        server_sock.listen(1)
+        serverSock = BluetoothSocket( RFCOMM )
+        serverSock.bind(("",PORT_ANY))
+        serverSock.listen(1)
 
-        port = server_sock.getsockname()[1]
+        port = serverSock.getsockname()[1]
 
         uuid = "80677070-a2f5-11e8-b568-0800200c9a66" #Random UUID from https://www.famkruithof.net/uuid/uuidgen
 
-        advertise_service( server_sock, "FileMateServer",
+        advertise_service( serverSock, "FileMateServer",
                            service_id = uuid,
                            service_classes = [ uuid, SERIAL_PORT_CLASS ],
                            profiles = [ SERIAL_PORT_PROFILE ],)
 
         print("[BT]: Waiting for connection on RFCOMM channel", port)
 
-        client_sock, client_info = server_sock.accept()
-        print("[BT]: Accepted connection from ", client_info)
-        LOCK = False
+        clientSock, clientInfo = serverSock.accept()
+        print("[BT]: Accepted connection from ", clientInfo)
+
+        #Send current file list
+        #clientSock.send(self.currentList)
 
         try:
             while self.manager.current == "main":
-                # print("Sending ping")
-                # try:
-                #     client_sock.send("ping")
-                # except:
-                #     print("AAAAA PING NOT WORKING")
-                #     client_sock.close()
-                #     server_sock.close()
-                #     self.clearUpTempFiles()
-                #     return mainthread(self.changeToLogin())
-
-                data = client_sock.recv(1024)
-                #if len(data) < 0:   #Will be -1 when connection lost
+                data = clientSock.recv(1024)
                 print(e ,"Connection lost")
-                client_sock.close()
-                server_sock.close()
+                clientSock.close()
+                serverSock.close()
                 print("BT sockets closed.")
                 self.clearUpTempFiles()
                 return mainthread(self.changeToLogin())
-                #time.sleep(1)
 
         except IOError as e:
             print(e ,"Connection lost")
-            client_sock.close()
-            server_sock.close()
+            clientSock.close()
+            serverSock.close()
             print("BT sockets closed.")
             self.clearUpTempFiles()
             return mainthread(self.changeToLogin())
@@ -706,6 +689,21 @@ class MainScreen(Screen, FloatLayout):
 ############################################
 
 #######Button Creation and button functions#######
+    def createButtonsCore(self, array):
+        self.currentList = array
+        for item in array:
+            btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
+            btn.bind(size=btn.setter("text_size"))
+            info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
+            info.bind(size=info.setter("text_size"))
+            fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
+            fileS.bind(size=fileS.setter("text_size"))
+            self.grid.add_widget(btn)
+            self.grid.add_widget(info)
+            self.grid.add_widget(fileS)
+        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
+        self.scroll.add_widget(self.grid)
+        self.add_widget(self.scroll)
 
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
@@ -716,35 +714,9 @@ class MainScreen(Screen, FloatLayout):
         self.grid.bind(minimum_height=self.grid.setter("height"))
 
         if sort:
-            self.currentList = sortedArray
-            for item in sortedArray:
-                btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
-                btn.bind(size=btn.setter("text_size"))
-                info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
-                info.bind(size=info.setter("text_size"))
-                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
-                fileS.bind(size=fileS.setter("text_size"))
-                self.grid.add_widget(btn)
-                self.grid.add_widget(info)
-                self.grid.add_widget(fileS)
-            self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
-            self.scroll.add_widget(self.grid)
-            self.add_widget(self.scroll)
+            self.createButtonsCore(sortedArray)
         else:
-            self.currentList = fileObjects
-            for item in fileObjects:
-                btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
-                btn.bind(size=btn.setter("text_size"))
-                info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
-                info.bind(size=info.setter("text_size"))
-                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
-                fileS.bind(size=fileS.setter("text_size"))
-                self.grid.add_widget(btn)
-                self.grid.add_widget(info)
-                self.grid.add_widget(fileS)
-            self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
-            self.scroll.add_widget(self.grid)
-            self.add_widget(self.scroll)
+            self.createButtonsCore(fileObjects)
 
     def removeButtons(self):
         self.grid = 0
@@ -1175,14 +1147,7 @@ class ScreenManagement(ScreenManager):
     def changeScreen(self, screen):
         self.current = screen
 
-try:
-    import bluetooth
-    bluetooth.BluetoothSocket( bluetooth.RFCOMM )
-except Exception as e:
-    print(e, "Reverting to no-bluetooth.")
-    useBT = False
-else:
-    print("Worked")
+
 
 if useBT:
     presentation = Builder.load_file(os.path.dirname(os.path.realpath(__file__))+fileSep+"mainBT.kv")
