@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import threading
+import fileinput
 from tempfile import gettempdir
 from subprocess import Popen, PIPE
 
@@ -47,6 +48,7 @@ osTemp = gettempdir()+fileSep #From tempfile module
 ######Load config and define shared variables#####
 global startDir
 global useBT
+global config
 #global root #For use like root.x in kv file
 useBT = False
 
@@ -71,10 +73,12 @@ except:
 else:
     if "config" in home:
         configFile = open(os.path.expanduser("~/.config/FileMate/config"), "r")
+        config = os.path.expanduser("~/.config/FileMate/config")
 
 if configFile == None:
     try:
         configFile = open(startDir+"config.cfg", "r")
+        config = startDir+"config.cfg"
     except Exception as e:
         print(e, "Config file not found.")
         raise FildNotFoundError("No config file found. Refer to the README if you need help.")
@@ -388,39 +392,76 @@ class MainScreen(Screen, FloatLayout):
             super(Popup, self).__init__(**kwargs)
 
         def editConfLoc(self, term, dir):
-            for line in fileinput.input(startDir+"config.cfg", inplace=1):
-                if term in line:
-                    line = line.replace(line, term+dir+"\n")
-                sys.stdout.write(line)
+            with open(config, "r") as conf:
+                confContent = conf.readlines()
+
+            for i in range(len(confContent)):
+                if term in confContent[i]:
+                    a = confContent[i].split("--")
+                    a[1] = dir+"\n"
+                    confContent[i] = "--".join(a)
+                    #print(confContent[i], "Done")
+
+            #print(confContent)
+            with open(config, "w") as confW:
+                confW.writelines(confContent)
+
+
+
+        def dirInputValid(self, inp):
+            valid = (inp[0] == fileSep) and ("\n" not in inp)
+            inp = inp.split(fileSep)
+            focusIsSlash = False
+            for item in inp:
+                if item == "":
+                    if focusIsSlash:
+                        valid = False
+                    focusIsSlash = True
+                else:
+                    focusIsSlash = False
+            return valid
 
         def changeVaultLoc(self, inp):
             if inp == "":
                 pass
             else:
-                if os.path.exists(inp):
-                    if os.path.isdir(inp):
-                        self.editConfLoc("vaultDir:", inp)
-                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        self.outerScreen.path = inp
-                        self.outerScreen.currentDir = inp
-                        self.outerScreen.resetButtons()
-                        done.open()
-                else:
-                    try:
-                        os.makedirs(inp)
-                    except FileNotFoundError:
-                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        warn.open()
-                    except PermissionError:
-                        warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        warn.open()
+                if self.dirInputValid(inp):
+                    if os.path.exists(inp):
+                        if os.path.isdir(inp):
+                            if inp[len(inp)-1] != fileSep:
+                                inp += fileSep
+                            self.editConfLoc("vaultDir--", inp)
+                            print("EDITING")
+                            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                            self.outerScreen.path = inp
+                            self.outerScreen.currentDir = inp
+                            self.outerScreen.resetButtons()
+                            done.open()
                     else:
-                        self.editConfLoc("vaultDir:", inp)
-                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        self.outerScreen.path = inp
-                        self.outerScreen.currentDir = inp
-                        self.outerScreen.resetButtons()
-                        done.open()
+                        try:
+                            os.makedirs(inp)
+                        except FileNotFoundError:
+                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                            warn.open()
+                        except PermissionError:
+                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                            warn.open()
+                        except Exception as e:
+                            print(e)
+                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                            warn.open()
+                        else:
+                            if inp[len(inp)-1] != fileSep:
+                                inp += fileSep
+                            self.editConfLoc("vaultDir--", inp)
+                            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                            self.outerScreen.path = inp
+                            self.outerScreen.currentDir = inp
+                            self.outerScreen.resetButtons()
+                            done.open()
+                else:
+                    warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                    warn.open()
 
     class infoButton(Button):
 
@@ -531,6 +572,7 @@ class MainScreen(Screen, FloatLayout):
         self.sizeCount = 0
         self.ascending = True
         self.addFile = 0
+        self.locked = True
         self.key = ""
         self.currentDecList = []
         #self.key = StringProperty('')
@@ -548,43 +590,51 @@ class MainScreen(Screen, FloatLayout):
     def __repr__(self):
         return "MainScreen"
 
+    def lock(self):
+        self.clearUpTempFiles()
+        try:
+            self.clientSock.close()
+            self.serverSock.close()
+        except Exception as e:
+            print(e, "Already closed? Shouldn't be")
+        self.manager.current = "Login"
 
     def runServMain(self):
-        serverSock = BluetoothSocket( RFCOMM )
-        serverSock.bind(("",PORT_ANY))
-        serverSock.listen(1)
+        self.serverSock = BluetoothSocket( RFCOMM )
+        self.serverSock.bind(("",PORT_ANY))
+        self.serverSock.listen(1)
 
-        port = serverSock.getsockname()[1]
+        port = self.serverSock.getsockname()[1]
 
         uuid = "80677070-a2f5-11e8-b568-0800200c9a66" #Random UUID from https://www.famkruithof.net/uuid/uuidgen
 
-        advertise_service( serverSock, "FileMateServer",
+        advertise_service( self.serverSock, "FileMateServer",
                            service_id = uuid,
                            service_classes = [ uuid, SERIAL_PORT_CLASS ],
                            profiles = [ SERIAL_PORT_PROFILE ],)
 
         print("[BT]: Waiting for connection on RFCOMM channel", port)
 
-        clientSock, clientInfo = serverSock.accept()
-        print("[BT]: Accepted connection from ", clientInfo)
+        self.clientSock, self.clientInfo = self.serverSock.accept()
+        print("[BT]: Accepted connection from ", self.clientInfo)
 
         #Send current file list
         #clientSock.send(self.currentList)
 
         try:
             while self.manager.current == "main":
-                data = clientSock.recv(1024)
-                print(e ,"Connection lost")
-                clientSock.close()
-                serverSock.close()
-                print("BT sockets closed.")
-                self.clearUpTempFiles()
-                return mainthread(self.changeToLogin())
+                data = self.clientSock.recv(1024)
+                # print("Connection lost")
+                # self.clientSock.close()
+                # self.serverSock.close()
+                # print("BT sockets closed.")
+                # self.clearUpTempFiles()
+                # return mainthread(self.changeToLogin())
 
         except IOError as e:
             print(e ,"Connection lost")
-            clientSock.close()
-            serverSock.close()
+            self.clientSock.close()
+            self.serverSock.close()
             print("BT sockets closed.")
             self.clearUpTempFiles()
             return mainthread(self.changeToLogin())
@@ -619,6 +669,7 @@ class MainScreen(Screen, FloatLayout):
         self.add_widget(self.sortsGrid)
 
     def on_enter(self):
+        self.locked = False
         self.setupSortButtons()
         self.createButtons(self.List(self.currentDir))
         if useBT:
