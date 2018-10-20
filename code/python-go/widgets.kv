@@ -5,12 +5,6 @@
     text:
     on_release: root.outerScreen.traverseButton(self.fileObj)
 
-<searchResultButton@Button>:
-    font_size: 14
-    size_hint: 1, None
-    text:
-    on_release: root.outerScreen.traverseButton(self.text, True, self.fullDir)
-
 <nameSortButton@Button>:
     font_size: 14
     on_release: root.changeSortOrder()
@@ -31,7 +25,7 @@
     font_size: 14
     size_hint: 1, None
     text:
-    on_release: root.outerScreen.getFileInfo(self.fileReference)
+    on_release: root.outerScreen.getFileInfo(self.fileObj)
 
 <infoLabel@Label>:
     text_size: self.width, None

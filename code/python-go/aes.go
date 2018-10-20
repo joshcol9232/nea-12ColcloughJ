@@ -8,7 +8,6 @@ import (
   "runtime"
   "strings"
   "strconv"
-  "encoding/hex"
 )
 
 //Global lookup tables.
@@ -620,66 +619,6 @@ func padSlice(slice []byte, factor int) ([]byte) {
   return slice
 }
 
-func encryptFileName(key []byte, name string) (string) {
-  fmt.Println("Inputs:", key, name)
-  var byteName = []byte(name)
-
-  var expandedKeys [176]byte
-  expandedKeys = expandKey(key)
-
-  //fmt.Println("byteName", byteName)
-  byteName = padSlice(byteName, 16)
-  //fmt.Println("padded", byteName)
-  var encName []byte
-
-  for i := 0; i < len(byteName)/16; i++ {
-    //fmt.Println(byteName[(i*16):((i+1)*16)], i)
-    encBlock := encrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
-    for _, element := range encBlock {
-      encName = append(encName, element)
-    }
-  }
-
-  //fmt.Println("encName at ln436", encName)
-  out := hex.EncodeToString(encName)
-
-  return out
-}
-
-func checkForPadding(input []byte) ([]byte) {
-  var newBytes []byte
-  for _, element := range input {
-    if (element > 31) && (element < 127) {    //If a character
-      newBytes = append(newBytes, element)
-    }
-  }
-  return newBytes
-}
-
-func decryptFileName(key []byte, hexName string) (string) {
-  //fmt.Println(hexName, "input of dec")
-  byteName, err := hex.DecodeString(hexName)
-  check(err)
-  var expandedKeys [176]byte
-  expandedKeys = expandKey(key)
-
-  //fmt.Println("byteName", byteName)
-  var decName []byte
-
-  for i := 0; i < len(byteName)/16; i++ {
-    fmt.Println(byteName[(i*16):((i+1)*16)], i)
-    decBlock := decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
-    for _, element := range decBlock {
-      decName = append(decName, element)
-    }
-  }
-  fmt.Println(len(decName), decName, "decname")
-  decName = checkForPadding(decName)
-  out := string(decName[:len(decName)])
-
-  return out
-}
-
 
 func main() {
   //w := "/run/media/josh/Storage/temp"
@@ -726,11 +665,6 @@ func main() {
     } else {
       fmt.Println("-NotValid-")
     }
-  } else if string(feilds[0]) == "encFileName" {
-    fmt.Println(encryptFileName(key, string(feilds[2])))
-  } else if string(feilds[0]) == "decFileName" {
-    fmt.Println("File name given:", string(feilds[2]))
-    fmt.Println(decryptFileName(key, string(feilds[2])))
   } else {
     panic("Invalid options.")
   }
