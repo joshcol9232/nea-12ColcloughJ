@@ -188,11 +188,8 @@ func expandKey(inputKey []byte) ([176]byte) {
   var rconIteration int = 1
   var temp [4]byte
 
-  for {
+  for bytesGenerated < 176{
     //Read 4 bytes for use in keyExpansionCore
-    if bytesGenerated > 175 { //Simulating a while loop
-      break
-    }
 
     for x := 0; x < 4; x++ {
       temp[x] = expandedKeys[x + bytesGenerated - 4]
@@ -470,14 +467,15 @@ func encryptFile(key []byte, f, w string) {
       } //This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
     }
 
+    var encBuff []byte
     for i := 0; i < bufferSize; i += 16 {
-      var encrypted []byte = encrypt(buff[i:i+16], expandedKeys, 9)
-      e.Write(encrypted)
+      encBuff = append(encBuff, encrypt(buff[i:i+16], expandedKeys, 9)...)
     }
-
+    e.Write(encBuff)
 
     buffCount += bufferSize
   }
+  a.Close()
   e.Close()
 }
 
@@ -511,14 +509,14 @@ func decryptFile(key []byte, f, w string) {
 
   //Check first block is key
   firstBlock := make([]byte, 16)
-  n2, err := io.ReadFull(a, firstBlock)
-  _ = n2
+  _, er := io.ReadFull(a, firstBlock)
+  check(er)
   decFirst := decrypt(firstBlock, expandedKeys, 9)
   validKey := compareSlices(key, decFirst)
   a.Seek(16, 0)
 
   if validKey {
-    for buffCount < fileSize{                                         //Same as a while buffCount < fileSize: in python3
+    for buffCount < fileSize{
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
       }
@@ -527,10 +525,11 @@ func decryptFile(key []byte, f, w string) {
       _, err := io.ReadFull(a, buff)  //Ignore the number of bytes read (_)
       check(err)
 
-
+      var decBuff []byte
       for i := 0; i < bufferSize; i += 16 {
-        var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)   //Decrypt 128 bit chunk of buffer
         if fileSize - i == 16 {     //If on the last block of whole file
+          var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)   //Decrypt 128 bit chunk of buffer
+          //Store in variable as we are going to change it.
           var focus int = int(decrypted[len(decrypted)-1])
           var focusCount int = 0
 
@@ -542,18 +541,19 @@ func decryptFile(key []byte, f, w string) {
               decrypted = decrypted[:(16-focus)]  //If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
             }
           }
+          decBuff = append(decBuff, decrypted...)
+        } else {
+          decBuff = append(decBuff, decrypt(buff[i:i+16], expandedKeys, 9)...)
         }
-        e.Write(decrypted)
       }
-
-
+      e.Write(decBuff)
 
       buffCount += bufferSize
     }
   } else {
     panic("Invalid Key")  //If first block is not equal to the key, then do not bother trying to decrypt the file.
   }
-
+  a.Close()
   e.Close()
 }
 
@@ -572,6 +572,7 @@ func checkKey(key []byte, f string)  bool{
   check(er)
   firstDecrypted := decrypt(firstBlock, expandedKeys, 9)    //Decrypt first block
 
+  a.Close()
   return compareSlices(key, firstDecrypted) //Compare decrypted first block with the key.
 }
 
