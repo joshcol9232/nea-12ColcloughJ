@@ -464,6 +464,28 @@ class MainScreen(Screen, FloatLayout):
     class infoLabel(Label):
         pass
 
+    class encPopup(Popup):
+
+        def __init__(self, labText, d, newLoc, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.d = d
+            self.newLoc = newLoc
+            self.grid = GridLayout(cols=1)
+            self.pb = ProgressBar(value=0, max=os.path.getsize(self.d), size_hint=(.9, .2))
+            self.grid.add_widget(Label(text=labText))
+            self.grid.add_widget(self.pb)
+            self.content = self.grid
+            self.checkThread = threading.Thread(target=self.checkNew, daemon=True)
+            self.checkThread.start()
+
+        def checkNew(self):
+            while self.pb.value < self.pb.max:
+                try:
+                    self.pb.value = os.path.getsize(self.newLoc)
+                except:
+                    pass #File not made yet
+
+
     class deleteButton(Button):
 
         def __init__(self, mainScreen, fileObj, **kwargs):
@@ -619,14 +641,6 @@ class MainScreen(Screen, FloatLayout):
             self.clearUpTempFiles()
             return mainthread(self.changeToLogin())
 
-    # def checkServerStatus(self):
-    #     while self.serverThread.is_alive() and self.manager.current == "main":
-    #         print("Server is alive")
-    #         time.sleep(0.1)
-    #     self.serverThread.join(1)
-    #     print("Locking...")
-    #     self.clearUpTempFiles()
-    #     return mainthread(self.changeToLogin())
 
     @mainthread
     def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
@@ -771,7 +785,7 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
 
         delBtn = self.deleteButton(self, fileObj,text="Delete", size_hint_x=.2)
         #delBtn.bind(on_press=self.deleteFile, args=(hexDir))
@@ -1006,7 +1020,7 @@ class MainScreen(Screen, FloatLayout):
             elif type == "n":
                 popText = "Decrypting..."
 
-            self.encPop = Popup(title="Please wait...", content=Label(text=popText), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False)
+            self.encPop = self.encPopup(popText, d, targetLoc, title="Please wait...", pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False) #self, labText, d, newLoc, **kwargs
             Clock.schedule_once(self.encPop.open, -1)
 
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
