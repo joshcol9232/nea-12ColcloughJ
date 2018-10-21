@@ -991,6 +991,10 @@ class MainScreen(Screen, FloatLayout):
         out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetloc for file name and self.key for self.key
         if err != None:
             raise ValueError("Key not valid.")
+
+        if self.encPop != None: #Close pop-up
+            self.encPop.dismiss()
+            self.encPop = None
         return out
 
     def encDecTerminal(self, type, d, targetLoc, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
@@ -1003,14 +1007,10 @@ class MainScreen(Screen, FloatLayout):
                 popText = "Decrypting..."
 
             self.encPop = Popup(title="Please wait...", content=Label(text=popText), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False)
-            self.encPop.open()
+            Clock.schedule_once(self.encPop.open, -1)
 
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
         self.encryptProcess.start()
-        self.encryptProcess.join()
-        if self.encPop != None:
-            self.encPop.dismiss()
-            self.encPop = None
 
     # def scheduleStart(self, dt): #Had to make to handle dt variable
     #     self.encryptProcess.start()

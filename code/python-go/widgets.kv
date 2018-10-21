@@ -14,13 +14,6 @@
     on_release: root.changeSizeOrder()
 
 
-# <nameSortButton@Button>:
-#     font_size: 14
-#     size_hint: .7, .015
-#     pos_hint: {"x": .005, "y": .805}
-#     text: root.getSortOrder()
-#     on_release: root.changeSortOrder()
-
 <infoButton@Button>:
     font_size: 14
     size_hint: 1, None
@@ -33,16 +26,6 @@
 
 <deleteButton@Button>:
     on_release: root.outerScreen.deleteFile(self.fileObj)
-
-# <SettingsPop@Popup>:
-#     id: settings
-#     GridLayout:
-#         cols: 2
-#         Label:
-#             size_hint: .32, .08
-#             font_size: 18
-#             text: "Current vault location:"+root.outerScreen.path
-
 
 
 <ConfirmationPopup@Popup>:
