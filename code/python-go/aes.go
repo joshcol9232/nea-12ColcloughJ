@@ -167,8 +167,6 @@ var mul14 = [256]byte {0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x
 
 func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
   //Shift the inp left by moving the first byte to the end (rotate).
-  //t = inp[0]
-  //inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], t
   inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], inp[0]
 
   //S-Box the bytes
@@ -451,7 +449,6 @@ func encryptFile(key []byte, f, w string) {
 
   for buffCount < fileSize {                                         //Same as a while buffCount < fileSize: in python3
     if bufferSize > (fileSize - buffCount) {
-      ////fmt.Println("Changing buffer.")
       bufferSize = fileSize - buffCount
     }
 
@@ -491,13 +488,10 @@ func decryptFile(key []byte, f, w string) {
   aInfo, err := a.Stat()
   check(err)
 
-  //fmt.Println("DECRYPT key", key, "DECRYPT key")
-
   fileSize := int(aInfo.Size())-16 //Take away length of added key for checksum
 
   var expandedKeys [176]byte
 
-  //key = padKey(stringKey)
   expandedKeys = expandKey(key)
 
   if _, err := os.Stat(w); err == nil { //If file exists, delete it
@@ -509,9 +503,6 @@ func decryptFile(key []byte, f, w string) {
   if fileSize < bufferSize {
     bufferSize = fileSize
   }
-
-  ////fmt.Println(float32(fileSize)/float32(1000000), "MB - File size.")
-  ////fmt.Println(float32(bufferSize)/float32(1000000), "MB - Buffer size.")
 
   var buffCount int = 0
 
@@ -529,7 +520,6 @@ func decryptFile(key []byte, f, w string) {
   if validKey {
     for buffCount < fileSize{                                         //Same as a while buffCount < fileSize: in python3
       if bufferSize > (fileSize - buffCount) {
-        ////fmt.Println("Changing buffer.")
         bufferSize = fileSize - buffCount
       }
 
@@ -574,7 +564,6 @@ func checkKey(key []byte, f string)  bool{
 
   var expandedKeys [176]byte
 
-  //key = padKey(stringKey)
   expandedKeys = expandKey(key) //Expand the key
 
   //Check first block is key
@@ -600,12 +589,10 @@ func main() {
 
   var key []byte
   for i := 0; i < len(keyString); i++ {
-    // //fmt.Println(keyString[i], reflect.TypeOf(keyString[i]))
     a, err := strToInt(keyString[i])
     check(err)
     key = append(key, byte(a))
   }
-  // //fmt.Println("FINAL KEY", key, "FINAL KEY")
 
   if string(feilds[0]) == "y" {
     encryptFile(key, string(feilds[1]), string(feilds[2]))
@@ -615,7 +602,6 @@ func main() {
     valid := checkKey(key, string(feilds[1]))
     if valid {
       fmt.Println("-Valid-")
-      //panic("Not valid")
     } else {
       fmt.Println("-NotValid-")
     }
