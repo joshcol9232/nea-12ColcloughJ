@@ -5,6 +5,7 @@ import threading
 import fileinput
 from tempfile import gettempdir
 from subprocess import Popen, PIPE
+import time
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -468,23 +469,51 @@ class MainScreen(Screen, FloatLayout):
 
         def __init__(self, labText, d, newLoc, **kwargs):
             super(Popup, self).__init__(**kwargs)
-            print(labText, d, newLoc, "ARGUMENTS TO INIT ENCPOP")
             self.d = d
             self.newLoc = newLoc
             self.grid = GridLayout(cols=1)
+            self.subGrid = GridLayout(cols=2)
+            self.per = Label(text="")
+            self.tim = Label(text="")
             self.pb = ProgressBar(value=0, max=os.path.getsize(self.d), size_hint=(.9, .2))
             self.grid.add_widget(Label(text=labText))
+            self.subGrid.add_widget(self.per)
+            self.subGrid.add_widget(self.tim)
+            self.grid.add_widget(self.subGrid)
             self.grid.add_widget(self.pb)
             self.content = self.grid
             self.checkThread = threading.Thread(target=self.checkNew, daemon=True)
             self.checkThread.start()
 
+        def getGoodUnit(self, bps):       #Not going to pass whole mainscreen in for one function so I just defined it again
+            divCount = 0
+            divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
+            while bps > 1000:
+                bps = bps/1000
+                divCount += 1
+
+            return ("%.2f" % bps) + divisions[divCount]
+
         def checkNew(self):
+            prevInt = 0
+            timeFor1per = 0
+            timeAtLastP = time.time()
+            per = 0
             while self.pb.value < self.pb.max:
                 try:
                     self.pb.value = os.path.getsize(self.newLoc)
                 except:
                     pass #File not made yet
+
+                per = self.pb.value_normalized*100
+                if int(per) != prevInt:
+                    timeFor1per = time.time()-timeAtLastP
+                    timeAtLastP = time.time()
+                    self.tim.text = "{0:.2f} Seconds left.".format(timeFor1per*(100-(per)))
+                    prevInt = int(per)
+
+                self.per.text = "{0:.2f}%".format(per)
+
 
 
     class deleteButton(Button):
