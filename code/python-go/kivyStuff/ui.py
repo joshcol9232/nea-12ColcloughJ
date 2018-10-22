@@ -465,27 +465,48 @@ class MainScreen(Screen, FloatLayout):
     class infoLabel(Label):
         pass
 
-    class encPopup(Popup):
+    class encPopup(Popup): #For single files
 
-        def __init__(self, labText, d, newLoc, **kwargs):
+        def __init__(self, outerScreen, labText, fileList, locList, **kwargs):
             super(Popup, self).__init__(**kwargs)
-            self.d = d
-            self.newLoc = newLoc
+            self.outerScreen = outerScreen
+            #kivy stuff
+            self.title = "Please wait..."
+            self.pos_hint = {"center_x": .5, "center_y": .5}
+            self.size_hint = (.7, .4)
+            self.auto_dismiss = False
+
+            self.fileList = fileList
+            self.locList = locList
+
             self.grid = GridLayout(cols=1)
-            self.subGrid = GridLayout(cols=2)
+            self.subGrid = GridLayout(cols=3)
+            self.currFile = Label(text="")
             self.per = Label(text="")
+            self.spd = Label(text="")
             self.tim = Label(text="")
-            self.pb = ProgressBar(value=0, max=os.path.getsize(self.d), size_hint=(.9, .2))
+            self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
+            self.wholePb = ProgressBar(value=0, max=self.getTotalSize(), size_hint=(.9, .2))
             self.grid.add_widget(Label(text=labText))
+            self.grid.add_widget(self.currFile)
             self.subGrid.add_widget(self.per)
+            self.subGrid.add_widget(self.spd)
             self.subGrid.add_widget(self.tim)
             self.grid.add_widget(self.subGrid)
             self.grid.add_widget(self.pb)
+            self.grid.add_widget(self.wholePb)
             self.content = self.grid
-            self.checkThread = threading.Thread(target=self.checkNew, daemon=True)
+
+            self.checkThread = threading.Thread(target=self.getStats, daemon=True)
             self.checkThread.start()
 
-        def getGoodUnit(self, bps):       #Not going to pass whole mainscreen in for one function so I just defined it again
+        def getTotalSize(self):
+            total = 0
+            for file in self.fileList:
+                total += os.path.getsize(file)
+            return total
+
+        def getGoodUnit(self, bps):
             divCount = 0
             divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
             while bps > 1000:
@@ -494,25 +515,48 @@ class MainScreen(Screen, FloatLayout):
 
             return ("%.2f" % bps) + divisions[divCount]
 
-        def checkNew(self):
-            prevInt = 0
-            timeFor1per = 0
-            timeAtLastP = time.time()
-            per = 0
-            while self.pb.value < self.pb.max:
-                try:
-                    self.pb.value = os.path.getsize(self.newLoc)
-                except:
-                    pass #File not made yet
+        def getStats(self):
+            total = 0
+            totalPer = 0
+            for i in range(len(self.fileList)):
+                self.pb.value = 0
+                self.pb.max = os.path.getsize(self.fileList[i])
+                if i == len(self.fileList)-1 :
+                    self.outerScreen.encDecTerminal("y", self.fileList[i], self.locList[i], True, True)
+                else:
+                    self.outerScreen.encDecTerminal("y", self.fileList[i], self.locList[i], True)
 
-                per = self.pb.value_normalized*100
-                if int(per) != prevInt:
-                    timeFor1per = time.time()-timeAtLastP
-                    timeAtLastP = time.time()
-                    self.tim.text = "{0:.2f} Seconds left.".format(timeFor1per*(100-(per)))
-                    prevInt = int(per)
+                prevInt = 0
+                timeFor1per = 0
+                timeAtLastP = time.time()
+                lastSize = 0
+                per = 0
+                while self.pb.value < self.pb.max:
+                    self.currFile.text = str(self.fileList[i] +"   "+ str(i)+"/"+str(len(self.fileList)))
+                    try:
+                        self.pb.value = os.path.getsize(self.locList[i])
+                        self.wholePb.value = total + self.pb.value
+                    except: #Exception as e:
+                        pass
+                        #print(e, "Probably not made yet, but print it out just in case.") #File not made yet
 
-                self.per.text = "{0:.2f}%".format(per)
+                    else:
+                        per = self.wholePb.value_normalized*100
+
+                        if int(per) != prevInt:
+                            timeFor1per = time.time()- timeAtLastP
+                            timeAtLastP = time.time()
+
+                            self.tim.text = "{0:.1f}\nSeconds left.".format((timeFor1per)*(totalPer+(100-(per))))
+                            sizeDelta = self.wholePb.value - lastSize
+                            self.spd.text = self.getGoodUnit(sizeDelta/timeFor1per)
+
+                            prevInt = int(per)
+                            lastSize = self.wholePb.value
+
+                        self.per.text = "{0:.2f}%".format(per)
+                totalPer += 100
+                total += self.pb.value
 
 
 
@@ -600,12 +644,6 @@ class MainScreen(Screen, FloatLayout):
         def checkIfSure(self, input):
             sure = self.ConfirmationPopup(self, input)
             sure.open()
-
-        # def reAddSubmit(self):
-        #     try:
-        #         self.add_widget(self.submitDirs)
-        #     except WidgetException:
-        #         print("Submit button already there.")
 
 
     key = StringProperty('')        #Shared key between LoginScreen and MainScreen
@@ -1011,7 +1049,7 @@ class MainScreen(Screen, FloatLayout):
 ############################
 
 ######Encryption Stuff + opening decrypted files######
-    def passToPipe(self, type, d, targetLoc, newName=None):     #Passes parameters to AES written in go.
+    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False):     #Passes parameters to AES written in go.
         if sys.platform.startswith("win32"):
             progname = "AESWin.exe"
         else:
@@ -1039,6 +1077,14 @@ class MainScreen(Screen, FloatLayout):
         if self.encPop != None: #Close pop-up
             self.encPop.dismiss()
             self.encPop = None
+
+        if endOfFolderList:
+            if self.encPopFolder != None:
+                self.encPopFolder.dismiss()
+                self.encPopFolder = None
+            else:
+                print("encPopFolder is None")
+
         if type == "n":
             print("MAIN THREAD OPEN")
             mainthread(self.openFileTh(targetLoc, d))
@@ -1048,27 +1094,28 @@ class MainScreen(Screen, FloatLayout):
         self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
         self.openFileThread.start()
 
-    def encDecTerminal(self, type, d, targetLoc, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
+    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
         self.encPop = None
 
-        if type == "y" or "n":
-            if type == "y":
-                popText = "Encrypting..."
-                if os.path.exists(targetLoc):
-                    print("Already exists, deleting.")
-                    if os.path.isdir(targetLoc):
-                        shutil.rmtree(targetLoc)
-                    else:
-                        os.remove(targetLoc)
-            elif type == "n":
-                popText = "Decrypting..."
+        if not isPartOfFolder:
+            if type == "y" or "n":
+                if type == "y":
+                    popText = "Encrypting..."
+                    if os.path.exists(targetLoc):
+                        print("Already exists, deleting.")
+                        if os.path.isdir(targetLoc):
+                            shutil.rmtree(targetLoc)
+                        else:
+                            os.remove(targetLoc)
+                elif type == "n":
+                    popText = "Decrypting..."
 
-            print(d, targetLoc, "AAAA encDecTerminal")
-                
-            self.encPop = self.encPopup(popText, d, targetLoc, title="Please wait...", pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False) #self, labText, d, newLoc, **kwargs
-            Clock.schedule_once(self.encPop.open, -1)
+                print(d, targetLoc, "AAAA encDecTerminal")
+                    
+                self.encPop = self.encPopup(self, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
+                Clock.schedule_once(self.encPop.open, -1)
 
-        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
+        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=True)
         self.encryptProcess.start()
 
     def openFile(self, location, startLoc):
@@ -1094,7 +1141,7 @@ class MainScreen(Screen, FloatLayout):
         if os.path.exists(fileLoc):         #Checks file exits already in temp files, so it doesn't have to decrypt again.
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
-            self.encDecTerminal("n", fileObj.hexPath, fileLoc, fileObj.name)
+            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name)
 
 
     def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
@@ -1105,8 +1152,19 @@ class MainScreen(Screen, FloatLayout):
             self.popup.open()
             return False
 
+    def encryptDir(self, d, targetLoc):
+        self.fileList = []
+        self.locList = []
+        self.encryptDirCore(d, targetLoc)
+        print(self.fileList, self.locList, "ARRAYS encryptDir")
 
-    def encryptDir(self, d, targetLoc): #Encrypts whole directory.
+        self.encPopFolder = self.encPopup(self, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
+        mainthread(Clock.schedule_once(self.encPopFolder.open, -1))
+        print("Opened")
+            
+
+
+    def encryptDirCore(self, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)
         targetLoc = targetLoc.split(fileSep)
         targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
@@ -1114,13 +1172,16 @@ class MainScreen(Screen, FloatLayout):
         for item in fs:
             if os.path.isdir(d+item):
                 try:
-                    self.encryptDir(d+item+fileSep, targetLoc+fileSep+item) #Recursive
+                    self.encryptDirCore(d+item+fileSep, targetLoc+fileSep+item) #Recursive
                 except OSError:
                     pass
             else:
                 try:
                     self.createFolders(targetLoc+fileSep)
-                    self.encDecTerminal("y", d+item, targetLoc+fileSep+item)
+                    #print(d+item, targetLoc+fileSep+aesFName.encryptFileName(self.key, item), "NONE ADDED encryptDirCore")
+                    self.fileList.append(d+item)
+                    self.locList.append(targetLoc+fileSep+aesFName.encryptFileName(self.key, item))
+                    #self.encDecTerminal("y", d+item, targetLoc+fileSep+item, True)
                 except PermissionError:
                     pass
 
