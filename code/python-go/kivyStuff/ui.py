@@ -468,6 +468,7 @@ class MainScreen(Screen, FloatLayout):
 
         def __init__(self, labText, d, newLoc, **kwargs):
             super(Popup, self).__init__(**kwargs)
+            print(labText, d, newLoc, "ARGUMENTS TO INIT ENCPOP")
             self.d = d
             self.newLoc = newLoc
             self.grid = GridLayout(cols=1)
@@ -1002,14 +1003,21 @@ class MainScreen(Screen, FloatLayout):
 
 
         goproc = Popen(startDir+progname, stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetloc for file name and self.key for self.key
+        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetLoc for file name and self.key for self.key
         if err != None:
             raise ValueError("Key not valid.")
 
         if self.encPop != None: #Close pop-up
             self.encPop.dismiss()
             self.encPop = None
+        if type == "n":
+            print("MAIN THREAD OPEN")
+            mainthread(self.openFileTh(targetLoc, d))
         return out
+
+    def openFileTh(self, fileLoc, startLoc):
+        self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
+        self.openFileThread.start()
 
     def encDecTerminal(self, type, d, targetLoc, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
         self.encPop = None
@@ -1017,18 +1025,22 @@ class MainScreen(Screen, FloatLayout):
         if type == "y" or "n":
             if type == "y":
                 popText = "Encrypting..."
+                if os.path.exists(targetLoc):
+                    print("Already exists, deleting.")
+                    if os.path.isdir(targetLoc):
+                        shutil.rmtree(targetLoc)
+                    else:
+                        os.remove(targetLoc)
             elif type == "n":
                 popText = "Decrypting..."
 
+            print(d, targetLoc, "AAAA encDecTerminal")
+                
             self.encPop = self.encPopup(popText, d, targetLoc, title="Please wait...", pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4), auto_dismiss=False) #self, labText, d, newLoc, **kwargs
             Clock.schedule_once(self.encPop.open, -1)
 
         self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName,), daemon=True)
         self.encryptProcess.start()
-
-    # def scheduleStart(self, dt): #Had to make to handle dt variable
-    #     self.encryptProcess.start()
-    #     self.encryptProcess.join()
 
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
@@ -1038,7 +1050,7 @@ class MainScreen(Screen, FloatLayout):
         else:
             command = "xdg-open "+'"'+location+'"'      #Quotation marks for if the dir has spaces in it
         os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
-        self.encDecTerminal("y", location, startLoc)
+        self.encDecTerminal("y", location, startLoc)   #Is encrypted when program closes anyway
 
 
     def onFileDrop(self, window, filePath):  #Drag + drop files
@@ -1051,13 +1063,9 @@ class MainScreen(Screen, FloatLayout):
             os.makedirs(osTemp+"FileMate"+fileSep)
         fileLoc = osTemp+"FileMate"+fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
         if os.path.exists(fileLoc):         #Checks file exits already in temp files, so it doesn't have to decrypt again.
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath), daemon=True)
-            self.openFileThread.start()
+            self.openFileTh(fileLoc, fileObj.hexPath)
         else:
             self.encDecTerminal("n", fileObj.hexPath, fileLoc, fileObj.name)
-
-            self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, fileObj.hexPath), daemon=True)
-            self.openFileThread.start()
 
 
     def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
