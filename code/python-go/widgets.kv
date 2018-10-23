@@ -1,5 +1,5 @@
 #: import Window kivy.core.window.Window
-#: import Clock kivy.clock
+#: import Clock kivy.clock.Clock
 <listButton@Button>:
     font_size: 14
     size_hint: 1, None
@@ -41,13 +41,13 @@
             text: "No!!!"
             pos_hint: {"center_x": .25, "center_y": .25}
             size_hint: .4, .3
-            on_release: Clock.Clock.schedule_once(root.dismiss, -1)
+            on_release: Clock.schedule_once(root.dismiss, -1)
 
         Button:
             text: "Yes"
             pos_hint: {"center_x": .75, "center_y": .25}
             size_hint: .4, .3
-            on_release: Clock.Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
+            on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
 
 <LoginScreen>:
