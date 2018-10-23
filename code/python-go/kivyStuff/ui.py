@@ -531,23 +531,22 @@ class MainScreen(Screen, FloatLayout):
                 timeAtLastP = time.time()
                 lastSize = 0
                 per = 0
-                while self.pb.value < self.pb.max:
+                while self.pb.value < (self.pb.max-16): #-16 because padding might make it not be exactly equal
                     self.currFile.text = str(self.fileList[i] +"   "+ str(i)+"/"+str(len(self.fileList)))
                     try:
                         self.pb.value = os.path.getsize(self.locList[i])
                         self.wholePb.value = total + self.pb.value
-                    except: #Exception as e:
+                    except:
                         pass
-                        #print(e, "Probably not made yet, but print it out just in case.") #File not made yet
 
                     else:
                         per = self.wholePb.value_normalized*100
 
-                        if int(per) != prevInt:
+                        if int(per) != prevInt:#if it takes less than 0.5 seconds then dont bother
                             timeFor1per = time.time()- timeAtLastP
                             timeAtLastP = time.time()
 
-                            self.tim.text = "{0:.1f}\nSeconds left.".format((timeFor1per)*(totalPer+(100-(per))))
+                            self.tim.text = "{0:.1f}\nSeconds left.".format(timeFor1per*(((self.wholePb.max - self.wholePb.value)/self.wholePb.max)*100))
                             sizeDelta = self.wholePb.value - lastSize
                             self.spd.text = self.getGoodUnit(sizeDelta/timeFor1per)
 
@@ -555,6 +554,7 @@ class MainScreen(Screen, FloatLayout):
                             lastSize = self.wholePb.value
 
                         self.per.text = "{0:.2f}%".format(per)
+
                 totalPer += 100
                 total += self.pb.value
 
@@ -655,6 +655,8 @@ class MainScreen(Screen, FloatLayout):
         self.addFile = 0
         self.locked = True
         self.key = ""
+        self.encPopFolder = None
+        self.encPop = None
         self.currentDecList = []
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
@@ -1086,7 +1088,7 @@ class MainScreen(Screen, FloatLayout):
                 print("encPopFolder is None")
 
         if type == "n":
-            print("MAIN THREAD OPEN")
+            #print("MAIN THREAD OPEN")
             mainthread(self.openFileTh(targetLoc, d))
         return out
 
@@ -1102,7 +1104,7 @@ class MainScreen(Screen, FloatLayout):
                 if type == "y":
                     popText = "Encrypting..."
                     if os.path.exists(targetLoc):
-                        print("Already exists, deleting.")
+                        #print("Already exists, deleting.")
                         if os.path.isdir(targetLoc):
                             shutil.rmtree(targetLoc)
                         else:
@@ -1110,7 +1112,7 @@ class MainScreen(Screen, FloatLayout):
                 elif type == "n":
                     popText = "Decrypting..."
 
-                print(d, targetLoc, "AAAA encDecTerminal")
+                #print(d, targetLoc, "AAAA encDecTerminal")
                     
                 self.encPop = self.encPopup(self, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
                 Clock.schedule_once(self.encPop.open, -1)
@@ -1156,11 +1158,11 @@ class MainScreen(Screen, FloatLayout):
         self.fileList = []
         self.locList = []
         self.encryptDirCore(d, targetLoc)
-        print(self.fileList, self.locList, "ARRAYS encryptDir")
+        #print(self.fileList, self.locList, "ARRAYS encryptDir")
 
         self.encPopFolder = self.encPopup(self, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPopFolder.open, -1))
-        print("Opened")
+        #print("Opened")
             
 
 

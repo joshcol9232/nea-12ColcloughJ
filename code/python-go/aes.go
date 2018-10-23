@@ -210,7 +210,6 @@ func expandKey(inputKey []byte) ([176]byte) {
 }
 
 func addRoundKey(state []byte, roundKey []byte) ([]byte) {       //is also it's own inverse
-  ////fmt.Println(state, roundKey, len(state), len(roundKey), "ADD ROUND KEY")
   for i := 0; i < 16; i++ {
     state[i] ^= roundKey[i]
   }
