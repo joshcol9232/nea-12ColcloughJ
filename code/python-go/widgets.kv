@@ -50,6 +50,24 @@
             on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
 
+<addNewFolderPop@Popup>:
+    title: "Add New Folder"
+    size_hint: .7, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: True
+    GridLayout:
+        cols: 1
+        Label:
+            text: "New Folder Name:"
+        TextInput:
+            id: folderNameInput
+            size_hint: .7, .4
+            multiline: False
+            hint_text: "Name"
+            on_text_validate: root.makeFolder(self.text)
+
+
+
 <LoginScreen>:
 
     keyInput: keyInput
@@ -134,14 +152,6 @@
             on_text_validate: root.searchForItem(self.text)
 
 
-        # Button:
-        #     id: SortByName
-        #     font_size: 14
-        #     size_hint: .7, .015
-        #     pos_hint: {"x": .005, "y": .805}
-        #     text: root.getSortOrder()
-        #     on_release: root.changeSortOrder()
-
         Button:
             id: home
             size_hint: .06, .08
@@ -215,6 +225,14 @@
                 size: 80, 112
                 allow_stretch: True
 
+        Button:
+            id: addFolder
+            size_hint: .06, .08
+            pos_hint: {"right": 1, "y": 0.68}
+            text: "Add Folder"
+            text_size: self.size
+            on_release: root.addFolder = root.addNewFolderPop(root); root.addFolder.open()
+
 
         ProgressBar:
             id: pb1
@@ -228,10 +246,6 @@
             pos_hint: {"x": 0.4, "y": 0.82}
             size_hint: .16, .16
             text: root.values(True)
-
-        # CheckBox:
-        #     pos_hint: {"x": 0.95, "y": 0.5}
-        #     size_hint: .05, .05
 
 
 

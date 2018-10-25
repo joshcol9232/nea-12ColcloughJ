@@ -98,7 +98,7 @@ for line in configFile:
         else:
             raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
     elif lineSplit[0] == "bluetooth":
-        print(lineSplit[1], "Bluetooth config adb ahdhinaadsajdaujdahhdahdhuhyu")
+        print(lineSplit[1], "Bluetooth config")
         if lineSplit[1] == "True":
             useBT = True
         elif lineSplit[1] == "False":
@@ -361,6 +361,32 @@ class MainScreen(Screen, FloatLayout):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
             self.fileObj = fileObj          #The file the button corresponds to.
+
+    class addNewFolderPop(Popup):
+
+        def __init__(self, mainScreen, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+
+        def dirInputValid(self, inp):       #much rather re define it than do "self.outerScreen.SettingsPop.dirInputValid(self.outerScreen.SettingsPop, self.outerScreen.currentDir+text)" later on
+            valid = (inp[0] == fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+            inp = inp.split(fileSep)
+            focusIsSlash = False
+            for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
+                if item == "":
+                    if focusIsSlash:
+                        valid = False
+                    focusIsSlash = True
+                else:
+                    focusIsSlash = False
+            return valid
+
+        def makeFolder(self, text):
+            if self.dirInputValid(self.outerScreen.currentDir+text):
+                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                self.outerScreen.refreshFiles()
+                self.dismiss()
+
 
     class SettingsPop(Popup):
 
@@ -798,6 +824,8 @@ class MainScreen(Screen, FloatLayout):
             self.createButtonsCore(fileObjects)
 
     def removeButtons(self):    #Remove the list of files.
+        self.grid.clear_widgets()
+        self.scroll.clear_widgets()
         self.grid = 0
         try:
             self.remove_widget(self.scroll)
@@ -846,6 +874,9 @@ class MainScreen(Screen, FloatLayout):
         self.infoPopup.open()
 
 
+    def makeFolder(self, folderName):
+        print(folderName, "folderName")
+
     def deleteFile(self, fileObj):
         print("Deleting,", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
@@ -875,7 +906,11 @@ class MainScreen(Screen, FloatLayout):
         self.sizeSort.text = ""
         self.createButtons(self.List(self.currentDir))
 
-    def refreshButtons(self):   #Refreshes the file buttons currently on the screen in case of issues.
+    def refreshFiles(self):   #Refreshes the file buttons currently on the screen in case of issues.
+        self.removeButtons()
+        self.createButtons(self.List(self.currentDir))
+
+    def refreshButtons(self):
         self.removeButtons()
         self.createButtons(self.currentList, False)
 
