@@ -264,14 +264,9 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
 
         def __init__(self, **kwargs):
             super(LoginScreenBT, self).__init__(**kwargs)
-            self.validBTKey = False
 
         def on_enter(self):
             Clock.schedule_once(self.startSrv, 0.7) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
-
-        @mainthread
-        def changeToMain(self):    #Prevents segmentation.
-            self.manager.current = "main"
 
         def checkKey(self, inputKey):
             inputKey = inputKey.split(",")
@@ -287,68 +282,8 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
 
 
         def startSrv(self, dt=None):
-            self.serverThread = threading.Thread(target=self.runServLogin, daemon=True)
+            self.serverThread = threading.Thread(target=self.manager.get_screen("main").startBT, daemon=True)
             self.serverThread.start()   #Starting server in thread lets the screen be rendered while the server is waiting.
-
-        def runServLogin(self):
-            serverSock = BluetoothSocket( RFCOMM )
-            serverSock.bind(("",PORT_ANY))
-            serverSock.listen(1)
-
-            port = serverSock.getsockname()[1]
-
-            uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
-
-            advertise_service(serverSock, "FileMateServer",
-                              service_id = uuid,
-                              service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                              profiles = [ SERIAL_PORT_PROFILE ],)
-
-            print("[BT]: Waiting for connection on RFCOMM channel", port)
-
-            clientSock, clientInfo = serverSock.accept()
-            print("[BT]: Accepted connection from ", clientInfo)
-
-            numbers = []
-            append = True
-
-            try:
-                while self.manager.current == "Login":
-                    data = clientSock.recv(1024)
-                    if len(data) == 0: break
-                    print("[BT]: Received data.")
-                    if append:
-                        numbers.append(str(data, "utf-8"))
-                    if b"~" in data:    ##End of message
-                        append = False
-                        tempNums = "".join(numbers)
-                        tempNums = tempNums.replace("#", "")
-                        tempNums = tempNums.replace("~", "")
-                        if self.checkKey(tempNums):
-                            numbers = []
-                            append = True
-                            clientSock.send("1")
-                            print("[BT]: Send true.")
-                            self.validBTKey = True
-                            clientSock.close()
-                            serverSock.close()
-                            print("[BT]: Shutting down for mainscreen check.")
-                            return mainthread(self.changeToMain())
-                        else:
-                            numbers = []
-                            append = True
-                            clientSock.send("0")
-                            print("[BT]: Send false.")
-                            self.validBTKey = False
-
-            except IOError as e:
-                print(e)
-
-            print("Closed.")
-
-            clientSock.close()
-            serverSock.close()
-            print("all done")
 
 
 
@@ -386,7 +321,6 @@ class MainScreen(Screen, FloatLayout):
                 os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
                 self.outerScreen.refreshFiles()
                 self.dismiss()
-
 
     class SettingsPop(Popup):
 
@@ -569,7 +503,6 @@ class MainScreen(Screen, FloatLayout):
                 total += self.pb.value
 
 
-
     class deleteButton(Button):
 
         def __init__(self, mainScreen, fileObj, **kwargs):
@@ -664,6 +597,7 @@ class MainScreen(Screen, FloatLayout):
         self.encPopFolder = None
         self.encPop = None
         self.enterCount = 0
+        self.validBTKey = False
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.path = sharedPath
@@ -679,12 +613,9 @@ class MainScreen(Screen, FloatLayout):
     def lock(self):         #Procedure for when the program is locked.
         self.clearUpTempFiles() #Delete all temporary files (decrypted files ready for use).
         if useBT:
-            try:
-                self.clientSock.close()     #If BT is being used, close the bluetooth connection.
-                self.serverSock.close()
-            except Exception as e:
-                print(e, "Already closed? Shouldn't be")
-        self.manager.current = "Login"      #Change screen to the login screen.
+            self.manager.get_screen("Login").ids.clientLabel.text = ""
+            self.validBTKey = False
+        return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in 
 
     def runServMain(self):
         self.serverSock = BluetoothSocket( RFCOMM )
@@ -693,34 +624,68 @@ class MainScreen(Screen, FloatLayout):
 
         port = self.serverSock.getsockname()[1]
 
-        uuid = "80677070-a2f5-11e8-b568-0800200c9a66" #Random UUID from https://www.famkruithof.net/uuid/uuidgen
+        uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
 
-        advertise_service( self.serverSock, "FileMateServer",
-                           service_id = uuid,
-                           service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                           profiles = [ SERIAL_PORT_PROFILE ],)
+        advertise_service(self.serverSock, "FileMateServer",
+                          service_id = uuid,
+                          service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                          profiles = [ SERIAL_PORT_PROFILE ],)
 
         print("[BT]: Waiting for connection on RFCOMM channel", port)
 
         self.clientSock, self.clientInfo = self.serverSock.accept()
         print("[BT]: Accepted connection from ", self.clientInfo)
+        self.manager.get_screen("Login").ids.clientLabel.text = "Connected to: "+str(self.clientInfo[0])
+
+        numbers = []
+        append = True
 
         try:
-            while self.manager.current == "main":
+            data = ""
+            while len(data) > -1:
                 data = self.clientSock.recv(1024)
+                print("[BT]: Received data.")
+                if not self.validBTKey:
+                    if append:
+                        numbers.append(str(data, "utf-8"))
+                    if b"~" in data:    ##End of message
+                        append = False
+                        tempNums = "".join(numbers)
+                        tempNums = tempNums.replace("#", "")
+                        tempNums = tempNums.replace("~", "")
+                        if self.manager.get_screen("Login").checkKey(tempNums):
+                            numbers = []
+                            append = True
+                            self.clientSock.send("1")
+                            print("[BT]: Send true.")
+                            self.validBTKey = True
+                            mainthread(self.changeToMain())
+                        else:
+                            numbers = []
+                            append = True
+                            self.clientSock.send("0")
+                            print("[BT]: Send false.")
+                            self.validBTKey = False
 
         except IOError as e:
-            print(e ,"Connection lost")     #Once connection is lost, lock everything.
-            self.clientSock.close()
-            self.serverSock.close()
-            print("BT sockets closed.")
-            self.clearUpTempFiles()
-            return mainthread(self.changeToLogin())
+            print(e)
 
+        print("Closed.")
+
+        self.clientSock.close()
+        self.serverSock.close()
+        print("all done, LOCK")
+        self.lock()
+
+##Functions for changing screen within threads
+    @mainthread
+    def changeToMain(self):
+        self.manager.current = "main"
 
     @mainthread
     def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
         self.manager.current = "Login"
+##############################################
 
     def startBT(self):
         self.serverThread = threading.Thread(target=self.runServMain, daemon=True)      #Start BT server as thread so the screen still renders.
@@ -738,8 +703,8 @@ class MainScreen(Screen, FloatLayout):
         self.setupSortButtons() #Put sort buttons in place.
         if self.enterCount == 0:        #Prevents the buttons being redrawn over the originals if the program is locked.
             self.createButtons(self.List(self.currentDir))     #List the files in the vault.
-        if useBT:
-            self.startBT()  #And if BT is to be used, try to connect to the mobile.
+        # if useBT:
+        #     self.startBT()  #And if BT is to be used, try to connect to the mobile.
         self.enterCount += 1
 
     def getGoodUnit(self, bytes):       #Get a good unit for displaying the sizes of files.

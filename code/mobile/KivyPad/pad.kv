@@ -9,14 +9,11 @@ ScreenManagement:
         name: "Pad"
         id: Pad
         manager: screenmanager
-    # DeviceSelectionScreen:
-    #     name: "Select"
-    #     id: Select
-    #     manager: screenmanager
-    # ConfirmationScreen:
-    #     name: "Confirm"
-    #     id: Confirm
-    #     manager: screenmanager
+    MainScreen:
+        name: "Main"
+        id: Main
+        manager: screenmanager
+
 
 <PadNum@Button>:
     font_size: 30
@@ -77,3 +74,8 @@ ScreenManagement:
             id: display
             text: root.numsString
             pos_hint: {"center_x": .5, "y": .35}
+
+<MainScreen>:
+    FloatLayout:
+        Label:
+            text: "Hi"

@@ -15,10 +15,12 @@ from kivy.uix.textinput import TextInput
 from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.properties import StringProperty
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.config import Config
 
+global sharedDev
 
 ####Bluetooth stuff in android accessed via jnius####
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
@@ -27,8 +29,29 @@ BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
 UUID = autoclass(u"java.util.UUID")
 
 
-class PadScreen(Screen, FloatLayout):
+#Shared method
+def createSocketStream(self, devName):
+    pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
+    socket = None
+    found = False
+    for dev in pairedDevs:
+        print dev, type(dev), "DEV"
+        if dev.getName() == devName:
+            socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
+            rStream = socket.getInputStream()   #Recieving data
+            sStream = socket.getOutputStream()  #Sending data
+            self.devName = devName
+            found = True
+            break   #Stop when device found
+    if found:
+        socket.connect()
+        return rStream, sStream
+    else:
+        raise ConnectionAbortedError(u"Couldn't find + connect to device.")
 
+
+class PadScreen(Screen, FloatLayout):
+    globalKey = StringProperty('')
 
     class DeviceSelectionPopup(Popup):
 
@@ -77,35 +100,14 @@ class PadScreen(Screen, FloatLayout):
 
             return result
 
-        # print u"Can't connect to device."
-        # noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
-        # noConnect.open()
-
-        def createSocketStream(self, devName):
-            pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
-            socket = None
-            found = False
-            for dev in pairedDevs:
-                print dev, type(dev), "DEV"
-                if dev.getName() == devName:
-                    socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
-                    rStream = socket.getInputStream()   #Recieving data
-                    sStream = socket.getOutputStream()  #Sending data
-                    self.devName = devName
-                    found = True
-                    break   #Stop when device found
-            if found:
-                socket.connect()
-                return rStream, sStream
-            else:
-                raise ConnectionAbortedError(u"Couldn't find + connect to device.")
 
         def changeToDeviceList(self, instance=None):
             self.content = self.view
 
         def setupBT(self, devName):
+            print u"In setupBT"
             try:
-                self.outerScreen.rStream, self.outerScreen.sStream = self.createSocketStream(devName)
+                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)
             except Exception, e:
                 print u"Can't connect to device."
                 self.connected = False
@@ -144,7 +146,6 @@ class PadScreen(Screen, FloatLayout):
         if len(self.nums) != 0:
             del self.nums[len(self.nums)-1]
             self.numsString = self.numsString[:len(self.nums)]
-            #print(self.nums, self.numsString)
             self.updateDisplay()
 
     def confirm(self):
@@ -172,16 +173,15 @@ class PadScreen(Screen, FloatLayout):
                 except Exception as e:
                     print e, u"Couldn't recieve data."
 
+            print u"Out of while loop"
             print data, u"Response"
             if data == 49:
                 pop.dismiss()
                 print u"Valid"
+                self.globalKey = self.numsString
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 corPop.open()
-                self.deviceSelection.connected = False #Reset connected value, as you are disconnected when the screens change.
-                print self.deviceSelection.connected, u"connected var"
-                while not self.deviceSelection.connected:
-                    self.deviceSelection.setupBT(self.deviceSelection.devName)
+                self.manager.current = "Main"
 
             elif data == 48:
                 print u"Invalid."
@@ -196,16 +196,37 @@ class PadScreen(Screen, FloatLayout):
             noConnect.open()
             self.deviceSelection.open()
 
-# class ConfirmationScreen(Screen, FloatLayout):
-#
-#     def __init__(self, **kwargs):
-#         super(ConfirmationScreen, self).__init__(**kwargs)
+
+class MainScreen(Screen, FloatLayout):
+    key = StringProperty('')
+    dev = StringProperty('')
+
+    def __init__(self, **kwargs):
+        super(MainScreen, self).__init__(**kwargs)
+        
+    # def on_enter(self):
+    #     self.setupBT()
+
+    def setupBT(self, devName):
+        try:
+            self.outerScreen.rStream, self.outerScreen.sStream = self.createSocketStream(devName)
+        except Exception, e:
+            print u"Can't connect to device."
+            self.connected = False
+            grid = GridLayout(cols=1)
+            info = Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app.")
+            btn = Button(text="Retry", size_hint_y=.2)
+            btn.bind(on_press=self.changeToDeviceList)
+            grid.add_widget(info)
+            grid.add_widget(btn)
+            self.add_widget(grid)
+        else:
+            print u"Connected to:", devName
+            self.connected = True
+
 
 
 class ScreenManagement(ScreenManager):
-    # LoginScreen = ObjectProperty(None)
-    # MainScreen = ObjectProperty(None)
-    # addFileScreen = ObjectProperty(None)
     pass
 
 
