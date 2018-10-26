@@ -3,6 +3,7 @@ import sys
 import shutil
 import threading
 import fileinput
+from functools import partial
 from tempfile import gettempdir
 from subprocess import Popen, PIPE
 import time
@@ -119,6 +120,8 @@ def runUI():
     except:
         print("No temp files.")
     print("App closed.")
+
+
 
 
 class File:
@@ -282,7 +285,7 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
 
 
         def startSrv(self, dt=None):
-            self.serverThread = threading.Thread(target=self.manager.get_screen("main").startBT, daemon=True)
+            self.serverThread = threading.Thread(target=self.manager.get_screen("main").startBT, daemon=True)       #Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
             self.serverThread.start()   #Starting server in thread lets the screen be rendered while the server is waiting.
 
 
@@ -617,6 +620,34 @@ class MainScreen(Screen, FloatLayout):
             self.validBTKey = False
         return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in 
 
+    def sendFile(self, fileObj, buttonInstance):
+        # File name is sent with !NAME!#!!<name here>!!~
+        # File size is sent with !SIZE!#!!<size here>!!~
+        # File data is sent with !DATA!#!!<data here>!!~
+        print(fileObj.name, fileObj.rawSize, "stuff")
+        print(self.clientSock)
+        self.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
+        print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
+#        self.clientSock.send("!SIZE!#!!{}!!~".format(fileObj.rawSize))
+
+        newLoc = osTemp+"FileMate"+fileSep+fileObj.name
+        if not os.path.isdir(osTemp+"FileMate"+fileSep):
+            os.makedirs(osTemp+"FileMate"+fileSep)
+        self.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+
+        buff = []
+        fr = open(newLoc, "rb")
+        buff = fr.read(1024)    #Read 1Kb of data
+
+        #Send data
+        while buff:
+            self.clientSock.send(buff)
+            buff = fr.read(1024)
+
+        self.clientSock.send("~!!ENDF!")
+
+
+
     def runServMain(self):
         self.serverSock = BluetoothSocket( RFCOMM )
         self.serverSock.bind(("",PORT_ANY))
@@ -703,8 +734,6 @@ class MainScreen(Screen, FloatLayout):
         self.setupSortButtons() #Put sort buttons in place.
         if self.enterCount == 0:        #Prevents the buttons being redrawn over the originals if the program is locked.
             self.createButtons(self.List(self.currentDir))     #List the files in the vault.
-        # if useBT:
-        #     self.startBT()  #And if BT is to be used, try to connect to the mobile.
         self.enterCount += 1
 
     def getGoodUnit(self, bytes):       #Get a good unit for displaying the sizes of files.
@@ -829,10 +858,14 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
+        if useBT:
+            btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
+            btButton.bind(on_release=partial(self.sendFile, fileObj))
+            internalLayout.add_widget(btButton)
+        else:
+            internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
 
         delBtn = self.deleteButton(self, fileObj,text="Delete", size_hint_x=.2)
-        #delBtn.bind(on_press=self.deleteFile, args=(hexDir))
         internalLayout.add_widget(delBtn)
 
         internalView.add_widget(internalLayout)
@@ -1032,7 +1065,7 @@ class MainScreen(Screen, FloatLayout):
 ############################
 
 ######Encryption Stuff + opening decrypted files######
-    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False):     #Passes parameters to AES written in go.
+    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.
         if sys.platform.startswith("win32"):
             progname = "AESWin.exe"
         else:
@@ -1044,16 +1077,18 @@ class MainScreen(Screen, FloatLayout):
         if err != None:
             raise ValueError("Key not valid.")
 
-        if self.encPop != None:
+        try:
             self.encPop.dismiss()
             self.encPop = None
+        except Exception as e:
+            print(e, "Dunno")
 
         if endOfFolderList:
             if self.encPopFolder != None:
                 self.encPopFolder.dismiss()
                 self.encPopFolder = None
 
-        if type == "n":
+        if type == "n" and op:
             mainthread(self.openFileTh(targetLoc, d))
         return out
 
@@ -1107,11 +1142,11 @@ class MainScreen(Screen, FloatLayout):
         self.resetButtons()
         return "Done"
 
-    def decrypt(self, fileObj):
+    def decrypt(self, fileObj, op=True):
         if not os.path.isdir(osTemp+"FileMate"+fileSep):
             os.makedirs(osTemp+"FileMate"+fileSep)
         fileLoc = osTemp+"FileMate"+fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
-        if os.path.exists(fileLoc):         #Checks file exits already in temp files, so it doesn't have to decrypt again.
+        if os.path.exists(fileLoc) and op:         #Checks file exits already in temp files, so it doesn't have to decrypt again.
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
             self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name)

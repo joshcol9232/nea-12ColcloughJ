@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 from jnius import autoclass
+from plyer import storagepath
 
 import time
 import SHA
+#from multiprocessing import Process
 
 import kivy
 from kivy.app import App
@@ -20,7 +22,6 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.config import Config
 
-global sharedDev
 
 ####Bluetooth stuff in android accessed via jnius####
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
@@ -51,7 +52,6 @@ def createSocketStream(self, devName):
 
 
 class PadScreen(Screen, FloatLayout):
-    globalKey = StringProperty('')
 
     class DeviceSelectionPopup(Popup):
 
@@ -77,7 +77,7 @@ class PadScreen(Screen, FloatLayout):
                 grid = GridLayout(cols=1)
                 info = Label(text="No paired devices found.\nPlease make sure your Bluetooth\nis on, you are in range of\nyour device, and you are paired\nto your device.")
                 btn = Button(text="Retry", size_hint_y=.2)
-                btn.bind(self.setupAll)
+                btn.bind(on_release=self.setupAll)
                 self.content = grid
 
         def setupDevButtons(self, listOfDevs):
@@ -152,7 +152,6 @@ class PadScreen(Screen, FloatLayout):
         pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
         if self.rStream != None and self.sStream != None:
             self.sStream.write("{}".format("#"))
-            print self.nums, u"self.nums"
             self.nums = SHA.getSHA128of16(self.nums)
             for num in self.nums:
                 self.sStream.write("{},".format(num))
@@ -178,9 +177,10 @@ class PadScreen(Screen, FloatLayout):
             if data == 49:
                 pop.dismiss()
                 print u"Valid"
-                self.globalKey = self.numsString
+                self.manager.get_screen("Main").key = self.nums
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 corPop.open()
+                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream
                 self.manager.current = "Main"
 
             elif data == 48:
@@ -198,31 +198,104 @@ class PadScreen(Screen, FloatLayout):
 
 
 class MainScreen(Screen, FloatLayout):
-    key = StringProperty('')
-    dev = StringProperty('')
+
+    class recievePopup(Popup):
+
+        def __init__(self, mainScreen, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.downloadsDir = storagepath.get_downloads_dir()
+            print self.downloadsDir, u"Downloads dir"
+            self.grid = GridLayout()
+            self.grid.add_widget(Label(text="Ready to recieve file."))
+            btn = Button(text="Exit")
+            btn.bind(on_release=self.dismiss)
+            self.grid.add_widget()
+
+            self.content = self.grid
+
+        def on_open(self):
+            self.recieveFile()
+        #     self.recieveThread = Process(target=self.recieveFile, daemon=True)
+        #     self.recieveThread.start()
+
+        def recieveFile(self):
+            # File name is sent with !NAME!#!!<name here>!!~
+            # File data is sent with !DATA!#!!<data here>!!~
+
+            buff = []
+            data = ""
+            nameInstruction = [33, 78, 65, 77, 69, 33]
+            endFile = [126, 33, 33, 69, 78, 68, 70, 33]
+            startHeader = [35, 33, 33]
+            endHeader = [33, 33, 126]
+            nameFound = False
+            name = []
+            fo, fw = None, None
+            fileName = ""
+            bufferSize = 1024
+            buffCount = 0
+
+            while len(str(data)) > -1:
+                data = self.outerScreen.rStream.read()
+                buff.append(data)
+            
+                if not nameFound:
+                    for i in range(len(buff)-6):
+                        if buff[i:i+6] == nameInstruction:
+                            if buff[i+6:i+9] == startHeader:
+                                z = i+9
+                                name = buff[z:z+3]
+                                while (buff[z:z+3] != endHeader) and (z+3 < len(buff)):
+                                    name.append(buff[z+3])
+                                    z += 1
+
+
+                                if name[len(name)-3:] == endHeader:
+                                    name = name[:len(name)-3]
+                                    if len(name) != 0:
+                                        nameFound = True
+                                        buff[i:z+len(endHeader)] = []
+
+                                        print buff, u"Removed name header."
+                                        for letter in name:
+                                            fileName += chr(letter)
+
+                                        fw = open(self.downloadsDir+"/"+fileName, "wb") #Clear file
+                                        fw.close()
+                                        fo = open(self.downloadsDir+"/"+fileName, "ab")
+
+
+                elif ((len(buff) > bufferSize+8) or (buff[len(buff)-8:] == endFile)):
+                    if buff[len(buff)-8:] == endFile:
+                        print buff, u"End included"
+                        buff[len(buff)-8:] = []
+                        print u"End found"
+                        print buff, u"Removed ending"
+
+                        fo.write(bytearray(buff))
+
+                        fo.close()
+                        return "Done"
+
+                    else:
+                        fo.write(bytearray(buff[:bufferSize]))
+                        buff[:bufferSize] = []
+                        buffCount += bufferSize
+                        print buffCount
+
+
+
+
+
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
-        
-    # def on_enter(self):
-    #     self.setupBT()
+        self.sStream = None
+        self.rStream = None
+        self.key = ""
 
-    def setupBT(self, devName):
-        try:
-            self.outerScreen.rStream, self.outerScreen.sStream = self.createSocketStream(devName)
-        except Exception, e:
-            print u"Can't connect to device."
-            self.connected = False
-            grid = GridLayout(cols=1)
-            info = Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app.")
-            btn = Button(text="Retry", size_hint_y=.2)
-            btn.bind(on_press=self.changeToDeviceList)
-            grid.add_widget(info)
-            grid.add_widget(btn)
-            self.add_widget(grid)
-        else:
-            print u"Connected to:", devName
-            self.connected = True
+        self.recvPop = self.recievePopup(self)
 
 
 
