@@ -316,8 +316,18 @@
 
 
         Label:
-            text: "Use Bluetooth?"
+            text: "Search folders recursively"
+        Switch:
+            id: searchSwitch
+            active: root.outerScreen.searchRecursively
+            #on_touch_down: root.editConfLoc("searchRecursively", str(not root.outerScreen.searchRecursively), "search faggot")
+
         Label:
+            text: "Use Bluetooth"
+        Switch:
+            id: btSwitch
+            active: root.outerScreen.useBTTemp
+            #on_touch_down: root.editConfLoc("bluetooth", str(not root.outerScreen.useBTTemp), "bt faggot")
 
         Label:
         Label:
@@ -326,9 +336,8 @@
         Label:
 
         Label:
-        Label:
-
-        Label:
+            text: "Note: Changes that you make that affect the login method only take effect once the program is restarted."
+            text_size: self.size
         Label:
 
         Button:

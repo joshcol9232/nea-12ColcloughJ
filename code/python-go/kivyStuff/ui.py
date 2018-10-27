@@ -50,6 +50,7 @@ osTemp = gettempdir()+fileSep #From tempfile module
 ######Load config and define shared variables#####
 global startDir
 global useBT
+global sharedPath
 global config
 #global root #For use like root.x in kv file
 useBT = False
@@ -67,47 +68,58 @@ tempDir = fileSep.join(tempDir)
 tempDir += "assets"+fileSep+"exports"+fileSep
 sharedAssets = tempDir
 
-configFile = None
-try:
-    home = os.listdir(os.path.expanduser("~/.config/FileMate/"))
-except:
-    print("No config file in .config")
-else:
-    if "config" in home:
-        configFile = open(os.path.expanduser("~/.config/FileMate/config"), "r")
-        config = os.path.expanduser("~/.config/FileMate/config")
-
-if configFile == None:
-    try:
-        configFile = open(startDir+"config.cfg", "r")
-        config = startDir+"config.cfg"
-    except Exception as e:
-        print(e, "Config file not found.")
-        raise FildNotFoundError("No config file found. Refer to the README if you need help.")
-
-for line in configFile:
-    print(line)
-    lineSplit = line.split("--")
-    lineSplit[1] = lineSplit[1].replace("\n", "")
-    if lineSplit[0] == "vaultDir":
-        sharedPath = lineSplit[1]
-    elif lineSplit[0] == "searchRecursively":
-        if lineSplit[1] == "True":
-            searchRecursively = True
-        elif lineSplit[1] == "False":
-            searchRecursively = False
+def findConfigFile():
+    config = None
+    if fileSep == "/":
+        try:
+            home = os.listdir(os.path.expanduser("~/.config/FileMate/"))
+        except:
+            print("No config file in .config")
         else:
-            raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
-    elif lineSplit[0] == "bluetooth":
-        print(lineSplit[1], "Bluetooth config")
-        if lineSplit[1] == "True":
-            useBT = True
-        elif lineSplit[1] == "False":
-            useBT = False
-        else:
-            raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+            if "config" in home:
+                config = os.path.expanduser("~/.config/FileMate/config")
 
-configFile.close()
+    if config == None:
+        try:
+            configFile = open(startDir+"config.cfg", "r")
+        except Exception as e:
+            print(e, "Config file not found.")
+            raise FildNotFoundError("No config file found. Refer to the README if you need help.")
+        else:
+            configFile.close()
+            config = startDir+"config.cfg"
+
+    return config
+
+
+def readConfigFile(configLocation):
+    configFile = open(configLocation, "r")
+    for line in configFile:
+        lineSplit = line.split("--")
+        lineSplit[1] = lineSplit[1].replace("\n", "")
+        if lineSplit[0] == "vaultDir":
+            path = lineSplit[1]
+        elif lineSplit[0] == "searchRecursively":
+            if lineSplit[1] == "True":
+                recurse = True
+            elif lineSplit[1] == "False":
+                recurse = False
+            else:
+                raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
+        elif lineSplit[0] == "bluetooth":
+            if lineSplit[1] == "True":
+                bt = True
+            elif lineSplit[1] == "False":
+                bt = False
+            else:
+                raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+
+    configFile.close()
+
+    return path, recurse, bt
+
+config = findConfigFile()
+sharedPath, searchRecursively, useBT = readConfigFile(config)
 
 
 def runUI():
@@ -331,19 +343,41 @@ class MainScreen(Screen, FloatLayout):
             self.outerScreen = mainScreen
             super(Popup, self).__init__(**kwargs)
 
-        def editConfLoc(self, term, dir):
+            self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
+            self.ids.btSwitch.bind(active=self.btSwitchCallback)
+
+        def searchSwitchCallback(self, switch, value):
+            return self.editConfLoc("searchRecursively", str(value))
+
+        def btSwitchCallback(self, switch, value):
+            return self.editConfLoc("bluetooth", str(value))
+
+
+        def editConfLoc(self, term, newContent):
+            print(newContent, "New content given")
             with open(config, "r") as conf:
                 confContent = conf.readlines()
 
             for i in range(len(confContent)):
-                if term in confContent[i]:
-                    a = confContent[i].split("--")
-                    a[1] = dir+"\n"
+                a = confContent[i].split("--")
+                print(term, a[0])
+                if term == a[0]:
+                    print("TERM FOUND")
+                    a[1] = newContent+"\n"
                     confContent[i] = "--".join(a)
 
             with open(config, "w") as confW:
                 confW.writelines(confContent)
 
+            print("TERM---------", term, newContent)
+            if term == "bluetooth":
+                print(self.outerScreen.useBTTemp, "before BT")
+                self.outerScreen.useBTTemp = not self.outerScreen.useBTTemp
+                print(self.outerScreen.useBTTemp, "after BT")
+            elif term == "searchRecursively":
+                print(self.outerScreen.searchRecursively, "before SEARCH")
+                self.outerScreen.searchRecursively = not self.outerScreen.searchRecursively
+                print(self.outerScreen.searchRecursively, "after SEARCH")
 
 
         def dirInputValid(self, inp):
@@ -368,7 +402,7 @@ class MainScreen(Screen, FloatLayout):
                         if os.path.isdir(inp):
                             if inp[len(inp)-1] != fileSep:
                                 inp += fileSep
-                            self.editConfLoc("vaultDir--", inp)
+                            self.editConfLoc("vaultDir", inp)
                             print("EDITING")
                             done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             self.outerScreen.path = inp
@@ -391,7 +425,7 @@ class MainScreen(Screen, FloatLayout):
                         else:
                             if inp[len(inp)-1] != fileSep:
                                 inp += fileSep
-                            self.editConfLoc("vaultDir--", inp)
+                            self.editConfLoc("vaultDir", inp)
                             done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             self.outerScreen.path = inp
                             self.outerScreen.currentDir = inp
@@ -601,6 +635,8 @@ class MainScreen(Screen, FloatLayout):
         self.encPop = None
         self.enterCount = 0
         self.validBTKey = False
+        self.useBTTemp = useBT
+        self.searchRecursively = searchRecursively
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.path = sharedPath
@@ -767,7 +803,6 @@ class MainScreen(Screen, FloatLayout):
         return foldersSort+filesSort
 
 
-##########Getting File Information##########
     def recursiveSize(self, f, encrypt=False):  #Get size of folders.
         fs = os.listdir(f)
         for item in fs:
@@ -1016,10 +1051,8 @@ class MainScreen(Screen, FloatLayout):
                 self.createButtons(self.searchResults)
             elif loc != -1:
                 self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
-                #print(self.unsorted)
 
-            if fileObj.isDir and searchRecursively:
-                #print("Isdir:", fileObj.hexPath)
+            if fileObj.isDir and self.searchRecursively:
                 self.findAndSortCore(fileObj.hexPath, item)
 
 
