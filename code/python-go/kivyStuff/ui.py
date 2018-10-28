@@ -539,6 +539,8 @@ class MainScreen(Screen, FloatLayout):
                 totalPer += 100
                 total += self.pb.value
 
+            self.dismiss()
+
 
     class deleteButton(Button):
 
@@ -1110,11 +1112,10 @@ class MainScreen(Screen, FloatLayout):
         if err != None:
             raise ValueError("Key not valid.")
 
-        try:
+        #print(self.encPop, "encpop in passToPipe")
+        if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
-        except Exception as e:
-            print(e, "Dunno")
 
         if endOfFolderList:
             if self.encPopFolder != None:
@@ -1194,6 +1195,10 @@ class MainScreen(Screen, FloatLayout):
             return False
 
     def encryptDir(self, d, targetLoc):
+        if self.encPopFolder != None:
+            self.encPopFolder.dismiss()
+            self.encPopFolder = None
+
         self.fileList = []
         self.locList = []
         self.encryptDirCore(d, targetLoc)
