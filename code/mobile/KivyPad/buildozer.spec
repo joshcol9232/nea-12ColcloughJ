@@ -146,7 +146,7 @@ android.permissions = BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_PRIVILEGED
 #android.gradle_dependencies =
 
 # (str) python-for-android branch to use, defaults to stable
-#p4a.branch = stable
+#p4a.branch = master
 
 # (str) OUYA Console category. Should be one of GAME or APP
 # If you leave this blank, OUYA support will not be enabled
@@ -225,7 +225,8 @@ log_level = 2
 warn_on_root = 1
 
 # (str) Path to build artifact storage, absolute or relative to spec file
-build_dir = /home/kivy/Desktop/VMOUT/
+build_dir = /home/kivy/VMOUT/
+#build_dir = /home/josh/kivyBuild/
 
 # (str) Path to build output (i.e. .apk, .ipa) storage
 # bin_dir = ./bin

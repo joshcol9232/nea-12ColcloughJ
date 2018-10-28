@@ -220,8 +220,7 @@ class MainScreen(Screen, FloatLayout):
         #     self.recieveThread.start()
 
         def recieveFile(self):
-            # File name is sent with !NAME!#!!<name here>!!~
-            # File data is sent with !DATA!#!!<data here>!!~
+            # File is sent with    !NAME!#!!<name here>!!~<data>~!!ENDF!   like a data sandwich.
 
             buff = []
             data = ""

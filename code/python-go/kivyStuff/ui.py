@@ -1020,6 +1020,12 @@ class MainScreen(Screen, FloatLayout):
             self.removeButtons()
             self.createButtons(self.searchResults, False)
 
+        else:
+            pop = Popup(title="No Results", content=Label(text="No results found for:\n"+item, halign="center"), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop.open()
+
+
+
     def searchThread(self, item):
         self.findAndSort(item)
         return "Done"
