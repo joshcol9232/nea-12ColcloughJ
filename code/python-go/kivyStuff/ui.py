@@ -38,6 +38,9 @@ import SHA
 ###########Import filename encryption###
 import aesFName     #AES easier to use when written in python, but slower, which isn't much of an issue for file names hence why this part is python.
 
+###########Import cython sorts##########
+import sortsCy
+
 #######Load OS Specific settings####
 global fileSep #linux has different file separators to windows and different temp dir
 global osTemp  #Different OS have different temp folder locations.
@@ -123,7 +126,7 @@ sharedPath, searchRecursively, useBT = readConfigFile(config)
 
 
 def runUI():
-    global ui
+    Clock.max_iteration = 20
     ui = uiApp()
     ui.run()
     print("Deleting temp files.")
@@ -572,31 +575,16 @@ class MainScreen(Screen, FloatLayout):
             super(Button, self).__init__(**kwargs)
             self.outerScreen = mainScreen
             self.ascending = True
+            self.sortList = []
 
-        def quickSortSize(self, fileObjects):
-            if len(fileObjects) > 1:
-                left = []
-                right = []  #Make seperate l+r lists, and add on at the end.
-                middle = []
-                pivot = fileObjects[int(len(fileObjects)/2)]
-                for i in fileObjects:
-                    if i.rawSize < pivot.rawSize:
-                        left.append(i)
-                    elif i.rawSize > pivot.rawSize:
-                        right.append(i)
-                    else:
-                        middle.append(i)
-                return self.quickSortSize(left)+middle+self.quickSortSize(right)
-            else:
-                return fileObjects
 
-        def sortBySize(self, asc=True):
-            sortList = self.quickSortSize(self.outerScreen.currentList)
-            if not asc:
-                sortList = sortList[::-1]
+        def sortBySize(self):
+            self.sortList = sortsCy.quickSortSize(self.outerScreen.currentList)
+            if not self.ascending:
+                self.sortList = self.sortList[::-1]
 
             self.outerScreen.removeButtons()
-            self.outerScreen.createButtons(sortList, False)
+            self.outerScreen.createButtons(self.sortList, False)
 
         def changeSizeOrder(self):
             self.ascending = not self.ascending
@@ -605,7 +593,15 @@ class MainScreen(Screen, FloatLayout):
             else:
                 self.text = "^"
 
-            self.sortBySize(self.ascending)
+            if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):
+                self.sortList = self.sortList[::-1]
+                print("Using old list")
+                self.outerScreen.removeButtons()
+                self.outerScreen.createButtons(self.sortList, False)
+            else:
+                self.outerScreen.previousDir = self.outerScreen.currentDir
+                print("Re-sorting")
+                self.sortBySize()
 
     class addFileScreen(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
 
@@ -638,6 +634,7 @@ class MainScreen(Screen, FloatLayout):
         self.enterCount = 0
         self.validBTKey = False
         self.useBTTemp = useBT
+        self.previousDir = None
         self.searchRecursively = searchRecursively
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
@@ -795,8 +792,8 @@ class MainScreen(Screen, FloatLayout):
             else:
                 files.append(fileObjects[i])
 
-        foldersSort = self.quickSortAlph(folders)   #Quick sort the list of folders and the list of files.
-        filesSort = self.quickSortAlph(files)
+        foldersSort = sortsCy.quickSortAlph(folders)   #Quick sort the list of folders and the list of files.
+        filesSort = sortsCy.quickSortAlph(files)
 
         if inverse: #If inverse
             foldersSort = foldersSort[::-1] #Invert the array/
@@ -837,9 +834,6 @@ class MainScreen(Screen, FloatLayout):
             self.grid.add_widget(btn)
             self.grid.add_widget(info)
             self.grid.add_widget(fileS)
-        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
-        self.scroll.add_widget(self.grid)
-        self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
 
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
@@ -848,6 +842,9 @@ class MainScreen(Screen, FloatLayout):
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
+        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
+        self.scroll.add_widget(self.grid)
+        self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
 
         if sort:
             self.createButtonsCore(sortedArray)
@@ -871,8 +868,8 @@ class MainScreen(Screen, FloatLayout):
 
     def traverseButton(self, fileObj):  #Function when file is clicked.
         if fileObj.isDir:   #If is a folder, then display files within that folder.
+            self.previousDir = self.currentDir
             self.currentDir = fileObj.hexPath
-            currentDirShare = self.currentDir
             self.resetButtons()
         else:   #If is a file, decrypt the file and open it.
             self.decrypt(fileObj)
@@ -926,6 +923,7 @@ class MainScreen(Screen, FloatLayout):
 
     def goBackFolder(self):     #Go up a folder.
         if self.currentDir != self.path:    #Can't go further past the vault dir.
+            self.previousDir = self.currentDir
             self.currentDir = self.getPathBack()
             currentDirShare = self.currentDir
             self.resetButtons()
@@ -953,6 +951,7 @@ class MainScreen(Screen, FloatLayout):
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
+        self.previousDir = self.currentDir
         self.currentDir = self.path
         self.createButtons(self.List(self.currentDir))
 
@@ -976,55 +975,6 @@ class MainScreen(Screen, FloatLayout):
         return tempDir
 
 ###########Sorts + Searches############
-    def compareStrings(self, fileObj, string2):     #returns True if string1 < string2 alphabetically, and "Found" if string1 == string2
-        count = 0
-        while not (count >= len(fileObj.name) or count >= len(string2)):
-            if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
-                return True
-            elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
-                return False
-            else:
-                if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
-                    return True
-                elif ord(string2[count]) > ord(fileObj.name[count]):
-                    return False
-                else:
-                    if string2 == fileObj.name:
-                        return "Found"
-                    else:
-                        count += 1
-        if len(fileObj.name) > len(string2):
-            return True
-        elif len(fileObj.name) < len(string2):
-            return False
-        else:
-            raise ValueError("Two strings are the same in compareStrings.")
-            print(string2, fileObj.name, len(string2), len(fileObj.name))
-
-
-    def quickSortAlph(self, myList, fileObjects=True):  #Quick sorts alphabetically
-        if len(myList) > 1:
-            left = []
-            right = []  #Make seperate l+r lists, and add on at the end.
-            middle = []
-            pivot = myList[int(len(myList)/2)]
-            for item in myList:
-                if fileObjects:
-                    leftSide = self.compareStrings(pivot, item.name)
-                else:
-                    leftSide = self.compareStrings(pivot, item)
-                if leftSide == "Found":
-                    middle.append(item)
-                elif leftSide:
-                    left.append(item)
-                elif not leftSide:
-                    right.append(item)
-
-            return self.quickSortAlph(left)+middle+self.quickSortAlph(right)
-        else:
-            return myList
-
-
     def quickSortTuples(self, tuples):  #Quick sorts tuples (for search results).
         if len(tuples) > 1:
             left = []
