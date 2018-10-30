@@ -53,7 +53,6 @@ osTemp = gettempdir()+fileSep #From tempfile module
 ######Load config and define shared variables#####
 global startDir
 global useBT
-global sharedPath
 global config
 #global root #For use like root.x in kv file
 useBT = False
@@ -63,7 +62,6 @@ startDir = os.path.dirname(os.path.realpath(__file__))+fileSep
 tempDir = startDir.split(fileSep)
 del tempDir[len(tempDir)-2]
 startDir = fileSep.join(tempDir)
-print(tempDir, "TEMP DIR")
 for i in range(2):
     del tempDir[len(tempDir)-2]
 
@@ -86,7 +84,6 @@ def findConfigFile():
         try:
             configFile = open(startDir+"config.cfg", "r")
         except Exception as e:
-            print(e, "Config file not found.")
             raise FildNotFoundError("No config file found. Refer to the README if you need help.")
         else:
             configFile.close()
@@ -127,7 +124,7 @@ sharedPath, searchRecursively, useBT = readConfigFile(config)
 
 def runUI():
     Clock.max_iteration = 20
-    ui = uiApp()
+    ui = uiApp(title="FileMate")
     ui.run()
     print("Deleting temp files.")
     try:
@@ -273,7 +270,6 @@ class LoginScreen(Screen, FloatLayout):
 
 
 
-###Bluetooth stuff### needs to be accessable by both screens.
 if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
     from bluetooth import *
 
@@ -336,7 +332,13 @@ class MainScreen(Screen, FloatLayout):
 
         def makeFolder(self, text):
             if self.dirInputValid(self.outerScreen.currentDir+text):
-                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                try:
+                    os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                except OSError as e:
+                    if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
+                        pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})
+                        pop.open()
+
                 self.outerScreen.refreshFiles()
                 self.dismiss()
 
@@ -357,30 +359,22 @@ class MainScreen(Screen, FloatLayout):
 
 
         def editConfLoc(self, term, newContent):
-            print(newContent, "New content given")
             with open(config, "r") as conf:
                 confContent = conf.readlines()
 
             for i in range(len(confContent)):
                 a = confContent[i].split("--")
-                print(term, a[0])
                 if term == a[0]:
-                    print("TERM FOUND")
                     a[1] = newContent+"\n"
                     confContent[i] = "--".join(a)
 
             with open(config, "w") as confW:
                 confW.writelines(confContent)
 
-            print("TERM---------", term, newContent)
             if term == "bluetooth":
-                print(self.outerScreen.useBTTemp, "before BT")
                 self.outerScreen.useBTTemp = not self.outerScreen.useBTTemp
-                print(self.outerScreen.useBTTemp, "after BT")
             elif term == "searchRecursively":
-                print(self.outerScreen.searchRecursively, "before SEARCH")
                 self.outerScreen.searchRecursively = not self.outerScreen.searchRecursively
-                print(self.outerScreen.searchRecursively, "after SEARCH")
 
 
         def dirInputValid(self, inp):
@@ -892,6 +886,9 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
+        internalLayout.add_widget(self.infoLabel(text="Date modified:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text=str(os.path.getmtime(fileObj.hexPath)), halign="left", valign="middle"))
+
         if useBT:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.sendFile, fileObj))
@@ -1087,6 +1084,7 @@ class MainScreen(Screen, FloatLayout):
         self.openFileThread.start()
 
     def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
+        alreadyDecrypted = False
         if type == "y" or "n":
             tempDir = d.split(fileSep)
             fileName = tempDir[len(tempDir)-1]
@@ -1229,9 +1227,7 @@ class MainScreen(Screen, FloatLayout):
 
 
 class ScreenManagement(ScreenManager):
-    
-    def changeScreen(self, screen):
-        self.current = screen
+    pass
 
 
 

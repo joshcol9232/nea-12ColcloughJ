@@ -1,6 +1,6 @@
-from sys.path import insert
+import sys
 from os.path import dirname, realpath
-insert(0, str(dirname(realpath(__file__))+"/kivyStuff"))
+sys.path.insert(0, str(dirname(realpath(__file__))+"/kivyStuff"))
 import ui
 
 ui.runUI()

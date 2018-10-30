@@ -27,7 +27,6 @@
 <deleteButton@Button>:
     on_release: root.outerScreen.deleteFile(self.fileObj)
 
-
 <ConfirmationPopup@Popup>:
     title: "Confirmation"
     size_hint: .4, .4
@@ -175,8 +174,8 @@
             on_release: a = root.SettingsPop(root, title="Settings");a.open()
             Image:
                 source: root.getPathForButton("settings.png")
-                x: self.parent.x + 10
-                y: self.parent.y + 4
+                x: self.parent.x+10
+                y: self.parent.y + (self.parent.y*(self.parent.size_hint[1]/2))/4
                 size: 40, 40
                 allow_stretch: True
 
@@ -187,10 +186,10 @@
             on_release: root.lock()#root.clearUpTempFiles();app.root.current = "Login"
             Image:
                 source: root.getPathForButton("padlock.png")
-                x: self.parent.x - 20
-                y: self.parent.y - 70
-                size: 200, 267 #1 : 1.3353 ratio
-                allow_stretch: True
+                x: self.parent.x + self.size[0]
+                y: self.parent.y + self.parent.y*(self.parent.size_hint[1]/4)
+                size: 50, 66.765 #1 : 1.3353 ratio
+                allow_stretch: False
 
         Button:
             id: addFile
@@ -199,11 +198,10 @@
             on_release: root.addFile = root.addFileScreen(root, title="Add File");root.addFile.open()
             Image:
                 source: root.getPathForButton("addFile.png")
-                x: self.parent.x - 33
-                y: self.parent.y - 73
-
-                size: 250, 267
-                allow_stretch: True
+                x: self.parent.x + self.parent.size[0]/5
+                y: self.parent.y - self.parent.y*(self.parent.size_hint[1]/4)
+                size: 100, 133.54
+                allow_stretch: False
 
         Button:
             id: goBackFolder
@@ -212,10 +210,10 @@
             on_release: root.goBackFolder()
             Image:
                 source: root.getPathForButton("backUpFolder.png")
-                x: self.parent.x - 33
-                y: self.parent.y - 73
-                size: 250, 267
-                allow_stretch: True
+                x: self.parent.x + (self.parent.width/5)
+                y: self.parent.y - (self.parent.height/6)
+                size: 100, 133.54
+                allow_stretch: False
 
         Button:
             id: manuallyRefresh
