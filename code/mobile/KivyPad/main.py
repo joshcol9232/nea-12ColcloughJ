@@ -189,7 +189,7 @@ class PadScreen(Screen, FloatLayout):
                 invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 invPop.open()
             else:
-                print type(data), "AAA data"
+                print type(data), "data"
         else:
             print u"Can't connect to device."
             noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
@@ -206,21 +206,19 @@ class MainScreen(Screen, FloatLayout):
             self.outerScreen = mainScreen
             self.downloadsDir = storagepath.get_downloads_dir()
             print self.downloadsDir, u"Downloads dir"
-            self.grid = GridLayout()
-            self.grid.add_widget(Label(text="Ready to recieve file."))
-            btn = Button(text="Exit")
-            btn.bind(on_release=self.dismiss)
-            self.grid.add_widget()
 
-            self.content = self.grid
+            self.content = Label(text="Waiting to fully recieve file.", halign="center")
 
         def on_open(self):
+            time.sleep(0.2)
             self.recieveFile()
         #     self.recieveThread = Process(target=self.recieveFile, daemon=True)
         #     self.recieveThread.start()
 
         def recieveFile(self):
             # File is sent with    !NAME!#!!<name here>!!~<data>~!!ENDF!   like a data sandwich.
+            # To do: make dictionary with each nameInstruction, startHeader etc, so they can be
+            # easily identified.
 
             buff = []
             data = ""
@@ -238,54 +236,45 @@ class MainScreen(Screen, FloatLayout):
             while len(str(data)) > -1:
                 data = self.outerScreen.rStream.read()
                 buff.append(data)
-            
+
                 if not nameFound:
                     for i in range(len(buff)-6):
-                        if buff[i:i+6] == nameInstruction:
-                            if buff[i+6:i+9] == startHeader:
-                                z = i+9
-                                name = buff[z:z+3]
-                                while (buff[z:z+3] != endHeader) and (z+3 < len(buff)):
-                                    name.append(buff[z+3])
-                                    z += 1
+                        if buff[i:i+6] == nameInstruction and buff[i+6:i+9] == startHeader:
+                            z = i+9
+                            name = buff[z:z+3]
+                            while (buff[z:z+3] != endHeader) and (z+3 < len(buff)):
+                                name.append(buff[z+3])
+                                z += 1
 
+                            if name[len(name)-3:] == endHeader and len(name) != 0:
+                                name = name[:len(name)-3]
+                                nameFound = True
+                                buff[i:z+len(endHeader)] = []
 
-                                if name[len(name)-3:] == endHeader:
-                                    name = name[:len(name)-3]
-                                    if len(name) != 0:
-                                        nameFound = True
-                                        buff[i:z+len(endHeader)] = []
+                                print buff, u"Removed name header."
+                                for letter in name:
+                                    fileName += chr(letter)
 
-                                        print buff, u"Removed name header."
-                                        for letter in name:
-                                            fileName += chr(letter)
-
-                                        fw = open(self.downloadsDir+"/"+fileName, "wb") #Clear file
-                                        fw.close()
-                                        fo = open(self.downloadsDir+"/"+fileName, "ab")
+                                fw = open(self.downloadsDir+"/"+fileName, "wb") #Clear file
+                                fw.close()
+                                fo = open(self.downloadsDir+"/"+fileName, "ab")
 
 
                 elif ((len(buff) > bufferSize+8) or (buff[len(buff)-8:] == endFile)):
                     if buff[len(buff)-8:] == endFile:
-                        print buff, u"End included"
                         buff[len(buff)-8:] = []
                         print u"End found"
-                        print buff, u"Removed ending"
 
                         fo.write(bytearray(buff))
-
                         fo.close()
+                        self.dismiss()
+                        print("Should be closed.")
                         return "Done"
 
                     else:
                         fo.write(bytearray(buff[:bufferSize]))
                         buff[:bufferSize] = []
                         buffCount += bufferSize
-                        print buffCount
-
-
-
-
 
 
     def __init__(self, **kwargs):
@@ -295,7 +284,6 @@ class MainScreen(Screen, FloatLayout):
         self.key = ""
 
         self.recvPop = self.recievePopup(self)
-
 
 
 class ScreenManagement(ScreenManager):

@@ -662,6 +662,7 @@ class MainScreen(Screen, FloatLayout):
         newLoc = osTemp+"FileMate"+fileSep+fileObj.name
         if not os.path.isdir(osTemp+"FileMate"+fileSep):
             os.makedirs(osTemp+"FileMate"+fileSep)
+
         self.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
 
         buff = []
@@ -792,7 +793,7 @@ class MainScreen(Screen, FloatLayout):
         if inverse: #If inverse
             foldersSort = foldersSort[::-1] #Invert the array/
             filesSort = filesSort[::-1]
-            
+
         return foldersSort+filesSort
 
 
@@ -889,7 +890,7 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Date modified:", size_hint_x=.2, halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(os.path.getmtime(fileObj.hexPath)), halign="left", valign="middle"))
 
-        if useBT:
+        if useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.sendFile, fileObj))
             internalLayout.add_widget(btButton)
