@@ -875,30 +875,35 @@ class MainScreen(Screen, FloatLayout):
 
         internalView = ScrollView()
         self.infoPopup = Popup(title="File Information", content=internalView, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.8, .4))
-        internalLayout = GridLayout(cols=2, size_hint_y=None)
+        internalLayout = GridLayout(cols=2, size_hint_y=None, row_default_height=self.infoPopup.size[1]/4)
 
-        internalLayout.add_widget(self.infoLabel(text="File Name:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text="Current Location:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
 
-
-        internalLayout.add_widget(self.infoLabel(text="Size:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text="Date modified:", size_hint_x=.2, halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel(text="Date modified:", halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(os.path.getmtime(fileObj.hexPath)), halign="left", valign="middle"))
+
+        internalLayout.add_widget(self.infoLabel())
+        internalLayout.add_widget(self.infoLabel())
 
         if useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.sendFile, fileObj))
             internalLayout.add_widget(btButton)
         else:
+            if fileObj.isDir:
+                decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
+                decBtn.bind(on_release=self.decryptDir)
+
             internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
 
-        delBtn = self.deleteButton(self, fileObj,text="Delete", size_hint_x=.2)
-        internalLayout.add_widget(delBtn)
+        internalLayout.add_widget(self.deleteButton(self, fileObj,text="Delete"))
 
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
@@ -1112,7 +1117,7 @@ class MainScreen(Screen, FloatLayout):
                 self.encPop = self.encPopup(self, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
                 mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=True)
+        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
         self.encryptProcess.start()
 
     def openFile(self, location, startLoc):
@@ -1156,13 +1161,15 @@ class MainScreen(Screen, FloatLayout):
 
         self.fileList = []
         self.locList = []
-        self.encryptDirCore(d, targetLoc)
+        self.encDecDirCore(d, targetLoc)
 
         self.encPopFolder = self.encPopup(self, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPopFolder.open, -1))            
 
+    def decryptDir(self):
+        pass
 
-    def encryptDirCore(self, d, targetLoc): #Encrypts whole directory.
+    def encDecDirCore(self, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)
         targetLoc = targetLoc.split(fileSep)
         targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
@@ -1170,7 +1177,7 @@ class MainScreen(Screen, FloatLayout):
         for item in fs:
             if os.path.isdir(d+item):
                 try:
-                    self.encryptDirCore(d+item+fileSep, targetLoc+fileSep+item) #Recursive
+                    self.encDecDirCore(d+item+fileSep, targetLoc+fileSep+item) #Recursive
                 except OSError:
                     pass
             else:
