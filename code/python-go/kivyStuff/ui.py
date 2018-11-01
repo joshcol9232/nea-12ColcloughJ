@@ -444,7 +444,7 @@ class MainScreen(Screen, FloatLayout):
 
     class encPopup(Popup): #For single files
 
-        def __init__(self, outerScreen, labText, fileList, locList, **kwargs):
+        def __init__(self, outerScreen, encType, labText, fileList, locList, **kwargs):
             super(Popup, self).__init__(**kwargs)
             self.outerScreen = outerScreen
             #kivy stuff
@@ -474,7 +474,7 @@ class MainScreen(Screen, FloatLayout):
             self.grid.add_widget(self.wholePb)
             self.content = self.grid
 
-            self.checkThread = threading.Thread(target=self.getStats, daemon=True)
+            self.checkThread = threading.Thread(target=self.getStats, args=(encType,), daemon=True)
             self.checkThread.start()
 
         def getTotalSize(self):
@@ -492,16 +492,16 @@ class MainScreen(Screen, FloatLayout):
 
             return ("%.2f" % bps) + divisions[divCount]
 
-        def getStats(self):
+        def getStats(self, encType):
             total = 0
             totalPer = 0
             for i in range(len(self.fileList)):
                 self.pb.value = 0
                 self.pb.max = os.path.getsize(self.fileList[i])
-                if i == len(self.fileList)-1 :
-                    self.outerScreen.encDecTerminal("y", self.fileList[i], self.locList[i], True, True)
+                if i == len(self.fileList)-1:
+                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True)
                 else:
-                    self.outerScreen.encDecTerminal("y", self.fileList[i], self.locList[i], True)
+                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True)
 
                 prevInt = 0
                 timeFor1per = 0
@@ -1071,17 +1071,15 @@ class MainScreen(Screen, FloatLayout):
         if err != None:
             raise ValueError("Key not valid.")
 
-        #print(self.encPop, "encpop in passToPipe")
-        if self.encPop != None:
-            self.encPop.dismiss()
-            self.encPop = None
-
         if endOfFolderList:
-            if self.encPopFolder != None:
-                self.encPopFolder.dismiss()
-                self.encPopFolder = None
+            if self.encPop != None:
+                self.encPop.dismiss()
+                self.encPop = None
 
-        if type == "n" and op:
+            print("Refreshing files.")
+            self.refreshFiles()
+
+        if type == "n" and op and endOfFolderList:
             mainthread(self.openFileTh(targetLoc, d))
         return out
 
@@ -1091,34 +1089,43 @@ class MainScreen(Screen, FloatLayout):
 
     def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
         alreadyDecrypted = False
-        if type == "y" or "n":
+        fileName = ""
+        if type == "y":     #The file name also needs to be encrypted
             tempDir = d.split(fileSep)
             fileName = tempDir[len(tempDir)-1]
-            if type == "y":     #The file name also needs to be encrypted
-                popText = "Encrypting..."
-                if os.path.exists(targetLoc):
-                    if os.path.isdir(targetLoc):
-                        shutil.rmtree(targetLoc)
-                    else:
-                        os.remove(targetLoc)
+            popText = "Encrypting..."
+            if os.path.exists(targetLoc):
+                if os.path.isdir(targetLoc):
+                    shutil.rmtree(targetLoc)
+                else:
+                    os.remove(targetLoc)
 
                 #replace file name with new hex
-                targetLoc = targetLoc.split(fileSep)
-                targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
-                targetLoc = fileSep.join(targetLoc)
+            targetLoc = targetLoc.split(fileSep)
+            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
+            targetLoc = fileSep.join(targetLoc)
 
-            elif type == "n":   #Need to decrypt file name if decrypting
-                targetLoc = targetLoc.split(fileSep)
-                targetLoc[len(targetLoc)-1] = newName #Stops you from doing it twice in decrypt()
-                targetLoc = fileSep.join(targetLoc)
-                popText = "Decrypting..."
+        elif type == "n":   #Need to decrypt file name if decrypting
+            tempDir = d.split(fileSep)
+            fileName = tempDir[len(tempDir)-1]
+            targetLoc = targetLoc.split(fileSep)
+            newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
+            targetLoc = fileSep.join(targetLoc)
+            popText = "Decrypting..."
 
-            if not isPartOfFolder:
-                self.encPop = self.encPopup(self, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
-                mainthread(Clock.schedule_once(self.encPop.open, -1))
+        if not isPartOfFolder:
+            self.encPop = self.encPopup(self, type, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
+            mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-        self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
-        self.encryptProcess.start()
+        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
+            self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
+            self.encryptProcess.start()
+        else:
+            print("File name too long :(")
+            self.encPop.dismiss()
+            print("Dismissed?")
+            pop = Popup(title="Invalid file name.", content=Label(text="File name too long,\nplease try again with shorter\nfile name."))
+            pop.open()
 
     def openFile(self, location, startLoc):
         if sys.platform.startswith("win32"):
@@ -1154,17 +1161,17 @@ class MainScreen(Screen, FloatLayout):
             self.popup.open()
             return False
 
-    def encryptDir(self, d, targetLoc):
-        if self.encPopFolder != None:
-            self.encPopFolder.dismiss()
-            self.encPopFolder = None
+    def encDecDir(self, encType, d, targetLoc):
+        if self.encPop != None:
+            self.encPop.dismiss()
+            self.encPop = None
 
         self.fileList = []
         self.locList = []
         self.encDecDirCore(d, targetLoc)
 
-        self.encPopFolder = self.encPopup(self, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
-        mainthread(Clock.schedule_once(self.encPopFolder.open, -1))            
+        self.encPop = self.encPopup(self, encType, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
+        mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptDir(self):
         pass
@@ -1197,12 +1204,10 @@ class MainScreen(Screen, FloatLayout):
                         if d[len(d)-1] != fileSep:
                             d += fileSep
                         dSplit = d.split(fileSep)
-                        self.encryptDir(d, self.currentDir+dSplit[len(dSplit)-2]+fileSep)
+                        self.encDecDir("y", d, self.currentDir+dSplit[len(dSplit)-2]+fileSep)
                     else:
                         dSplit = d.split(fileSep)
                         self.encDecTerminal("y", d, self.currentDir+dSplit[len(dSplit)-1])
-
-
 
         else:
             if self.checkDirExists(inp):
@@ -1210,11 +1215,10 @@ class MainScreen(Screen, FloatLayout):
                     if inp[len(inp)-1] != fileSep:
                         inp += fileSep
                     inpSplit = inp.split(fileSep)
-                    self.encryptDir(inp, self.currentDir+inpSplit[len(inpSplit)-2])
+                    self.encDecDir("y", inp, self.currentDir+inpSplit[len(inpSplit)-2])
                 else:
                     inpSplit = inp.split(fileSep)
                     self.encDecTerminal("y", inp, self.currentDir+inpSplit[len(inpSplit)-1])
-
 
         self.resetButtons()
 
