@@ -569,11 +569,10 @@ class MainScreen(Screen, FloatLayout):
 
         def sendFile(self, fileObj):
             # File name is sent with !NAME!#!!<name here>!!~
-            # File size is sent with !SIZE!#!!<size here>!!~
-            # File data is sent with !DATA!#!!<data here>!!~
+            # File data is sent right afterwards, ending with ~!!ENDF!
+            # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
             self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
             print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
-    #        self.clientSock.send("!SIZE!#!!{}!!~".format(fileObj.rawSize))
 
             newLoc = osTemp+"FileMate"+fileSep+fileObj.name
             if not os.path.isdir(osTemp+"FileMate"+fileSep):
@@ -689,7 +688,6 @@ class MainScreen(Screen, FloatLayout):
         super(MainScreen, self).__init__(**kwargs)
         self.ascending = True
         self.key = ""
-        self.encPopFolder = None
         self.encPop = None
         self.enterCount = 0
         self.validBTKey = False
@@ -708,13 +706,21 @@ class MainScreen(Screen, FloatLayout):
     def __repr__(self):
         return "MainScreen"
 
+    def on_enter(self): #When the screen is started.
+        if self.enterCount == 0:
+            self.setupSortButtons() #Put sort buttons in place.
+        self.createButtons(self.List(self.currentDir))     #List the files in the vault.
+        self.enterCount += 1
+
+    def on_leave(self):     #Kept separate from lock because i may want to add more screens.
+        self.remove_widget(self.scroll)
+
     def lock(self):         #Procedure for when the program is locked.
         self.clearUpTempFiles() #Delete all temporary files (decrypted files ready for use).
         if useBT:
             self.manager.get_screen("Login").ids.clientLabel.text = ""
             self.validBTKey = False
         return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in 
-
 
 
     def runServMain(self):
@@ -759,6 +765,7 @@ class MainScreen(Screen, FloatLayout):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
+                            self.sendFileList()
                             mainthread(self.changeToMain())
                         else:
                             numbers = []
@@ -776,6 +783,20 @@ class MainScreen(Screen, FloatLayout):
         self.serverSock.close()
         print("all done, LOCK")
         self.lock()
+
+
+    def sendFileList(self):
+        # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
+        self.clientSock.send("!FILELIST!#!!")
+        fileList = self.List(self.currentDir)
+
+        for i in fileList:
+            print("Sending:", i.name)
+            self.clientSock.send("--{}".format(i.name))
+
+        print("Sent full list, now sent end.")
+        self.clientSock.send("~!!ENDLIST!")
+
 
 ##Functions for changing screen within threads
     @mainthread
@@ -798,12 +819,6 @@ class MainScreen(Screen, FloatLayout):
         self.sortsGrid.add_widget(self.nameSort)
         self.sortsGrid.add_widget(self.sizeSort)
         self.add_widget(self.sortsGrid) #Add the sort buttons grid to the float layout of MainScreen.
-
-    def on_enter(self): #When the screen is started.
-        self.setupSortButtons() #Put sort buttons in place.
-        if self.enterCount == 0:        #Prevents the buttons being redrawn over the originals if the program is locked.
-            self.createButtons(self.List(self.currentDir))     #List the files in the vault.
-        self.enterCount += 1
 
     def getGoodUnit(self, bytes):       #Get a good unit for displaying the sizes of files.
         if bytes == " -":

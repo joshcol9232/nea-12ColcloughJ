@@ -148,6 +148,7 @@ class PadScreen(Screen, FloatLayout):
             self.numsString = self.numsString[:len(self.nums)]
             self.updateDisplay()
 
+
     def confirm(self):
         pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
         if self.rStream != None and self.sStream != None:
@@ -178,9 +179,15 @@ class PadScreen(Screen, FloatLayout):
                 pop.dismiss()
                 print u"Valid"
                 self.manager.get_screen("Main").key = self.nums
+
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
-                corPop.open()
+                Clock.schedule_once(corPop.open, -1)
+
+                #Time to recieve file names of current directory
+                listOfFiles = self.recieveFileList()
+
                 self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream
+                self.manager.get_screen("Main").fileList = listOfFiles
                 self.manager.current = "Main"
 
             elif data == 48:
@@ -195,6 +202,44 @@ class PadScreen(Screen, FloatLayout):
             noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
             noConnect.open()
             self.deviceSelection.open()
+
+    def recieveFileList(self):
+        buff = []
+        data = ""
+
+        startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33, 35, 33, 33] #!FILELIST!#!!
+        endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
+
+        while buff[len(buff)-11:] != endList:
+            try:
+                data = self.rStream.read()
+            except Exception as e:
+                print e, "Failed while getting file list."
+                break
+            else:
+                print buff, buff[len(buff)-11:]
+                buff.append(data)
+
+        buff = buff[13:len(buff)-11]
+        print buff, "New buff."
+
+        listOfFiles = []
+        for i in range(len(buff)):
+            if (buff[i-1] == 45) and (buff[i] == 45):  #If two "--" in a row (what i used to separate the names).
+                a = i + 1
+                name = []
+                while (buff[a] != 45 or buff[a+1] != 45) and (a < len(buff)-1):
+                    name.append(chr(buff[a]))
+                    a += 1
+
+                    if a == len(buff)-1:
+                        name.append(chr(buff[a]))
+
+                listOfFiles.append("".join(name))
+
+
+        print "List of files given:", listOfFiles
+        return listOfFiles
 
 
 class MainScreen(Screen, FloatLayout):
@@ -234,8 +279,13 @@ class MainScreen(Screen, FloatLayout):
             buffCount = 0
 
             while len(str(data)) > -1:
-                data = self.outerScreen.rStream.read()
-                buff.append(data)
+                try:
+                    data = self.outerScreen.rStream.read()
+                except Exception as e:
+                    print e, "Failed recieving file."
+                    break
+                else:
+                    buff.append(data)
 
                 if not nameFound:
                     for i in range(len(buff)-6):
@@ -282,6 +332,7 @@ class MainScreen(Screen, FloatLayout):
         self.sStream = None
         self.rStream = None
         self.key = ""
+        self.fileList = []
 
         self.recvPop = self.recievePopup(self)
 
