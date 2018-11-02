@@ -474,7 +474,7 @@ class MainScreen(Screen, FloatLayout):
             self.grid.add_widget(self.wholePb)
             self.content = self.grid
 
-            self.checkThread = threading.Thread(target=self.getStats, args=(encType,), daemon=True)
+            self.checkThread = threading.Thread(target=self.enc, args=(encType,), daemon=True)
             self.checkThread.start()
 
         def getTotalSize(self):
@@ -492,7 +492,7 @@ class MainScreen(Screen, FloatLayout):
 
             return ("%.2f" % bps) + divisions[divCount]
 
-        def getStats(self, encType):
+        def enc(self, encType):
             total = 0
             totalPer = 0
             for i in range(len(self.fileList)):
@@ -537,6 +537,72 @@ class MainScreen(Screen, FloatLayout):
                 total += self.pb.value
 
             self.dismiss()
+
+
+    class btTransferPop(encPopup):
+
+        def __init__(self, mainScreen, fileObjTmp, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.title = "Please wait..."
+            self.size_hint = (.7, .4)
+            self.pos_hint = {"center_x": .5, "center_y": .5}
+            self.auto_dismiss = False
+            self.grid = GridLayout(cols=1)
+            self.subGrid = GridLayout(cols=3)
+            self.currFile = Label(text=fileObjTmp.path)
+            self.per = Label(text="")
+            self.spd = Label(text="")
+            self.tim = Label(text="")
+            self.pb = ProgressBar(value=0, max=1, size_hint=(.9, .2))
+            self.grid.add_widget(Label(text="Sending..."))
+            self.grid.add_widget(self.currFile)
+            self.subGrid.add_widget(self.per)
+            self.subGrid.add_widget(self.spd)
+            self.subGrid.add_widget(self.tim)
+            self.grid.add_widget(self.subGrid)
+            self.grid.add_widget(self.pb)
+            self.content = self.grid
+
+            self.sendThread = threading.Thread(target=self.sendFile, args=(fileObjTmp,), daemon=True) # can be cancelled mid way through
+            self.sendThread.start()
+
+        def sendFile(self, fileObj):
+            # File name is sent with !NAME!#!!<name here>!!~
+            # File size is sent with !SIZE!#!!<size here>!!~
+            # File data is sent with !DATA!#!!<data here>!!~
+            self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
+            print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
+    #        self.clientSock.send("!SIZE!#!!{}!!~".format(fileObj.rawSize))
+
+            newLoc = osTemp+"FileMate"+fileSep+fileObj.name
+            if not os.path.isdir(osTemp+"FileMate"+fileSep):
+                os.makedirs(osTemp+"FileMate"+fileSep)
+
+            self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+
+            bufferSize = 1024
+            buff = []
+            fr = open(newLoc, "rb")
+            buff = fr.read(bufferSize)    #Read 1Kb of data
+            buffCount = 0
+            self.per.text = "{0:.2f}%".format(0)
+
+            start = time.time()
+            #Send data
+            while buff:
+                self.outerScreen.clientSock.send(buff)
+                buffCount += bufferSize
+                buff = fr.read(bufferSize)
+
+                self.pb.value = buffCount/fileObj.rawSize
+                self.per.text = "{0:.2f}%".format(self.pb.value*100)
+                self.spd.text = self.getGoodUnit(buffCount/(time.time() - start))
+
+            self.outerScreen.clientSock.send("~!!ENDF!")
+            self.dismiss()
+
+
 
 
     class deleteButton(Button):
@@ -648,33 +714,6 @@ class MainScreen(Screen, FloatLayout):
             self.manager.get_screen("Login").ids.clientLabel.text = ""
             self.validBTKey = False
         return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in 
-
-    def sendFile(self, fileObj, buttonInstance):
-        # File name is sent with !NAME!#!!<name here>!!~
-        # File size is sent with !SIZE!#!!<size here>!!~
-        # File data is sent with !DATA!#!!<data here>!!~
-        print(fileObj.name, fileObj.rawSize, "stuff")
-        print(self.clientSock)
-        self.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
-        print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
-#        self.clientSock.send("!SIZE!#!!{}!!~".format(fileObj.rawSize))
-
-        newLoc = osTemp+"FileMate"+fileSep+fileObj.name
-        if not os.path.isdir(osTemp+"FileMate"+fileSep):
-            os.makedirs(osTemp+"FileMate"+fileSep)
-
-        self.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
-
-        buff = []
-        fr = open(newLoc, "rb")
-        buff = fr.read(1024)    #Read 1Kb of data
-
-        #Send data
-        while buff:
-            self.clientSock.send(buff)
-            buff = fr.read(1024)
-
-        self.clientSock.send("~!!ENDF!")
 
 
 
@@ -894,20 +933,26 @@ class MainScreen(Screen, FloatLayout):
 
         if useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
-            btButton.bind(on_release=partial(self.sendFile, fileObj))
+            btButton.bind(on_release=partial(self.makeSendFile, fileObj))
             internalLayout.add_widget(btButton)
-        else:
-            if fileObj.isDir:
-                decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
-                decBtn.bind(on_release=self.decryptDir)
 
+        else:
             internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
 
+
+        if fileObj.isDir:
+            decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
+            decBtn.bind(on_release=self.decryptDir)
+
+        internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
         internalLayout.add_widget(self.deleteButton(self, fileObj,text="Delete"))
 
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
 
+    def makeSendFile(self, fileObj, buttonInstance):
+        self.sendFile = self.btTransferPop(self, fileObj)
+        self.sendFile.open()
 
     def makeFolder(self, folderName):
         print(folderName, "folderName")
