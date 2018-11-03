@@ -781,18 +781,30 @@ static const char *__pyx_f[] = {
 };
 
 /*--- Type declarations ---*/
+struct __pyx_opt_args_7sortsCy_compareStrings;
 struct __pyx_opt_args_7sortsCy_quickSortAlph;
 
-/* "sortsCy.pyx":26
- *         raise ValueError("Two strings are the same in compareStrings.")
+/* "sortsCy.pyx":2
+ * # Since compareStrings will be called a lot, i will define as cpdef for speeeed
+ * cpdef int compareStrings(fileObj, string2, fileObjects=True):             # <<<<<<<<<<<<<<
+ *     cdef int count = 0
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
+ */
+struct __pyx_opt_args_7sortsCy_compareStrings {
+  int __pyx_n;
+  PyObject *fileObjects;
+};
+
+/* "sortsCy.pyx":34
+ * 
+ * 
+ * cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  */
 struct __pyx_opt_args_7sortsCy_quickSortAlph {
   int __pyx_n;
-  int fileObjects;
+  PyObject *fileObjects;
 };
 
 /* --- Runtime support code (head) --- */
@@ -1061,14 +1073,14 @@ static void __Pyx_AddTraceback(const char *funcname, int c_line,
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
 
-/* CIntFromPy.proto */
-static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
-
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
 
 /* CIntFromPy.proto */
 static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
+
+/* CIntFromPy.proto */
+static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
 /* FastTypeChecks.proto */
 #if CYTHON_COMPILING_IN_CPYTHON
@@ -1091,7 +1103,7 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 
 /* Module declarations from 'sortsCy' */
-static int __pyx_f_7sortsCy_compareStrings(PyObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
+static int __pyx_f_7sortsCy_compareStrings(PyObject *, PyObject *, int __pyx_skip_dispatch, struct __pyx_opt_args_7sortsCy_compareStrings *__pyx_optional_args); /*proto*/
 static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *, int __pyx_skip_dispatch, struct __pyx_opt_args_7sortsCy_quickSortAlph *__pyx_optional_args); /*proto*/
 static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *, int __pyx_skip_dispatch); /*proto*/
 #define __Pyx_MODULE_NAME "sortsCy"
@@ -1124,22 +1136,24 @@ static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_n_s_rawSize;
 static PyObject *__pyx_n_s_string2;
 static PyObject *__pyx_n_s_test;
-static PyObject *__pyx_pf_7sortsCy_compareStrings(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2); /* proto */
-static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_myList, int __pyx_v_fileObjects); /* proto */
+static PyObject *__pyx_pf_7sortsCy_compareStrings(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2, PyObject *__pyx_v_fileObjects); /* proto */
+static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_myList, PyObject *__pyx_v_fileObjects); /* proto */
 static PyObject *__pyx_pf_7sortsCy_4quickSortSize(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObjects); /* proto */
 static PyObject *__pyx_tuple_;
 /* Late includes */
 
 /* "sortsCy.pyx":2
  * # Since compareStrings will be called a lot, i will define as cpdef for speeeed
- * cpdef int compareStrings(fileObj, string2):             # <<<<<<<<<<<<<<
+ * cpdef int compareStrings(fileObj, string2, fileObjects=True):             # <<<<<<<<<<<<<<
  *     cdef int count = 0
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
+ * 
  */
 
 static PyObject *__pyx_pw_7sortsCy_1compareStrings(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2, CYTHON_UNUSED int __pyx_skip_dispatch, struct __pyx_opt_args_7sortsCy_compareStrings *__pyx_optional_args) {
+  PyObject *__pyx_v_fileObjects = ((PyObject *)Py_True);
   int __pyx_v_count;
+  PyObject *__pyx_v_string1 = NULL;
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
@@ -1152,51 +1166,98 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
   long __pyx_t_8;
   Py_ssize_t __pyx_t_9;
   __Pyx_RefNannySetupContext("compareStrings", 0);
+  if (__pyx_optional_args) {
+    if (__pyx_optional_args->__pyx_n > 0) {
+      __pyx_v_fileObjects = __pyx_optional_args->fileObjects;
+    }
+  }
 
   /* "sortsCy.pyx":3
  * # Since compareStrings will be called a lot, i will define as cpdef for speeeed
- * cpdef int compareStrings(fileObj, string2):
+ * cpdef int compareStrings(fileObj, string2, fileObjects=True):
  *     cdef int count = 0             # <<<<<<<<<<<<<<
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
+ * 
+ *     if fileObjects:
  */
   __pyx_v_count = 0;
 
-  /* "sortsCy.pyx":4
- * cpdef int compareStrings(fileObj, string2):
+  /* "sortsCy.pyx":5
  *     cdef int count = 0
- *     while not (count >= len(fileObj.name) or count >= len(string2)):             # <<<<<<<<<<<<<<
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
+ * 
+ *     if fileObjects:             # <<<<<<<<<<<<<<
+ *         string1 = fileObj.name
+ *     else:
+ */
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_fileObjects); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 5, __pyx_L1_error)
+  if (__pyx_t_1) {
+
+    /* "sortsCy.pyx":6
+ * 
+ *     if fileObjects:
+ *         string1 = fileObj.name             # <<<<<<<<<<<<<<
+ *     else:
+ *         string1 = fileObj
+ */
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 6, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_v_string1 = __pyx_t_2;
+    __pyx_t_2 = 0;
+
+    /* "sortsCy.pyx":5
+ *     cdef int count = 0
+ * 
+ *     if fileObjects:             # <<<<<<<<<<<<<<
+ *         string1 = fileObj.name
+ *     else:
+ */
+    goto __pyx_L3;
+  }
+
+  /* "sortsCy.pyx":8
+ *         string1 = fileObj.name
+ *     else:
+ *         string1 = fileObj             # <<<<<<<<<<<<<<
+ * 
+ *     while not (count >= len(string1) or count >= len(string2)):
+ */
+  /*else*/ {
+    __Pyx_INCREF(__pyx_v_fileObj);
+    __pyx_v_string1 = __pyx_v_fileObj;
+  }
+  __pyx_L3:;
+
+  /* "sortsCy.pyx":10
+ *         string1 = fileObj
+ * 
+ *     while not (count >= len(string1) or count >= len(string2)):             # <<<<<<<<<<<<<<
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):
  *             return 1
  */
   while (1) {
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 4, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 4, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_3 = PyObject_Length(__pyx_v_string1); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 10, __pyx_L1_error)
     __pyx_t_4 = ((__pyx_v_count >= __pyx_t_3) != 0);
     if (!__pyx_t_4) {
     } else {
       __pyx_t_1 = __pyx_t_4;
-      goto __pyx_L5_bool_binop_done;
+      goto __pyx_L6_bool_binop_done;
     }
-    __pyx_t_3 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 4, __pyx_L1_error)
+    __pyx_t_3 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 10, __pyx_L1_error)
     __pyx_t_4 = ((__pyx_v_count >= __pyx_t_3) != 0);
     __pyx_t_1 = __pyx_t_4;
-    __pyx_L5_bool_binop_done:;
+    __pyx_L6_bool_binop_done:;
     __pyx_t_4 = ((!__pyx_t_1) != 0);
     if (!__pyx_t_4) break;
 
-    /* "sortsCy.pyx":5
- *     cdef int count = 0
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):             # <<<<<<<<<<<<<<
+    /* "sortsCy.pyx":11
+ * 
+ *     while not (count >= len(string1) or count >= len(string2)):
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):             # <<<<<<<<<<<<<<
  *             return 1
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):
  */
-    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 5, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_lower); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 5, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_lower); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_5 = NULL;
@@ -1210,103 +1271,97 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
       }
     }
     if (__pyx_t_5) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
     }
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 5, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 5, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_string1, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_6, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 5, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_lower); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_lower); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 5, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
-      __pyx_t_5 = PyMethod_GET_SELF(__pyx_t_6);
-      if (likely(__pyx_t_5)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
-        __Pyx_INCREF(__pyx_t_5);
+    __pyx_t_6 = NULL;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
+      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
+      if (likely(__pyx_t_6)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
+        __Pyx_INCREF(__pyx_t_6);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_6, function);
+        __Pyx_DECREF_SET(__pyx_t_5, function);
       }
     }
-    if (__pyx_t_5) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__pyx_t_6) {
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
     }
     __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 5, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 11, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_4 = ((__pyx_t_7 < __pyx_t_8) != 0);
     if (__pyx_t_4) {
 
-      /* "sortsCy.pyx":6
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
+      /* "sortsCy.pyx":12
+ *     while not (count >= len(string1) or count >= len(string2)):
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):
  *             return 1             # <<<<<<<<<<<<<<
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):
  *             return 0
  */
       __pyx_r = 1;
       goto __pyx_L0;
 
-      /* "sortsCy.pyx":5
- *     cdef int count = 0
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):             # <<<<<<<<<<<<<<
+      /* "sortsCy.pyx":11
+ * 
+ *     while not (count >= len(string1) or count >= len(string2)):
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):             # <<<<<<<<<<<<<<
  *             return 1
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):
  */
     }
 
-    /* "sortsCy.pyx":7
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
+    /* "sortsCy.pyx":13
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):
  *             return 1
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):             # <<<<<<<<<<<<<<
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):             # <<<<<<<<<<<<<<
  *             return 0
  *         else:
  */
-    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 7, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_lower); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 7, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 13, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_6)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_6);
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_lower); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 13, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_6);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = NULL;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
+      __pyx_t_5 = PyMethod_GET_SELF(__pyx_t_6);
+      if (likely(__pyx_t_5)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
+        __Pyx_INCREF(__pyx_t_5);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
+        __Pyx_DECREF_SET(__pyx_t_6, function);
       }
     }
-    if (__pyx_t_6) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+    if (__pyx_t_5) {
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
     }
     __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 7, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+    __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 13, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 7, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = __Pyx_GetItemInt(__pyx_t_5, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 7, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_string1, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 13, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_lower); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 7, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_lower); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 13, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __pyx_t_6 = NULL;
@@ -1320,137 +1375,128 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
       }
     }
     if (__pyx_t_6) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
     }
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 7, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 13, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_4 = ((__pyx_t_8 > __pyx_t_7) != 0);
     if (__pyx_t_4) {
 
-      /* "sortsCy.pyx":8
+      /* "sortsCy.pyx":14
  *             return 1
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):
  *             return 0             # <<<<<<<<<<<<<<
  *         else:
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
  */
       __pyx_r = 0;
       goto __pyx_L0;
 
-      /* "sortsCy.pyx":7
- *         if ord(string2[count].lower()) < ord(fileObj.name[count].lower()):
+      /* "sortsCy.pyx":13
+ *         if ord(string2[count].lower()) < ord(string1[count].lower()):
  *             return 1
- *         elif ord(string2[count].lower()) > ord(fileObj.name[count].lower()):             # <<<<<<<<<<<<<<
+ *         elif ord(string2[count].lower()) > ord(string1[count].lower()):             # <<<<<<<<<<<<<<
  *             return 0
  *         else:
  */
     }
 
-    /* "sortsCy.pyx":10
+    /* "sortsCy.pyx":16
  *             return 0
  *         else:
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)             # <<<<<<<<<<<<<<
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)             # <<<<<<<<<<<<<<
  *                 return 1
- *             elif ord(string2[count]) > ord(fileObj.name[count]):
+ *             elif ord(string2[count]) > ord(string1[count]):
  */
     /*else*/ {
-      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 10, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 16, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 10, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 16, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 10, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_string1, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 16, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 10, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 16, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_5); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 10, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __pyx_t_4 = ((__pyx_t_7 < __pyx_t_8) != 0);
       if (__pyx_t_4) {
 
-        /* "sortsCy.pyx":11
+        /* "sortsCy.pyx":17
  *         else:
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
  *                 return 1             # <<<<<<<<<<<<<<
- *             elif ord(string2[count]) > ord(fileObj.name[count]):
+ *             elif ord(string2[count]) > ord(string1[count]):
  *                 return 0
  */
         __pyx_r = 1;
         goto __pyx_L0;
 
-        /* "sortsCy.pyx":10
+        /* "sortsCy.pyx":16
  *             return 0
  *         else:
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)             # <<<<<<<<<<<<<<
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)             # <<<<<<<<<<<<<<
  *                 return 1
- *             elif ord(string2[count]) > ord(fileObj.name[count]):
+ *             elif ord(string2[count]) > ord(string1[count]):
  */
       }
 
-      /* "sortsCy.pyx":12
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+      /* "sortsCy.pyx":18
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
  *                 return 1
- *             elif ord(string2[count]) > ord(fileObj.name[count]):             # <<<<<<<<<<<<<<
+ *             elif ord(string2[count]) > ord(string1[count]):             # <<<<<<<<<<<<<<
  *                 return 0
  *             else:
  */
-      __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 12, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_5); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 12, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 12, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_5, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_string2, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 12, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_8 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_string1, __pyx_v_count, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_7 = __Pyx_PyObject_Ord(__pyx_t_2); if (unlikely(__pyx_t_7 == ((long)(long)(Py_UCS4)-1))) __PYX_ERR(0, 18, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       __pyx_t_4 = ((__pyx_t_8 > __pyx_t_7) != 0);
       if (__pyx_t_4) {
 
-        /* "sortsCy.pyx":13
+        /* "sortsCy.pyx":19
  *                 return 1
- *             elif ord(string2[count]) > ord(fileObj.name[count]):
+ *             elif ord(string2[count]) > ord(string1[count]):
  *                 return 0             # <<<<<<<<<<<<<<
  *             else:
- *                 if string2 == fileObj.name:
+ *                 if string2 == string1:
  */
         __pyx_r = 0;
         goto __pyx_L0;
 
-        /* "sortsCy.pyx":12
- *             if ord(string2[count]) < ord(fileObj.name[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+        /* "sortsCy.pyx":18
+ *             if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
  *                 return 1
- *             elif ord(string2[count]) > ord(fileObj.name[count]):             # <<<<<<<<<<<<<<
+ *             elif ord(string2[count]) > ord(string1[count]):             # <<<<<<<<<<<<<<
  *                 return 0
  *             else:
  */
       }
 
-      /* "sortsCy.pyx":15
+      /* "sortsCy.pyx":21
  *                 return 0
  *             else:
- *                 if string2 == fileObj.name:             # <<<<<<<<<<<<<<
+ *                 if string2 == string1:             # <<<<<<<<<<<<<<
  *                     return 2
  *                 else:
  */
       /*else*/ {
-        __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_2);
-        __pyx_t_5 = PyObject_RichCompare(__pyx_v_string2, __pyx_t_2, Py_EQ); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 15, __pyx_L1_error)
+        __pyx_t_2 = PyObject_RichCompare(__pyx_v_string2, __pyx_v_string1, Py_EQ); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 21, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-        __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 15, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
         if (__pyx_t_4) {
 
-          /* "sortsCy.pyx":16
+          /* "sortsCy.pyx":22
  *             else:
- *                 if string2 == fileObj.name:
+ *                 if string2 == string1:
  *                     return 2             # <<<<<<<<<<<<<<
  *                 else:
  *                     count += 1
@@ -1458,20 +1504,20 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
           __pyx_r = 2;
           goto __pyx_L0;
 
-          /* "sortsCy.pyx":15
+          /* "sortsCy.pyx":21
  *                 return 0
  *             else:
- *                 if string2 == fileObj.name:             # <<<<<<<<<<<<<<
+ *                 if string2 == string1:             # <<<<<<<<<<<<<<
  *                     return 2
  *                 else:
  */
         }
 
-        /* "sortsCy.pyx":18
+        /* "sortsCy.pyx":24
  *                     return 2
  *                 else:
  *                     count += 1             # <<<<<<<<<<<<<<
- *     if len(fileObj.name) > len(string2):
+ *     if len(string1) > len(string2):
  *         return 1
  */
         /*else*/ {
@@ -1481,58 +1527,52 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
     }
   }
 
-  /* "sortsCy.pyx":19
+  /* "sortsCy.pyx":25
  *                 else:
  *                     count += 1
- *     if len(fileObj.name) > len(string2):             # <<<<<<<<<<<<<<
+ *     if len(string1) > len(string2):             # <<<<<<<<<<<<<<
  *         return 1
- *     elif len(fileObj.name) < len(string2):
+ *     elif len(string1) < len(string2):
  */
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 19, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_3 = PyObject_Length(__pyx_t_5); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 19, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_9 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_9 == ((Py_ssize_t)-1))) __PYX_ERR(0, 19, __pyx_L1_error)
+  __pyx_t_3 = PyObject_Length(__pyx_v_string1); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 25, __pyx_L1_error)
+  __pyx_t_9 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_9 == ((Py_ssize_t)-1))) __PYX_ERR(0, 25, __pyx_L1_error)
   __pyx_t_4 = ((__pyx_t_3 > __pyx_t_9) != 0);
   if (__pyx_t_4) {
 
-    /* "sortsCy.pyx":20
+    /* "sortsCy.pyx":26
  *                     count += 1
- *     if len(fileObj.name) > len(string2):
+ *     if len(string1) > len(string2):
  *         return 1             # <<<<<<<<<<<<<<
- *     elif len(fileObj.name) < len(string2):
+ *     elif len(string1) < len(string2):
  *         return 0
  */
     __pyx_r = 1;
     goto __pyx_L0;
 
-    /* "sortsCy.pyx":19
+    /* "sortsCy.pyx":25
  *                 else:
  *                     count += 1
- *     if len(fileObj.name) > len(string2):             # <<<<<<<<<<<<<<
+ *     if len(string1) > len(string2):             # <<<<<<<<<<<<<<
  *         return 1
- *     elif len(fileObj.name) < len(string2):
+ *     elif len(string1) < len(string2):
  */
   }
 
-  /* "sortsCy.pyx":21
- *     if len(fileObj.name) > len(string2):
+  /* "sortsCy.pyx":27
+ *     if len(string1) > len(string2):
  *         return 1
- *     elif len(fileObj.name) < len(string2):             # <<<<<<<<<<<<<<
+ *     elif len(string1) < len(string2):             # <<<<<<<<<<<<<<
  *         return 0
  *     else:
  */
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_fileObj, __pyx_n_s_name); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 21, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_9 = PyObject_Length(__pyx_t_5); if (unlikely(__pyx_t_9 == ((Py_ssize_t)-1))) __PYX_ERR(0, 21, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_3 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_9 = PyObject_Length(__pyx_v_string1); if (unlikely(__pyx_t_9 == ((Py_ssize_t)-1))) __PYX_ERR(0, 27, __pyx_L1_error)
+  __pyx_t_3 = PyObject_Length(__pyx_v_string2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 27, __pyx_L1_error)
   __pyx_t_4 = ((__pyx_t_9 < __pyx_t_3) != 0);
   if (likely(__pyx_t_4)) {
 
-    /* "sortsCy.pyx":22
+    /* "sortsCy.pyx":28
  *         return 1
- *     elif len(fileObj.name) < len(string2):
+ *     elif len(string1) < len(string2):
  *         return 0             # <<<<<<<<<<<<<<
  *     else:
  *         raise ValueError("Two strings are the same in compareStrings.")
@@ -1540,35 +1580,35 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "sortsCy.pyx":21
- *     if len(fileObj.name) > len(string2):
+    /* "sortsCy.pyx":27
+ *     if len(string1) > len(string2):
  *         return 1
- *     elif len(fileObj.name) < len(string2):             # <<<<<<<<<<<<<<
+ *     elif len(string1) < len(string2):             # <<<<<<<<<<<<<<
  *         return 0
  *     else:
  */
   }
 
-  /* "sortsCy.pyx":24
+  /* "sortsCy.pyx":30
  *         return 0
  *     else:
  *         raise ValueError("Two strings are the same in compareStrings.")             # <<<<<<<<<<<<<<
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically
+ * 
  */
   /*else*/ {
-    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 24, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_5);
-    __Pyx_Raise(__pyx_t_5, 0, 0, 0);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __PYX_ERR(0, 24, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 30, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_Raise(__pyx_t_2, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __PYX_ERR(0, 30, __pyx_L1_error)
   }
 
   /* "sortsCy.pyx":2
  * # Since compareStrings will be called a lot, i will define as cpdef for speeeed
- * cpdef int compareStrings(fileObj, string2):             # <<<<<<<<<<<<<<
+ * cpdef int compareStrings(fileObj, string2, fileObjects=True):             # <<<<<<<<<<<<<<
  *     cdef int count = 0
- *     while not (count >= len(fileObj.name) or count >= len(string2)):
+ * 
  */
 
   /* function exit code */
@@ -1579,6 +1619,7 @@ static int __pyx_f_7sortsCy_compareStrings(PyObject *__pyx_v_fileObj, PyObject *
   __Pyx_WriteUnraisable("sortsCy.compareStrings", __pyx_clineno, __pyx_lineno, __pyx_filename, 1, 0);
   __pyx_r = 0;
   __pyx_L0:;
+  __Pyx_XDECREF(__pyx_v_string1);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
@@ -1588,16 +1629,20 @@ static PyObject *__pyx_pw_7sortsCy_1compareStrings(PyObject *__pyx_self, PyObjec
 static PyObject *__pyx_pw_7sortsCy_1compareStrings(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_fileObj = 0;
   PyObject *__pyx_v_string2 = 0;
+  PyObject *__pyx_v_fileObjects = 0;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("compareStrings (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_fileObj,&__pyx_n_s_string2,0};
-    PyObject* values[2] = {0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_fileObj,&__pyx_n_s_string2,&__pyx_n_s_fileObjects,0};
+    PyObject* values[3] = {0,0,0};
+    values[2] = ((PyObject *)Py_True);
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        CYTHON_FALLTHROUGH;
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         CYTHON_FALLTHROUGH;
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -1614,51 +1659,67 @@ static PyObject *__pyx_pw_7sortsCy_1compareStrings(PyObject *__pyx_self, PyObjec
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_string2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("compareStrings", 1, 2, 2, 1); __PYX_ERR(0, 2, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("compareStrings", 0, 2, 3, 1); __PYX_ERR(0, 2, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  2:
+        if (kw_args > 0) {
+          PyObject* value = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_fileObjects);
+          if (value) { values[2] = value; kw_args--; }
         }
       }
       if (unlikely(kw_args > 0)) {
         if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compareStrings") < 0)) __PYX_ERR(0, 2, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
-      goto __pyx_L5_argtuple_error;
     } else {
-      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
-      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      switch (PyTuple_GET_SIZE(__pyx_args)) {
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        CYTHON_FALLTHROUGH;
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        break;
+        default: goto __pyx_L5_argtuple_error;
+      }
     }
     __pyx_v_fileObj = values[0];
     __pyx_v_string2 = values[1];
+    __pyx_v_fileObjects = values[2];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("compareStrings", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 2, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("compareStrings", 0, 2, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 2, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("sortsCy.compareStrings", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_7sortsCy_compareStrings(__pyx_self, __pyx_v_fileObj, __pyx_v_string2);
+  __pyx_r = __pyx_pf_7sortsCy_compareStrings(__pyx_self, __pyx_v_fileObj, __pyx_v_string2, __pyx_v_fileObjects);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7sortsCy_compareStrings(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2) {
+static PyObject *__pyx_pf_7sortsCy_compareStrings(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObj, PyObject *__pyx_v_string2, PyObject *__pyx_v_fileObjects) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
+  int __pyx_t_1;
+  struct __pyx_opt_args_7sortsCy_compareStrings __pyx_t_2;
+  PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("compareStrings", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_f_7sortsCy_compareStrings(__pyx_v_fileObj, __pyx_v_string2, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_r = __pyx_t_1;
-  __pyx_t_1 = 0;
+  __pyx_t_2.__pyx_n = 1;
+  __pyx_t_2.fileObjects = __pyx_v_fileObjects;
+  __pyx_t_1 = __pyx_f_7sortsCy_compareStrings(__pyx_v_fileObj, __pyx_v_string2, 0, &__pyx_t_2); 
+  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 2, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_r = __pyx_t_3;
+  __pyx_t_3 = 0;
   goto __pyx_L0;
 
   /* function exit code */
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_3);
   __Pyx_AddTraceback("sortsCy.compareStrings", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -1667,17 +1728,17 @@ static PyObject *__pyx_pf_7sortsCy_compareStrings(CYTHON_UNUSED PyObject *__pyx_
   return __pyx_r;
 }
 
-/* "sortsCy.pyx":26
- *         raise ValueError("Two strings are the same in compareStrings.")
+/* "sortsCy.pyx":34
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
+ * 
+ * cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  */
 
 static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON_UNUSED int __pyx_skip_dispatch, struct __pyx_opt_args_7sortsCy_quickSortAlph *__pyx_optional_args) {
-  int __pyx_v_fileObjects = ((int)1);
+  PyObject *__pyx_v_fileObjects = ((PyObject *)Py_True);
   PyObject *__pyx_v_left = 0;
   PyObject *__pyx_v_right = 0;
   PyObject *__pyx_v_middle = 0;
@@ -1691,8 +1752,10 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
   int __pyx_t_3;
   PyObject *__pyx_t_4 = NULL;
   int __pyx_t_5;
-  struct __pyx_opt_args_7sortsCy_quickSortAlph __pyx_t_6;
-  PyObject *__pyx_t_7 = NULL;
+  struct __pyx_opt_args_7sortsCy_compareStrings __pyx_t_6;
+  int __pyx_t_7;
+  struct __pyx_opt_args_7sortsCy_quickSortAlph __pyx_t_8;
+  PyObject *__pyx_t_9 = NULL;
   __Pyx_RefNannySetupContext("quickSortAlph", 0);
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
@@ -1700,43 +1763,43 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
     }
   }
 
-  /* "sortsCy.pyx":27
+  /* "sortsCy.pyx":35
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically
+ * cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically
  *     cdef list left = []             # <<<<<<<<<<<<<<
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 27, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 35, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_left = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":28
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically
+  /* "sortsCy.pyx":36
+ * cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.             # <<<<<<<<<<<<<<
  *     cdef list middle = []
  *     if len(myList) > 1:
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_right = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":29
+  /* "sortsCy.pyx":37
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []             # <<<<<<<<<<<<<<
  *     if len(myList) > 1:
  *         pivot = myList[int(len(myList)/2)]
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 29, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 37, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_middle = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":30
+  /* "sortsCy.pyx":38
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  *     if len(myList) > 1:             # <<<<<<<<<<<<<<
@@ -1745,13 +1808,13 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
   if (unlikely(__pyx_v_myList == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 30, __pyx_L1_error)
+    __PYX_ERR(0, 38, __pyx_L1_error)
   }
-  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_myList); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 30, __pyx_L1_error)
+  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_myList); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 38, __pyx_L1_error)
   __pyx_t_3 = ((__pyx_t_2 > 1) != 0);
   if (__pyx_t_3) {
 
-    /* "sortsCy.pyx":31
+    /* "sortsCy.pyx":39
  *     cdef list middle = []
  *     if len(myList) > 1:
  *         pivot = myList[int(len(myList)/2)]             # <<<<<<<<<<<<<<
@@ -1760,25 +1823,25 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
     if (unlikely(__pyx_v_myList == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 31, __pyx_L1_error)
+      __PYX_ERR(0, 39, __pyx_L1_error)
     }
     if (unlikely(__pyx_v_myList == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 31, __pyx_L1_error)
+      __PYX_ERR(0, 39, __pyx_L1_error)
     }
-    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_myList); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 31, __pyx_L1_error)
-    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 31, __pyx_L1_error)
+    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_myList); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 39, __pyx_L1_error)
+    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 39, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 31, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 39, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_myList, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 31, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_myList, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 39, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_v_pivot = __pyx_t_1;
     __pyx_t_1 = 0;
 
-    /* "sortsCy.pyx":32
+    /* "sortsCy.pyx":40
  *     if len(myList) > 1:
  *         pivot = myList[int(len(myList)/2)]
  *         for item in myList:             # <<<<<<<<<<<<<<
@@ -1787,43 +1850,43 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
     if (unlikely(__pyx_v_myList == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 32, __pyx_L1_error)
+      __PYX_ERR(0, 40, __pyx_L1_error)
     }
     __pyx_t_1 = __pyx_v_myList; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
     for (;;) {
       if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_1)) break;
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 32, __pyx_L1_error)
+      __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 40, __pyx_L1_error)
       #else
-      __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 32, __pyx_L1_error)
+      __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       #endif
       __Pyx_XDECREF_SET(__pyx_v_item, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "sortsCy.pyx":33
+      /* "sortsCy.pyx":41
  *         pivot = myList[int(len(myList)/2)]
  *         for item in myList:
  *             if fileObjects:             # <<<<<<<<<<<<<<
  *                 leftSide = compareStrings(pivot, item.name)
  *             else:
  */
-      __pyx_t_3 = (__pyx_v_fileObjects != 0);
+      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_v_fileObjects); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 41, __pyx_L1_error)
       if (__pyx_t_3) {
 
-        /* "sortsCy.pyx":34
+        /* "sortsCy.pyx":42
  *         for item in myList:
  *             if fileObjects:
  *                 leftSide = compareStrings(pivot, item.name)             # <<<<<<<<<<<<<<
  *             else:
- *                 leftSide = compareStrings(pivot, item)
+ *                 leftSide = compareStrings(pivot, item, False)
  */
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_name); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 34, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_name); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 42, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __pyx_v_leftSide = __pyx_f_7sortsCy_compareStrings(__pyx_v_pivot, __pyx_t_4, 0);
+        __pyx_v_leftSide = __pyx_f_7sortsCy_compareStrings(__pyx_v_pivot, __pyx_t_4, 0, NULL);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-        /* "sortsCy.pyx":33
+        /* "sortsCy.pyx":41
  *         pivot = myList[int(len(myList)/2)]
  *         for item in myList:
  *             if fileObjects:             # <<<<<<<<<<<<<<
@@ -1833,21 +1896,24 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
         goto __pyx_L6;
       }
 
-      /* "sortsCy.pyx":36
+      /* "sortsCy.pyx":44
  *                 leftSide = compareStrings(pivot, item.name)
  *             else:
- *                 leftSide = compareStrings(pivot, item)             # <<<<<<<<<<<<<<
+ *                 leftSide = compareStrings(pivot, item, False)             # <<<<<<<<<<<<<<
  *             if leftSide == 2:
  *                 middle.append(item)
  */
       /*else*/ {
-        __pyx_v_leftSide = __pyx_f_7sortsCy_compareStrings(__pyx_v_pivot, __pyx_v_item, 0);
+        __pyx_t_6.__pyx_n = 1;
+        __pyx_t_6.fileObjects = Py_False;
+        __pyx_t_5 = __pyx_f_7sortsCy_compareStrings(__pyx_v_pivot, __pyx_v_item, 0, &__pyx_t_6); 
+        __pyx_v_leftSide = __pyx_t_5;
       }
       __pyx_L6:;
 
-      /* "sortsCy.pyx":37
+      /* "sortsCy.pyx":45
  *             else:
- *                 leftSide = compareStrings(pivot, item)
+ *                 leftSide = compareStrings(pivot, item, False)
  *             if leftSide == 2:             # <<<<<<<<<<<<<<
  *                 middle.append(item)
  *             elif leftSide == 1:
@@ -1855,25 +1921,25 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
       switch (__pyx_v_leftSide) {
         case 2:
 
-        /* "sortsCy.pyx":38
- *                 leftSide = compareStrings(pivot, item)
+        /* "sortsCy.pyx":46
+ *                 leftSide = compareStrings(pivot, item, False)
  *             if leftSide == 2:
  *                 middle.append(item)             # <<<<<<<<<<<<<<
  *             elif leftSide == 1:
  *                 left.append(item)
  */
-        __pyx_t_5 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_item); if (unlikely(__pyx_t_5 == ((int)-1))) __PYX_ERR(0, 38, __pyx_L1_error)
+        __pyx_t_7 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_item); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 46, __pyx_L1_error)
 
-        /* "sortsCy.pyx":37
+        /* "sortsCy.pyx":45
  *             else:
- *                 leftSide = compareStrings(pivot, item)
+ *                 leftSide = compareStrings(pivot, item, False)
  *             if leftSide == 2:             # <<<<<<<<<<<<<<
  *                 middle.append(item)
  *             elif leftSide == 1:
  */
         break;
 
-        /* "sortsCy.pyx":39
+        /* "sortsCy.pyx":47
  *             if leftSide == 2:
  *                 middle.append(item)
  *             elif leftSide == 1:             # <<<<<<<<<<<<<<
@@ -1882,16 +1948,16 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
         case 1:
 
-        /* "sortsCy.pyx":40
+        /* "sortsCy.pyx":48
  *                 middle.append(item)
  *             elif leftSide == 1:
  *                 left.append(item)             # <<<<<<<<<<<<<<
  *             elif leftSide == 0:
  *                 right.append(item)
  */
-        __pyx_t_5 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_item); if (unlikely(__pyx_t_5 == ((int)-1))) __PYX_ERR(0, 40, __pyx_L1_error)
+        __pyx_t_7 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_item); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 48, __pyx_L1_error)
 
-        /* "sortsCy.pyx":39
+        /* "sortsCy.pyx":47
  *             if leftSide == 2:
  *                 middle.append(item)
  *             elif leftSide == 1:             # <<<<<<<<<<<<<<
@@ -1900,7 +1966,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
         break;
 
-        /* "sortsCy.pyx":41
+        /* "sortsCy.pyx":49
  *             elif leftSide == 1:
  *                 left.append(item)
  *             elif leftSide == 0:             # <<<<<<<<<<<<<<
@@ -1909,16 +1975,16 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
         case 0:
 
-        /* "sortsCy.pyx":42
+        /* "sortsCy.pyx":50
  *                 left.append(item)
  *             elif leftSide == 0:
  *                 right.append(item)             # <<<<<<<<<<<<<<
  * 
  *         return quickSortAlph(left, fileObjects)+middle+quickSortAlph(right, fileObjects)
  */
-        __pyx_t_5 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_item); if (unlikely(__pyx_t_5 == ((int)-1))) __PYX_ERR(0, 42, __pyx_L1_error)
+        __pyx_t_7 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_item); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 50, __pyx_L1_error)
 
-        /* "sortsCy.pyx":41
+        /* "sortsCy.pyx":49
  *             elif leftSide == 1:
  *                 left.append(item)
  *             elif leftSide == 0:             # <<<<<<<<<<<<<<
@@ -1929,7 +1995,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
         default: break;
       }
 
-      /* "sortsCy.pyx":32
+      /* "sortsCy.pyx":40
  *     if len(myList) > 1:
  *         pivot = myList[int(len(myList)/2)]
  *         for item in myList:             # <<<<<<<<<<<<<<
@@ -1939,7 +2005,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
     }
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "sortsCy.pyx":44
+    /* "sortsCy.pyx":52
  *                 right.append(item)
  * 
  *         return quickSortAlph(left, fileObjects)+middle+quickSortAlph(right, fileObjects)             # <<<<<<<<<<<<<<
@@ -1947,26 +2013,26 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  *         return myList
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_6.__pyx_n = 1;
-    __pyx_t_6.fileObjects = __pyx_v_fileObjects;
-    __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_left, 0, &__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 44, __pyx_L1_error)
+    __pyx_t_8.__pyx_n = 1;
+    __pyx_t_8.fileObjects = __pyx_v_fileObjects;
+    __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_left, 0, &__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = PyNumber_Add(__pyx_t_1, __pyx_v_middle); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 44, __pyx_L1_error)
+    __pyx_t_4 = PyNumber_Add(__pyx_t_1, __pyx_v_middle); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 52, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_6.__pyx_n = 1;
-    __pyx_t_6.fileObjects = __pyx_v_fileObjects;
-    __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_right, 0, &__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 44, __pyx_L1_error)
+    __pyx_t_8.__pyx_n = 1;
+    __pyx_t_8.fileObjects = __pyx_v_fileObjects;
+    __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_right, 0, &__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_7 = PyNumber_Add(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 44, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_7);
+    __pyx_t_9 = PyNumber_Add(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 52, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_r = ((PyObject*)__pyx_t_7);
-    __pyx_t_7 = 0;
+    __pyx_r = ((PyObject*)__pyx_t_9);
+    __pyx_t_9 = 0;
     goto __pyx_L0;
 
-    /* "sortsCy.pyx":30
+    /* "sortsCy.pyx":38
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  *     if len(myList) > 1:             # <<<<<<<<<<<<<<
@@ -1975,7 +2041,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
  */
   }
 
-  /* "sortsCy.pyx":46
+  /* "sortsCy.pyx":54
  *         return quickSortAlph(left, fileObjects)+middle+quickSortAlph(right, fileObjects)
  *     else:
  *         return myList             # <<<<<<<<<<<<<<
@@ -1989,10 +2055,10 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
     goto __pyx_L0;
   }
 
-  /* "sortsCy.pyx":26
- *         raise ValueError("Two strings are the same in compareStrings.")
+  /* "sortsCy.pyx":34
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
+ * 
+ * cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  */
@@ -2001,7 +2067,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_7);
+  __Pyx_XDECREF(__pyx_t_9);
   __Pyx_AddTraceback("sortsCy.quickSortAlph", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   __pyx_L0:;
@@ -2019,13 +2085,14 @@ static PyObject *__pyx_f_7sortsCy_quickSortAlph(PyObject *__pyx_v_myList, CYTHON
 static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_myList = 0;
-  int __pyx_v_fileObjects;
+  PyObject *__pyx_v_fileObjects = 0;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("quickSortAlph (wrapper)", 0);
   {
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_myList,&__pyx_n_s_fileObjects,0};
     PyObject* values[2] = {0,0};
+    values[1] = ((PyObject *)Py_True);
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
@@ -2050,7 +2117,7 @@ static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "quickSortAlph") < 0)) __PYX_ERR(0, 26, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "quickSortAlph") < 0)) __PYX_ERR(0, 34, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -2062,21 +2129,17 @@ static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject
       }
     }
     __pyx_v_myList = ((PyObject*)values[0]);
-    if (values[1]) {
-      __pyx_v_fileObjects = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_fileObjects == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 26, __pyx_L3_error)
-    } else {
-      __pyx_v_fileObjects = ((int)1);
-    }
+    __pyx_v_fileObjects = values[1];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("quickSortAlph", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 26, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("quickSortAlph", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 34, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("sortsCy.quickSortAlph", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_myList), (&PyList_Type), 1, "myList", 1))) __PYX_ERR(0, 26, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_myList), (&PyList_Type), 1, "myList", 1))) __PYX_ERR(0, 34, __pyx_L1_error)
   __pyx_r = __pyx_pf_7sortsCy_2quickSortAlph(__pyx_self, __pyx_v_myList, __pyx_v_fileObjects);
 
   /* function exit code */
@@ -2088,7 +2151,7 @@ static PyObject *__pyx_pw_7sortsCy_3quickSortAlph(PyObject *__pyx_self, PyObject
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_myList, int __pyx_v_fileObjects) {
+static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_myList, PyObject *__pyx_v_fileObjects) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -2097,7 +2160,7 @@ static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_2.__pyx_n = 1;
   __pyx_t_2.fileObjects = __pyx_v_fileObjects;
-  __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_myList, 0, &__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_7sortsCy_quickSortAlph(__pyx_v_myList, 0, &__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 34, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -2114,7 +2177,7 @@ static PyObject *__pyx_pf_7sortsCy_2quickSortAlph(CYTHON_UNUSED PyObject *__pyx_
   return __pyx_r;
 }
 
-/* "sortsCy.pyx":49
+/* "sortsCy.pyx":57
  * 
  * 
  * cpdef list quickSortSize(list fileObjects):             # <<<<<<<<<<<<<<
@@ -2139,43 +2202,43 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
   int __pyx_t_6;
   __Pyx_RefNannySetupContext("quickSortSize", 0);
 
-  /* "sortsCy.pyx":50
+  /* "sortsCy.pyx":58
  * 
  * cpdef list quickSortSize(list fileObjects):
  *     cdef list left = []             # <<<<<<<<<<<<<<
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_left = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":51
+  /* "sortsCy.pyx":59
  * cpdef list quickSortSize(list fileObjects):
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.             # <<<<<<<<<<<<<<
  *     cdef list middle = []
  *     if len(fileObjects) > 1:
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_right = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":52
+  /* "sortsCy.pyx":60
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []             # <<<<<<<<<<<<<<
  *     if len(fileObjects) > 1:
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_middle = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":53
+  /* "sortsCy.pyx":61
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  *     if len(fileObjects) > 1:             # <<<<<<<<<<<<<<
@@ -2184,13 +2247,13 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  */
   if (unlikely(__pyx_v_fileObjects == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 53, __pyx_L1_error)
+    __PYX_ERR(0, 61, __pyx_L1_error)
   }
-  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 53, __pyx_L1_error)
+  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 61, __pyx_L1_error)
   __pyx_t_3 = ((__pyx_t_2 > 1) != 0);
   if (__pyx_t_3) {
 
-    /* "sortsCy.pyx":54
+    /* "sortsCy.pyx":62
  *     cdef list middle = []
  *     if len(fileObjects) > 1:
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize             # <<<<<<<<<<<<<<
@@ -2199,28 +2262,28 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  */
     if (unlikely(__pyx_v_fileObjects == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 54, __pyx_L1_error)
+      __PYX_ERR(0, 62, __pyx_L1_error)
     }
     if (unlikely(__pyx_v_fileObjects == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 54, __pyx_L1_error)
+      __PYX_ERR(0, 62, __pyx_L1_error)
     }
-    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 54, __pyx_L1_error)
-    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 62, __pyx_L1_error)
+    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 62, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_fileObjects, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_fileObjects, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 62, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_v_pivotSize = __pyx_t_4;
     __pyx_t_4 = 0;
 
-    /* "sortsCy.pyx":55
+    /* "sortsCy.pyx":63
  *     if len(fileObjects) > 1:
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
  *         for i in fileObjects:             # <<<<<<<<<<<<<<
@@ -2229,45 +2292,45 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  */
     if (unlikely(__pyx_v_fileObjects == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 55, __pyx_L1_error)
+      __PYX_ERR(0, 63, __pyx_L1_error)
     }
     __pyx_t_4 = __pyx_v_fileObjects; __Pyx_INCREF(__pyx_t_4); __pyx_t_2 = 0;
     for (;;) {
       if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_4)) break;
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_1 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_2); __Pyx_INCREF(__pyx_t_1); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 55, __pyx_L1_error)
+      __pyx_t_1 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_2); __Pyx_INCREF(__pyx_t_1); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 63, __pyx_L1_error)
       #else
-      __pyx_t_1 = PySequence_ITEM(__pyx_t_4, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+      __pyx_t_1 = PySequence_ITEM(__pyx_t_4, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       #endif
       __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_1);
       __pyx_t_1 = 0;
 
-      /* "sortsCy.pyx":56
+      /* "sortsCy.pyx":64
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
  *         for i in fileObjects:
  *             if i.rawSize < pivotSize:             # <<<<<<<<<<<<<<
  *                 left.append(i)
  *             elif i.rawSize > pivotSize:
  */
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_5 = PyObject_RichCompare(__pyx_t_1, __pyx_v_pivotSize, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 56, __pyx_L1_error)
+      __pyx_t_5 = PyObject_RichCompare(__pyx_t_1, __pyx_v_pivotSize, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 64, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 56, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 64, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       if (__pyx_t_3) {
 
-        /* "sortsCy.pyx":57
+        /* "sortsCy.pyx":65
  *         for i in fileObjects:
  *             if i.rawSize < pivotSize:
  *                 left.append(i)             # <<<<<<<<<<<<<<
  *             elif i.rawSize > pivotSize:
  *                 right.append(i)
  */
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 57, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 65, __pyx_L1_error)
 
-        /* "sortsCy.pyx":56
+        /* "sortsCy.pyx":64
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
  *         for i in fileObjects:
  *             if i.rawSize < pivotSize:             # <<<<<<<<<<<<<<
@@ -2277,31 +2340,31 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
         goto __pyx_L6;
       }
 
-      /* "sortsCy.pyx":58
+      /* "sortsCy.pyx":66
  *             if i.rawSize < pivotSize:
  *                 left.append(i)
  *             elif i.rawSize > pivotSize:             # <<<<<<<<<<<<<<
  *                 right.append(i)
  *             else:
  */
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 58, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 66, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_t_5, __pyx_v_pivotSize, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 58, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_t_5, __pyx_v_pivotSize, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 58, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 66, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       if (__pyx_t_3) {
 
-        /* "sortsCy.pyx":59
+        /* "sortsCy.pyx":67
  *                 left.append(i)
  *             elif i.rawSize > pivotSize:
  *                 right.append(i)             # <<<<<<<<<<<<<<
  *             else:
  *                 middle.append(i)
  */
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 59, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 67, __pyx_L1_error)
 
-        /* "sortsCy.pyx":58
+        /* "sortsCy.pyx":66
  *             if i.rawSize < pivotSize:
  *                 left.append(i)
  *             elif i.rawSize > pivotSize:             # <<<<<<<<<<<<<<
@@ -2311,7 +2374,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
         goto __pyx_L6;
       }
 
-      /* "sortsCy.pyx":61
+      /* "sortsCy.pyx":69
  *                 right.append(i)
  *             else:
  *                 middle.append(i)             # <<<<<<<<<<<<<<
@@ -2319,11 +2382,11 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  *     else:
  */
       /*else*/ {
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 61, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 69, __pyx_L1_error)
       }
       __pyx_L6:;
 
-      /* "sortsCy.pyx":55
+      /* "sortsCy.pyx":63
  *     if len(fileObjects) > 1:
  *         pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
  *         for i in fileObjects:             # <<<<<<<<<<<<<<
@@ -2333,7 +2396,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "sortsCy.pyx":62
+    /* "sortsCy.pyx":70
  *             else:
  *                 middle.append(i)
  *         return quickSortSize(left)+middle+quickSortSize(right)             # <<<<<<<<<<<<<<
@@ -2341,14 +2404,14 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  *         return fileObjects
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_left, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __pyx_t_4 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_left, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 70, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_1 = PyNumber_Add(__pyx_t_4, __pyx_v_middle); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __pyx_t_1 = PyNumber_Add(__pyx_t_4, __pyx_v_middle); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 70, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_right, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __pyx_t_4 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_right, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 70, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = PyNumber_Add(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Add(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 70, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -2356,7 +2419,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
     __pyx_t_5 = 0;
     goto __pyx_L0;
 
-    /* "sortsCy.pyx":53
+    /* "sortsCy.pyx":61
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  *     if len(fileObjects) > 1:             # <<<<<<<<<<<<<<
@@ -2365,7 +2428,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
  */
   }
 
-  /* "sortsCy.pyx":64
+  /* "sortsCy.pyx":72
  *         return quickSortSize(left)+middle+quickSortSize(right)
  *     else:
  *         return fileObjects             # <<<<<<<<<<<<<<
@@ -2377,7 +2440,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, C
     goto __pyx_L0;
   }
 
-  /* "sortsCy.pyx":49
+  /* "sortsCy.pyx":57
  * 
  * 
  * cpdef list quickSortSize(list fileObjects):             # <<<<<<<<<<<<<<
@@ -2409,7 +2472,7 @@ static PyObject *__pyx_pw_7sortsCy_5quickSortSize(PyObject *__pyx_self, PyObject
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("quickSortSize (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_fileObjects), (&PyList_Type), 1, "fileObjects", 1))) __PYX_ERR(0, 49, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_fileObjects), (&PyList_Type), 1, "fileObjects", 1))) __PYX_ERR(0, 57, __pyx_L1_error)
   __pyx_r = __pyx_pf_7sortsCy_4quickSortSize(__pyx_self, ((PyObject*)__pyx_v_fileObjects));
 
   /* function exit code */
@@ -2427,7 +2490,7 @@ static PyObject *__pyx_pf_7sortsCy_4quickSortSize(CYTHON_UNUSED PyObject *__pyx_
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("quickSortSize", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_fileObjects, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_fileObjects, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -2499,7 +2562,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 24, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 30, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -2509,14 +2572,14 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "sortsCy.pyx":24
+  /* "sortsCy.pyx":30
  *         return 0
  *     else:
  *         raise ValueError("Two strings are the same in compareStrings.")             # <<<<<<<<<<<<<<
  * 
- * cpdef list quickSortAlph(list myList, int fileObjects=True):  #Quick sorts alphabetically
+ * 
  */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_Two_strings_are_the_same_in_comp); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 24, __pyx_L1_error)
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_Two_strings_are_the_same_in_comp); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 30, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
   __Pyx_RefNannyFinishContext();
@@ -2772,7 +2835,7 @@ if (!__Pyx_RefNanny) {
 
   /* "sortsCy.pyx":1
  * # Since compareStrings will be called a lot, i will define as cpdef for speeeed             # <<<<<<<<<<<<<<
- * cpdef int compareStrings(fileObj, string2):
+ * cpdef int compareStrings(fileObj, string2, fileObjects=True):
  *     cdef int count = 0
  */
   __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
@@ -3871,28 +3934,6 @@ bad:
     Py_XDECREF(py_frame);
 }
 
-/* CIntFromPyVerify */
-  #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
-    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
-#define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
-    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
-#define __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, exc)\
-    {\
-        func_type value = func_value;\
-        if (sizeof(target_type) < sizeof(func_type)) {\
-            if (unlikely(value != (func_type) (target_type) value)) {\
-                func_type zero = 0;\
-                if (exc && unlikely(value == (func_type)-1 && PyErr_Occurred()))\
-                    return (target_type) -1;\
-                if (is_unsigned && unlikely(value < zero))\
-                    goto raise_neg_overflow;\
-                else\
-                    goto raise_overflow;\
-            }\
-        }\
-        return (target_type) value;\
-    }
-
 /* CIntToPy */
   static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     const int neg_one = (int) -1, const_zero = (int) 0;
@@ -3922,6 +3963,248 @@ bad:
         return _PyLong_FromByteArray(bytes, sizeof(int),
                                      little, !is_unsigned);
     }
+}
+
+/* CIntToPy */
+  static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
+    const long neg_one = (long) -1, const_zero = (long) 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(long) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(long) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+#endif
+        }
+    } else {
+        if (sizeof(long) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+#endif
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(long),
+                                     little, !is_unsigned);
+    }
+}
+
+/* CIntFromPyVerify */
+  #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
+    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
+#define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
+    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
+#define __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, exc)\
+    {\
+        func_type value = func_value;\
+        if (sizeof(target_type) < sizeof(func_type)) {\
+            if (unlikely(value != (func_type) (target_type) value)) {\
+                func_type zero = 0;\
+                if (exc && unlikely(value == (func_type)-1 && PyErr_Occurred()))\
+                    return (target_type) -1;\
+                if (is_unsigned && unlikely(value < zero))\
+                    goto raise_neg_overflow;\
+                else\
+                    goto raise_overflow;\
+            }\
+        }\
+        return (target_type) value;\
+    }
+
+/* CIntFromPy */
+  static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
+    const long neg_one = (long) -1, const_zero = (long) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(long) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (long) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (long) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(long, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 2 * PyLong_SHIFT) {
+                            return (long) (((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 3 * PyLong_SHIFT) {
+                            return (long) (((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 4 * PyLong_SHIFT) {
+                            return (long) (((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (long) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(long) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned long, PyLong_AsUnsignedLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+#endif
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (long) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, (sdigit) (-(sdigit)digits[0]))
+                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(long) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                            return (long) ((((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                            return (long) ((((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
+                            return (long) ((((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(long) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, long, PyLong_AsLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, PY_LONG_LONG, PyLong_AsLongLong(x))
+#endif
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            long val;
+            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (long) -1;
+        }
+    } else {
+        long val;
+        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
+        if (!tmp) return (long) -1;
+        val = __Pyx_PyInt_As_long(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to long");
+    return (long) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to long");
+    return (long) -1;
 }
 
 /* CIntFromPy */
@@ -4111,226 +4394,6 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to int");
     return (int) -1;
-}
-
-/* CIntToPy */
-  static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
-    const long neg_one = (long) -1, const_zero = (long) 0;
-    const int is_unsigned = neg_one > const_zero;
-    if (is_unsigned) {
-        if (sizeof(long) < sizeof(long)) {
-            return PyInt_FromLong((long) value);
-        } else if (sizeof(long) <= sizeof(unsigned long)) {
-            return PyLong_FromUnsignedLong((unsigned long) value);
-#ifdef HAVE_LONG_LONG
-        } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
-            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
-#endif
-        }
-    } else {
-        if (sizeof(long) <= sizeof(long)) {
-            return PyInt_FromLong((long) value);
-#ifdef HAVE_LONG_LONG
-        } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
-            return PyLong_FromLongLong((PY_LONG_LONG) value);
-#endif
-        }
-    }
-    {
-        int one = 1; int little = (int)*(unsigned char *)&one;
-        unsigned char *bytes = (unsigned char *)&value;
-        return _PyLong_FromByteArray(bytes, sizeof(long),
-                                     little, !is_unsigned);
-    }
-}
-
-/* CIntFromPy */
-  static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
-    const long neg_one = (long) -1, const_zero = (long) 0;
-    const int is_unsigned = neg_one > const_zero;
-#if PY_MAJOR_VERSION < 3
-    if (likely(PyInt_Check(x))) {
-        if (sizeof(long) < sizeof(long)) {
-            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
-        } else {
-            long val = PyInt_AS_LONG(x);
-            if (is_unsigned && unlikely(val < 0)) {
-                goto raise_neg_overflow;
-            }
-            return (long) val;
-        }
-    } else
-#endif
-    if (likely(PyLong_Check(x))) {
-        if (is_unsigned) {
-#if CYTHON_USE_PYLONG_INTERNALS
-            const digit* digits = ((PyLongObject*)x)->ob_digit;
-            switch (Py_SIZE(x)) {
-                case  0: return (long) 0;
-                case  1: __PYX_VERIFY_RETURN_INT(long, digit, digits[0])
-                case 2:
-                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 2 * PyLong_SHIFT) {
-                            return (long) (((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
-                        }
-                    }
-                    break;
-                case 3:
-                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 3 * PyLong_SHIFT) {
-                            return (long) (((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
-                        }
-                    }
-                    break;
-                case 4:
-                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 4 * PyLong_SHIFT) {
-                            return (long) (((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
-                        }
-                    }
-                    break;
-            }
-#endif
-#if CYTHON_COMPILING_IN_CPYTHON
-            if (unlikely(Py_SIZE(x) < 0)) {
-                goto raise_neg_overflow;
-            }
-#else
-            {
-                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
-                if (unlikely(result < 0))
-                    return (long) -1;
-                if (unlikely(result == 1))
-                    goto raise_neg_overflow;
-            }
-#endif
-            if (sizeof(long) <= sizeof(unsigned long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned long, PyLong_AsUnsignedLong(x))
-#ifdef HAVE_LONG_LONG
-            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
-#endif
-            }
-        } else {
-#if CYTHON_USE_PYLONG_INTERNALS
-            const digit* digits = ((PyLongObject*)x)->ob_digit;
-            switch (Py_SIZE(x)) {
-                case  0: return (long) 0;
-                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, (sdigit) (-(sdigit)digits[0]))
-                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +digits[0])
-                case -2:
-                    if (8 * sizeof(long) - 1 > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-                case 2:
-                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
-                            return (long) ((((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-                case -3:
-                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-                case 3:
-                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
-                            return (long) ((((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-                case -4:
-                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-                case 4:
-                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
-                            return (long) ((((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
-                        }
-                    }
-                    break;
-            }
-#endif
-            if (sizeof(long) <= sizeof(long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, long, PyLong_AsLong(x))
-#ifdef HAVE_LONG_LONG
-            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, PY_LONG_LONG, PyLong_AsLongLong(x))
-#endif
-            }
-        }
-        {
-#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
-            PyErr_SetString(PyExc_RuntimeError,
-                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
-#else
-            long val;
-            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
- #if PY_MAJOR_VERSION < 3
-            if (likely(v) && !PyLong_Check(v)) {
-                PyObject *tmp = v;
-                v = PyNumber_Long(tmp);
-                Py_DECREF(tmp);
-            }
- #endif
-            if (likely(v)) {
-                int one = 1; int is_little = (int)*(unsigned char *)&one;
-                unsigned char *bytes = (unsigned char *)&val;
-                int ret = _PyLong_AsByteArray((PyLongObject *)v,
-                                              bytes, sizeof(val),
-                                              is_little, !is_unsigned);
-                Py_DECREF(v);
-                if (likely(!ret))
-                    return val;
-            }
-#endif
-            return (long) -1;
-        }
-    } else {
-        long val;
-        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
-        if (!tmp) return (long) -1;
-        val = __Pyx_PyInt_As_long(tmp);
-        Py_DECREF(tmp);
-        return val;
-    }
-raise_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "value too large to convert to long");
-    return (long) -1;
-raise_neg_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "can't convert negative value to long");
-    return (long) -1;
 }
 
 /* FastTypeChecks */

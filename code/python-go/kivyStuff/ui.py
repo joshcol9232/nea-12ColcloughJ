@@ -813,14 +813,12 @@ class MainScreen(Screen, FloatLayout):
                             fileObj = None
                             while (f < len(filesInPath)) and (fileObj == None):
                                 if filesInPath[f].name == fileWanted:
-                                    print("Found the file.")
                                     fileObj = filesInPath[f]
                                 f += 1
 
                             if fileObj != None:
                                 if fileObj.isDir:
                                     # Return list of that directory.
-                                    print("Sending file list of:", fileObj.name)
                                     self.sendFileList(self.getListForSend(fileObj.hexPath))
                                 else:
                                     self.makeSendFile(fileObj)
@@ -852,7 +850,6 @@ class MainScreen(Screen, FloatLayout):
         print("Sent !FILELIST!#!!")
 
         for i in fileList:
-            print(i, "sending")
             self.clientSock.send("--{}".format(i))
 
         print("Sent full list, now sent end.")
@@ -874,7 +871,7 @@ class MainScreen(Screen, FloatLayout):
 
             self.lastPathSent = path
 
-            return listOfFolders+listOfFiles
+            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)
 
 
 

@@ -54,7 +54,6 @@ def createSocketStream(self, devName):
 def recieveFileList(rStream, buffAlreadyKnown=[]):
     buff = buffAlreadyKnown
     data = ""
-    print u"Buff at start of recieveFileList."
 
     startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33, 35, 33, 33] #!FILELIST!#!!
     endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
@@ -148,7 +147,7 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
                 fo.write(bytearray(buff))
                 fo.close()
 
-                pop = Popup(title="Success!", content=Label(text="File recieved successfuly.\nYou can find your file in\nyour 'Download' folder."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.7, .7))
+                pop = Popup(title="Success!", content=Label(text="File recieved successfuly.\nYou can find your file in\nyour 'Download' folder."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.7, .4))
                 pop.open()
                 return True
 
@@ -381,16 +380,14 @@ class FileSelectionScreen(Screen, FloatLayout):
         self.grid = GridLayout(cols=1, size_hint_y=None) # Added in case I need to add more columns in the future (file size etc)
         self.grid.bind(minimum_height=self.grid.setter("height"))
         for item in array:
-            print item, "item"
             btn = self.listButton(self, item, text=("    "+str(item)), height=Window.height/10, halign="left", valign="middle")
             btn.bind(size=btn.setter("text_size"))
             self.grid.add_widget(btn)
 
         self.scroll = ScrollView(size_hint=(1, .77)) # Leaves a 0.01 gap between text input and list
         self.scroll.add_widget(self.grid)
-        print "adding scroll view"
         self.add_widget(self.scroll)
-        print u"done"
+        print u"done creating buttons"
 
     def recreateButtons(self, array):
         self.removeButtons()
