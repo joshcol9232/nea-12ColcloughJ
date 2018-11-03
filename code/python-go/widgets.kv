@@ -3,7 +3,6 @@
 <listButton@Button>:
     font_size: 14
     size_hint: 1, None
-    text:
     on_release: root.outerScreen.traverseButton(self.fileObj)
 
 <nameSortButton@Button>:
@@ -149,7 +148,7 @@
             id: Search
             size_hint: .46, .08
             font_size: 22
-            hint_text: "Search"
+            hint_text: "Search:"
             pos_hint: {"x": 0.16, "top": 1}
             multiline: False
             on_text_validate: root.searchForItem(self.text)

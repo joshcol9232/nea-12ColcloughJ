@@ -14,6 +14,11 @@ ScreenManagement:
         name: "Main"
         id: Main
         manager: screenmanager
+    FileSelectionScreen:
+        name: "Select"
+        id: Select
+        manager: screenmanager
+
 
 <recievePopup@Popup>:
     title: "Ready to recieve."
@@ -81,10 +86,43 @@ ScreenManagement:
 <MainScreen>:
     FloatLayout:
         Label:
-            text: "To lock the Vault, close the program."
+            text: "To lock the Vault, close the program.\nAll downloaded files are stored in\nyour 'Download' folder."
 
         Button:
             pos_hint: {"x": .25, "y": .2}
-            size_hint: 0.5, 0.2
+            size_hint: .5, .2
             text: "Recieve files from PC"
             on_release: Clock.schedule_once(root.recvPop.open, -1)
+
+        Button:
+            pos_hint: {"x": .25, "y": .6}
+            size_hint: .5, .2
+            text: "Select files from PC"
+            on_release: root.manager.current = "Select"
+
+<listButton@Button>:
+    size_hint: 1, None
+    on_release: root.outerScreen.selectFile(self.fileName)
+
+<FileSelectionScreen>:
+    FloatLayout:
+        Button:
+            text: "Exit"
+            size_hint: .3, .14
+            pos_hint: {"top": 1, "left": 1}
+            on_release: root.exit()
+
+        Button:
+            text: "Go back"
+            size_hint: .3, .14
+            pos_hint: {"top": 1, "right": 1}
+            on_release: root.getBackDir()
+
+        TextInput:
+            id: searchInput
+            size_hint: 1, .08
+            pos_hint: {"left": 1, "y": .78}
+            hint_text: "Search:"
+            multiline: False
+            on_text_validate: print self.text
+

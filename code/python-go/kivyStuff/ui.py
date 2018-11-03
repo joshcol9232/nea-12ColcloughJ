@@ -693,6 +693,7 @@ class MainScreen(Screen, FloatLayout):
         self.validBTKey = False
         self.useBTTemp = useBT
         self.previousDir = None
+        self.lastPathSent = ""
         self.searchRecursively = searchRecursively
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
@@ -748,6 +749,11 @@ class MainScreen(Screen, FloatLayout):
 
         try:
             data = ""
+            buff = []
+            backCommand = [33, 66, 65, 67, 75, 33]                                            # !BACK!
+            fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33, 35, 33, 33]  # !FILESELECT!#!!
+            endHeader = [126, 33 ,33]                                                         # ~!!
+
             while len(data) > -1:
                 data = self.clientSock.recv(1024)
                 print("[BT]: Received data.")
@@ -765,7 +771,7 @@ class MainScreen(Screen, FloatLayout):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            self.sendFileList()
+                            self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())
                         else:
                             numbers = []
@@ -773,6 +779,61 @@ class MainScreen(Screen, FloatLayout):
                             self.clientSock.send("0")
                             print("[BT]: Send false.")
                             self.validBTKey = False
+
+                else:
+                    for i in data:
+                        buff.append(i)
+
+                    print(buff)
+
+                    if buff[:6] == backCommand:   # Buffer is reset every time a header is found
+                        pathBack = self.getPathBack(self.lastPathSent)
+                        print(pathBack, "pathBack")
+                        if (not pathBack) or (pathBack.replace(self.path, "") == pathBack):    # If you can't go further back (if pathBack has less than path, then remove returns the original string).
+                            print("Can't go further back.")
+                            self.clientSock.send("!ENDOFTREE!")
+                        else:
+                            self.sendFileList(self.getListForSend(pathBack))
+                            print("Should have sent now.")
+                        buff = []
+
+                    elif buff[:15] == fileSelectCommand:
+                        commandParams = buff[15:]
+                        if commandParams[len(commandParams)-3:] == endHeader:
+                            fileWantedList = commandParams[:len(commandParams)-3]
+                            fileWanted = ""
+                            for letter in fileWantedList:
+                                fileWanted += chr(letter)
+
+                            print(fileWanted, "fileWanted")
+                            buff = []
+                            filesInPath = self.List(self.lastPathSent)
+
+                            f = 0
+                            fileObj = None
+                            while (f < len(filesInPath)) and (fileObj == None):
+                                if filesInPath[f].name == fileWanted:
+                                    print("Found the file.")
+                                    fileObj = filesInPath[f]
+                                f += 1
+
+                            if fileObj != None:
+                                if fileObj.isDir:
+                                    # Return list of that directory.
+                                    print("Sending file list of:", fileObj.name)
+                                    self.sendFileList(self.getListForSend(fileObj.hexPath))
+                                else:
+                                    self.makeSendFile(fileObj)
+
+                            else:
+                                print("Couldn't find that file :/")
+                                self.clientSock.send("!NOTFOUND!")
+
+
+                    elif len(buff) >= 15: # Re-set to wait for next command.
+                        buff = []
+
+
 
         except IOError as e:
             print(e)
@@ -785,17 +846,36 @@ class MainScreen(Screen, FloatLayout):
         self.lock()
 
 
-    def sendFileList(self):
+    def sendFileList(self, fileList):
         # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
         self.clientSock.send("!FILELIST!#!!")
-        fileList = self.List(self.currentDir)
+        print("Sent !FILELIST!#!!")
 
         for i in fileList:
-            print("Sending:", i.name)
-            self.clientSock.send("--{}".format(i.name))
+            print(i, "sending")
+            self.clientSock.send("--{}".format(i))
 
         print("Sent full list, now sent end.")
         self.clientSock.send("~!!ENDLIST!")
+
+
+    def getListForSend(self, path):
+        if not path:
+            return False
+        else:
+            fs = os.listdir(path)
+            listOfFolders = []
+            listOfFiles = []
+            for item in fs:
+                if os.path.isdir(path+item):
+                    listOfFolders.append(aesFName.decryptFileName(self.key, item))
+                else:
+                    listOfFiles.append(aesFName.decryptFileName(self.key, item))
+
+            self.lastPathSent = path
+
+            return listOfFolders+listOfFiles
+
 
 
 ##Functions for changing screen within threads
@@ -965,7 +1045,7 @@ class MainScreen(Screen, FloatLayout):
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
 
-    def makeSendFile(self, fileObj, buttonInstance):
+    def makeSendFile(self, fileObj, buttonInstance=None):
         self.sendFile = self.btTransferPop(self, fileObj)
         self.sendFile.open()
 
@@ -987,11 +1067,12 @@ class MainScreen(Screen, FloatLayout):
     def goBackFolder(self):     #Go up a folder.
         if self.currentDir != self.path:    #Can't go further past the vault dir.
             self.previousDir = self.currentDir
-            self.currentDir = self.getPathBack()
+            self.currentDir = self.getPathBack(self.currentDir)
             currentDirShare = self.currentDir
             self.resetButtons()
         else:
             print("Can't go further up.")
+            return False
 
     def getPathForButton(self, item):   #Get the path to the picture for each button.
         return self.assetsPath+item
@@ -1021,7 +1102,6 @@ class MainScreen(Screen, FloatLayout):
 
     def List(self, dir):    #Lists a directory.
         fs = os.listdir(dir)
-        count = 0
         listOfFolders = []
         listOfFiles = []
         for item in fs:
@@ -1031,8 +1111,8 @@ class MainScreen(Screen, FloatLayout):
                 listOfFiles.append(File(self, dir+item, item))
         return listOfFolders+listOfFiles
 
-    def getPathBack(self):  #Gets the path above the current folder.
-        tempDir = self.currentDir.split(fileSep)
+    def getPathBack(self, origPath):  #Gets the path above the current folder.
+        tempDir = origPath.split(fileSep)
         del tempDir[len(tempDir)-2]
         tempDir = fileSep.join(tempDir)
         return tempDir
