@@ -2,6 +2,9 @@
 #: import Clock kivy.clock.Clock
 <listButton@Button>:
     font_size: 14
+    halign: "left"
+    valign: "middle"
+    height: 30
     size_hint: 1, None
     on_release: root.outerScreen.traverseButton(self.fileObj)
 
@@ -15,8 +18,10 @@
 
 <infoButton@Button>:
     font_size: 14
-    size_hint: 1, None
-    text:
+    size_hint: .05, 1
+    halign: "left"
+    valign: "middle"
+    text: " INFO"
     on_release: root.outerScreen.getFileInfo(self.fileObj)
 
 <infoLabel@Label>:
@@ -233,6 +238,17 @@
             text: "Add Folder"
             text_size: self.size
             on_release: root.addFolder = root.addNewFolderPop(root); root.addFolder.open()
+
+        Button:
+            id: recyclingBin
+            size_hint: .09, .14
+            pos_hint: {"right": 1, "bottom": 1}
+            on_release: root.openRecycling()
+            Image:
+                source: root.getPathForButton("recycling.png")
+                size: Window.width/8, Window.height/8
+                x: Window.width - Window.width/9
+                y: 0
 
 
         ProgressBar:

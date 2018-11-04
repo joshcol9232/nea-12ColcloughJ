@@ -36,7 +36,6 @@ def createSocketStream(self, devName):
     socket = None
     found = False
     for dev in pairedDevs:
-        print dev, type(dev), "DEV"
         if dev.getName() == devName:
             socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
             rStream = socket.getInputStream()   #Recieving data
@@ -65,11 +64,9 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
             print e, "Failed while getting file list."
             break
         else:
-            print buff, buff[len(buff)-11:]
             buff.append(data)
 
     buff = buff[13:len(buff)-11]
-    print buff, "New buff."
 
     listOfFiles = []
     for i in range(len(buff)):
@@ -131,7 +128,6 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
                         nameFound = True
                         buff[i:z+len(endHeader)] = []
 
-                        print buff, u"Removed name header."
                         for letter in name:
                             fileName += chr(letter)
 
@@ -424,7 +420,6 @@ class FileSelectionScreen(Screen, FloatLayout):
             else:
                 buff.append(data)
 
-            print buff, u"buff in selectFile"
             if (buff[:6] == self.nameInstruction) and (len(buff) >= 6):
                 print u"Is name instruction"
                 recieveFile(self.rStream, buff)

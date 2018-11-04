@@ -172,19 +172,13 @@ class File:
                 self.outerScreen.totalSize = 0
                 self.outerScreen.recursiveSize(self.hexPath)
                 size = self.outerScreen.totalSize
-                if size == 0:
-                    return " -"
-                else:
-                    return size
+                return size
             else:
                 return " -"
         else:
             try:
                 size = os.path.getsize(self.hexPath)
-                if size == 0:
-                    return " -"
-                else:
-                    return size
+                return size
             except Exception as e:
                 print(e, "couldn't get size.")
                 return " -"
@@ -394,25 +388,26 @@ class MainScreen(Screen, FloatLayout):
             if inp == "":
                 pass
             else:
+                if inp[len(inp)-1] != fileSep:
+                    inp += fileSep
                 if self.dirInputValid(inp):
-                    if os.path.exists(inp):
-                        if os.path.isdir(inp):
-                            if inp[len(inp)-1] != fileSep:
-                                inp += fileSep
-                            self.editConfLoc("vaultDir", inp)
-                            print("EDITING")
-                            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                            self.outerScreen.path = inp
-                            self.outerScreen.currentDir = inp
-                            self.outerScreen.resetButtons()
-                            done.open()
+                    if os.path.exists(inp) and os.path.isdir(inp):
+                        self.editConfLoc("vaultDir", inp)
+                        print("EDITING")
+                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                        self.outerScreen.path = inp
+                        self.outerScreen.currentDir = inp
+                        self.outerScreen.resetButtons()
+                        done.open()
                     else:
                         try:
                             os.makedirs(inp)
+                            os.makedirs(inp+aesFName.encryptFileName(self.outerScreen.key, ".$recycling"))
                         except FileNotFoundError:
                             warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             warn.open()
-                        except PermissionError:
+                        except PermissionError as e:
+                            print(e, "what.")
                             warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             warn.open()
                         except Exception as e:
@@ -689,11 +684,13 @@ class MainScreen(Screen, FloatLayout):
         self.ascending = True
         self.key = ""
         self.encPop = None
-        self.enterCount = 0
+        self.entered = False
         self.validBTKey = False
         self.useBTTemp = useBT
         self.previousDir = None
         self.lastPathSent = ""
+        self.recycleFolder = ""
+        self.recycleName = ""
         self.searchRecursively = searchRecursively
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
@@ -708,10 +705,21 @@ class MainScreen(Screen, FloatLayout):
         return "MainScreen"
 
     def on_enter(self): #When the screen is started.
-        if self.enterCount == 0:
+        if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-        self.createButtons(self.List(self.currentDir))     #List the files in the vault.
-        self.enterCount += 1
+            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")
+            self.recycleFolder = self.path+self.recycleName+fileSep
+
+            if not os.path.exists(self.recycleFolder):
+                print("Recycling folder not found in directory, making one now.")
+                os.makedirs(self.recycleFolder)
+
+            self.entered = True
+
+        if self.recycleFolder in self.currentDir:
+            self.createButtons(self.List(self.path))     # Don't want to log into the recycling bin, as the user might get confused.
+        else:
+            self.createButtons(self.List(self.currentDir)) # Loads previous directory.
 
     def on_leave(self):     #Kept separate from lock because i may want to add more screens.
         self.remove_widget(self.scroll)
@@ -783,8 +791,6 @@ class MainScreen(Screen, FloatLayout):
                 else:
                     for i in data:
                         buff.append(i)
-
-                    print(buff)
 
                     if buff[:6] == backCommand:   # Buffer is reset every time a header is found
                         pathBack = self.getPathBack(self.lastPathSent)
@@ -890,9 +896,9 @@ class MainScreen(Screen, FloatLayout):
         self.serverThread.start()
 
     def setupSortButtons(self):
-        self.sortsGrid = GridLayout(cols=3, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=3 and i am only adding 3 widgets) to hold sort buttons.
-        self.nameSort = self.nameSortButton(self, text="^", size_hint_x=6.66) #Not sure why it has to be the devil's number
-        self.sizeSort = self.sizeSortButton(self)
+        self.sortsGrid = GridLayout(cols=2, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
+        self.nameSort = self.nameSortButton(self, text="^", size_hint_x=.87)
+        self.sizeSort = self.sizeSortButton(self, size_hint_x=.13)
         self.sortsGrid.add_widget(self.nameSort)
         self.sortsGrid.add_widget(self.sizeSort)
         self.add_widget(self.sortsGrid) #Add the sort buttons grid to the float layout of MainScreen.
@@ -945,21 +951,35 @@ class MainScreen(Screen, FloatLayout):
                     pass
 
 
+    def openRecycling(self):
+        warnPop = Popup(title="Changed Mode", content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+        warnPop.open()
+        self.currentDir = self.recycleFolder
+        self.removeButtons()
+        print(self.currentDir, "current dir")
+        self.createButtons(self.List(self.currentDir))
+
 ############################################
 
 #######Button Creation and button functions#######
     def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
         self.currentList = array
         for item in array:
-            btn = self.listButton(self, item, text=("    "+item.name), height=30, halign="left", valign="middle")
-            btn.bind(size=btn.setter("text_size"))
-            info = self.infoButton(self, item, text=(" INFO"), size_hint=(.05, 1), halign="left", valign="middle")
-            info.bind(size=info.setter("text_size"))
-            fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
-            fileS.bind(size=fileS.setter("text_size"))
-            self.grid.add_widget(btn)
-            self.grid.add_widget(info)
-            self.grid.add_widget(fileS)
+            if item.name != ".$recycling":
+                if item.isDir:
+                    btn = self.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
+                    info = self.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
+                else:
+                    btn = self.listButton(self, item, text=("    "+item.name))
+                    info = self.infoButton(self, item)
+
+                btn.bind(size=btn.setter("text_size"))
+                info.bind(size=info.setter("text_size"))
+                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS.bind(size=fileS.setter("text_size"))
+                self.grid.add_widget(btn)
+                self.grid.add_widget(info)
+                self.grid.add_widget(fileS)
 
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
@@ -980,12 +1000,10 @@ class MainScreen(Screen, FloatLayout):
     def removeButtons(self):    #Remove the list of files.
         self.grid.clear_widgets()
         self.scroll.clear_widgets()
-        self.grid = 0
         try:
             self.remove_widget(self.scroll)
         except Exception as e:
             print(e, "Already removed?")
-        self.scroll = 0
 
 
     def getFileNameFromText(self, itemName):    #Get the file name.
@@ -993,12 +1011,17 @@ class MainScreen(Screen, FloatLayout):
 
 
     def traverseButton(self, fileObj):  #Function when file is clicked.
-        if fileObj.isDir:   #If is a folder, then display files within that folder.
-            self.previousDir = self.currentDir
-            self.currentDir = fileObj.hexPath
-            self.resetButtons()
-        else:   #If is a file, decrypt the file and open it.
-            self.decrypt(fileObj)
+        if self.recycleFolder not in self.currentDir:
+            if fileObj.isDir:   #If is a folder, then display files within that folder.
+                self.previousDir = self.currentDir
+                self.currentDir = fileObj.hexPath
+                self.resetButtons()
+            else:   #If is a file, decrypt the file and open it.
+                self.decrypt(fileObj)
+        else:
+            print("Recovering this file to path:", fileObj.name)
+            shutil.move(fileObj.hexPath, self.path)
+            self.refreshFiles()
 
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
@@ -1017,8 +1040,8 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
         internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel(text="Date modified:", halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=str(os.path.getmtime(fileObj.hexPath)), halign="left", valign="middle"))
+        internalLayout.add_widget(self.infoLabel())
+        internalLayout.add_widget(self.infoLabel())
 
         internalLayout.add_widget(self.infoLabel())
         internalLayout.add_widget(self.infoLabel())
@@ -1037,7 +1060,12 @@ class MainScreen(Screen, FloatLayout):
             decBtn.bind(on_release=self.decryptDir)
 
         internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
-        internalLayout.add_widget(self.deleteButton(self, fileObj,text="Delete"))
+
+        delText = "Delete"
+        if self.recycleFolder in self.currentDir:
+            delText = "Delete Permanently"
+
+        internalLayout.add_widget(self.deleteButton(self, fileObj,text=delText))
 
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
@@ -1049,14 +1077,25 @@ class MainScreen(Screen, FloatLayout):
     def makeFolder(self, folderName):
         print(folderName, "folderName")
 
+    def moveFileToRecycling(self, fileObj):
+        print("Moving", fileObj.hexPath)
+        if os.path.exists(fileObj.hexPath):
+            shutil.move(fileObj.hexPath, self.recycleFolder)
+        else:
+            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.")
+
     def deleteFile(self, fileObj):
-        print("Deleting,", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
-            if fileObj.isDir:
-                shutil.rmtree(fileObj.hexPath)
+            if self.recycleFolder not in self.currentDir:
+                print("Moving", fileObj.hexPath)
+                shutil.move(fileObj.hexPath, self.recycleFolder)
             else:
-                os.remove(fileObj.hexPath)
-            self.resetButtons()
+                print("Deleting", fileObj.hexPath)
+                if fileObj.isDir:
+                    shutil.rmtree(fileObj.hexPath)
+                else:
+                    os.remove(fileObj.hexPath)
+            self.refreshFiles()
             self.infoPopup.dismiss()
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
@@ -1064,8 +1103,10 @@ class MainScreen(Screen, FloatLayout):
     def goBackFolder(self):     #Go up a folder.
         if self.currentDir != self.path:    #Can't go further past the vault dir.
             self.previousDir = self.currentDir
-            self.currentDir = self.getPathBack(self.currentDir)
-            currentDirShare = self.currentDir
+            if self.currentDir in self.recycleFolder:
+                self.goHome()
+            else:
+                self.currentDir = self.getPathBack(self.currentDir)
             self.resetButtons()
         else:
             print("Can't go further up.")

@@ -58,10 +58,18 @@ cpdef list quickSortSize(list fileObjects):
     cdef list left = []
     cdef list right = []  #Make seperate l+r lists, and add on at the end.
     cdef list middle = []
+    cdef int pivotSize
     if len(fileObjects) > 1:
-        pivotSize = fileObjects[int(len(fileObjects)/2)].rawSize
+        pivot = fileObjects[int(len(fileObjects)/2)]
+        if pivot.rawSize == " -":
+            pivotSize = 0
+        else:
+            pivotSize = pivot.rawSize
+
         for i in fileObjects:
-            if i.rawSize < pivotSize:
+            if i.rawSize == " -":
+                left.append(i)
+            elif i.rawSize < pivotSize:
                 left.append(i)
             elif i.rawSize > pivotSize:
                 right.append(i)
