@@ -1046,20 +1046,17 @@ class MainScreen(Screen, FloatLayout):
         internalLayout.add_widget(self.infoLabel())
         internalLayout.add_widget(self.infoLabel())
 
+
         if useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.makeSendFile, fileObj))
             internalLayout.add_widget(btButton)
 
-        else:
-            internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
-
 
         if fileObj.isDir:
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
             decBtn.bind(on_release=self.decryptDir)
-
-        internalLayout.add_widget(self.infoLabel(text="", halign="left", valign="middle"))
+            internalLayout.add_widget(decBtn)
 
         delText = "Delete"
         if self.recycleFolder in self.currentDir:
@@ -1351,7 +1348,7 @@ class MainScreen(Screen, FloatLayout):
         self.encPop = self.encPopup(self, encType, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-    def decryptDir(self):
+    def decryptDir(self, buttonInstance=None):
         pass
 
     def encDecDirCore(self, d, targetLoc): #Encrypts whole directory.
