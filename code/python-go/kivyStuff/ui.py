@@ -1,12 +1,11 @@
 import os
-import sys
-import shutil
-import threading
-import fileinput
+from sys import platform
+from shutil import move, disk_usage, rmtree
+from threading import Thread
 from functools import partial
 from tempfile import gettempdir
 from subprocess import Popen, PIPE
-import time
+from time import time, sleep
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -29,7 +28,6 @@ from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 from kivy.properties import StringProperty
-from kivy.base import EventLoop
 from kivy.lang import Builder
 
 ############Import SHA Module###########
@@ -44,7 +42,7 @@ import sortsCy
 #######Load OS Specific settings####
 global fileSep #linux has different file separators to windows and different temp dir
 global osTemp  #Different OS have different temp folder locations.
-if sys.platform.startswith("win32"):
+if platform.startswith("win32"): #Imported sys.platform.startswith to find what operating system.
     fileSep = "\\"
 else:          #windows bad
     fileSep = "/"
@@ -128,7 +126,7 @@ def runUI():
     ui.run()
     print("Deleting temp files.")
     try:
-        shutil.rmtree(osTemp+"FileMate"+fileSep)
+        rmtree(osTemp+"FileMate"+fileSep) # Imported from shutil
     except:
         print("No temp files.")
     print("App closed.")
@@ -205,7 +203,7 @@ class LoginScreen(Screen, FloatLayout):
                 return
 
     def passToTerm(self, key, d):           #Makes a pipe to communicate with the AES written in go.
-        if sys.platform.startswith("win32"):
+        if fileSep == "\\":
             progname = "AESWin"
         else:
             progname = "AES"
@@ -290,7 +288,7 @@ if useBT:   #Some of this stuff doesn't need to be loaded unless bt is used.
 
 
         def startSrv(self, dt=None):
-            self.serverThread = threading.Thread(target=self.manager.get_screen("main").startBT, daemon=True)       #Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
+            self.serverThread = Thread(target=self.manager.get_screen("main").startBT, daemon=True)       #Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
             self.serverThread.start()   #Starting server in thread lets the screen be rendered while the server is waiting.
 
 
@@ -439,7 +437,7 @@ class MainScreen(Screen, FloatLayout):
 
     class encPopup(Popup): #For single files
 
-        def __init__(self, outerScreen, encType, labText, fileList, locList, **kwargs):
+        def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
             super(Popup, self).__init__(**kwargs)
             self.outerScreen = outerScreen
             #kivy stuff
@@ -469,7 +467,7 @@ class MainScreen(Screen, FloatLayout):
             self.grid.add_widget(self.wholePb)
             self.content = self.grid
 
-            self.checkThread = threading.Thread(target=self.enc, args=(encType,), daemon=True)
+            self.checkThread = Thread(target=self.enc, args=(encType, op,), daemon=True)
             self.checkThread.start()
 
         def getTotalSize(self):
@@ -487,23 +485,23 @@ class MainScreen(Screen, FloatLayout):
 
             return ("%.2f" % bps) + divisions[divCount]
 
-        def enc(self, encType):
+        def enc(self, encType, op):
             total = 0
             totalPer = 0
             for i in range(len(self.fileList)):
                 self.pb.value = 0
                 self.pb.max = os.path.getsize(self.fileList[i])
                 if i == len(self.fileList)-1:
-                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True)
+                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
                 else:
-                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True)
+                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
 
                 prevInt = 0
                 timeFor1per = 0
-                timeAtLastP = time.time()
+                timeAtLastP = time()
                 lastSize = 0
                 per = 0
-                while self.pb.value < (self.pb.max-16): #-16 because padding might make it not be exactly equal
+                while self.pb.value_normalized < 0.99: # Padding can cause issues as original size is not known.
                     self.currFile.text = str(self.fileList[i] +"   "+ str(i)+"/"+str(len(self.fileList)))
                     try:
                         self.pb.value = os.path.getsize(self.locList[i])
@@ -514,19 +512,19 @@ class MainScreen(Screen, FloatLayout):
                     else:
                         per = self.wholePb.value_normalized*100
 
-                        if int(per) != prevInt:
-                            timeFor1per = time.time()- timeAtLastP
-                            timeAtLastP = time.time()
+                        if per-prevInt > 0.5:
+                            timeFor1per = time()- timeAtLastP
+                            timeAtLastP = time()
 
                             self.tim.text = "{0:.1f}\nSeconds left.".format(timeFor1per*(((self.wholePb.max - self.wholePb.value)/self.wholePb.max)*100))
                             sizeDelta = self.wholePb.value - lastSize
                             self.spd.text = self.getGoodUnit(sizeDelta/timeFor1per)
 
-                            prevInt = int(per)
+                            prevInt = per
                             lastSize = self.wholePb.value
 
                         self.per.text = "{0:.2f}%".format(per)
-                    time.sleep(0.01)
+                    sleep(0.05) # Imported from time module
 
                 totalPer += 100
                 total += self.pb.value
@@ -559,7 +557,7 @@ class MainScreen(Screen, FloatLayout):
             self.grid.add_widget(self.pb)
             self.content = self.grid
 
-            self.sendThread = threading.Thread(target=self.sendFile, args=(fileObjTmp,), daemon=True) # can be cancelled mid way through
+            self.sendThread = Thread(target=self.sendFile, args=(fileObjTmp,), daemon=True) # can be cancelled mid way through
             self.sendThread.start()
 
         def sendFile(self, fileObj):
@@ -582,7 +580,7 @@ class MainScreen(Screen, FloatLayout):
             buffCount = 0
             self.per.text = "{0:.2f}%".format(0)
 
-            start = time.time()
+            start = time()
             #Send data
             while buff:
                 self.outerScreen.clientSock.send(buff)
@@ -591,7 +589,7 @@ class MainScreen(Screen, FloatLayout):
 
                 self.pb.value = buffCount/fileObj.rawSize
                 self.per.text = "{0:.2f}%".format(self.pb.value*100)
-                self.spd.text = self.getGoodUnit(buffCount/(time.time() - start))
+                self.spd.text = self.getGoodUnit(buffCount/(time() - start))
 
             self.outerScreen.clientSock.send("~!!ENDF!")
             self.dismiss()
@@ -649,6 +647,7 @@ class MainScreen(Screen, FloatLayout):
 
             if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):
                 self.sortList = self.sortList[::-1]
+                self.outerScreen.currentList = self.sortList
                 print("Using old list")
                 self.outerScreen.removeButtons()
                 self.outerScreen.createButtons(self.sortList, False)
@@ -657,12 +656,26 @@ class MainScreen(Screen, FloatLayout):
                 print("Re-sorting")
                 self.sortBySize()
 
+    class decryptDirPop(Popup):
+
+        def __init__(self, mainScreen, fileObj, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.fileObj = fileObj
+
+        def checkCanDec(self, inp):
+            print("FileObj", self.fileObj)
+            if self.outerScreen.SettingsPop.dirInputValid(None, inp): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+                if not os.path.exists(inp):
+                    os.makedirs(inp)
+                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+
+
     class addFileScreen(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
 
         def __init__(self, mainScreen, **kwargs):
             super(Popup, self).__init__(**kwargs)
             self.outerScreen = mainScreen
-            self.layout = FloatLayout()
 
         class ConfirmationPopup(Popup):     #Popup for confirming encryption.
 
@@ -892,7 +905,7 @@ class MainScreen(Screen, FloatLayout):
 ##############################################
 
     def startBT(self):
-        self.serverThread = threading.Thread(target=self.runServMain, daemon=True)      #Start BT server as thread so the screen still renders.
+        self.serverThread = Thread(target=self.runServMain, daemon=True)      #Start BT server as thread so the screen still renders.
         self.serverThread.start()
 
     def setupSortButtons(self):
@@ -1020,7 +1033,7 @@ class MainScreen(Screen, FloatLayout):
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
-            shutil.move(fileObj.hexPath, self.path)
+            move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 
 
@@ -1055,7 +1068,7 @@ class MainScreen(Screen, FloatLayout):
 
         if fileObj.isDir:
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
-            decBtn.bind(on_release=self.decryptDir)
+            decBtn.bind(on_release=partial(self.decryptDir, fileObj))
             internalLayout.add_widget(decBtn)
 
         delText = "Delete"
@@ -1077,7 +1090,7 @@ class MainScreen(Screen, FloatLayout):
     def moveFileToRecycling(self, fileObj):
         print("Moving", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath):
-            shutil.move(fileObj.hexPath, self.recycleFolder)
+            move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.")
 
@@ -1085,11 +1098,11 @@ class MainScreen(Screen, FloatLayout):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
             if self.recycleFolder not in self.currentDir:
                 print("Moving", fileObj.hexPath)
-                shutil.move(fileObj.hexPath, self.recycleFolder)
+                move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
             else:
                 print("Deleting", fileObj.hexPath)
                 if fileObj.isDir:
-                    shutil.rmtree(fileObj.hexPath)
+                    rmtree(fileObj.hexPath) # Imported from shutil
                 else:
                     os.remove(fileObj.hexPath)
             self.refreshFiles()
@@ -1215,7 +1228,7 @@ class MainScreen(Screen, FloatLayout):
 ####Progress Bar Information####
 
     def values(self, st):   #Information for space left on device.
-        values = shutil.disk_usage(self.path)
+        values = disk_usage(self.path) # Imported from shutil
         if st:
             return self.getGoodUnit(int(values[1]))+" / " + self.getGoodUnit(int(values[0])) + " used."
         else:
@@ -1228,14 +1241,14 @@ class MainScreen(Screen, FloatLayout):
     def searchForItem(self, item):
         self.resetButtons()
         self.searchResults = []
-        self.t = threading.Thread(target=self.searchThread, args=(item,), daemon=True)
+        self.t = Thread(target=self.searchThread, args=(item,), daemon=True)
         self.t.start()
 
 ############################
 
 ######Encryption Stuff + opening decrypted files######
     def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.
-        if sys.platform.startswith("win32"):
+        if fileSep == "\\":
             progname = "AESWin.exe"
         else:
             progname = "AES"
@@ -1259,11 +1272,10 @@ class MainScreen(Screen, FloatLayout):
         return out
 
     def openFileTh(self, fileLoc, startLoc):
-        self.openFileThread = threading.Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
+        self.openFileThread = Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
         self.openFileThread.start()
 
-    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None):     #Handels passToPipe and UI while encryption/decryption happens.
-        alreadyDecrypted = False
+    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True):     #Handels passToPipe and UI while encryption/decryption happens.
         fileName = ""
         if type == "y":     #The file name also needs to be encrypted
             tempDir = d.split(fileSep)
@@ -1271,7 +1283,7 @@ class MainScreen(Screen, FloatLayout):
             popText = "Encrypting..."
             if os.path.exists(targetLoc):
                 if os.path.isdir(targetLoc):
-                    shutil.rmtree(targetLoc)
+                    rmtree(targetLoc) # Imported from shutil
                 else:
                     os.remove(targetLoc)
 
@@ -1285,25 +1297,26 @@ class MainScreen(Screen, FloatLayout):
             fileName = tempDir[len(tempDir)-1]
             targetLoc = targetLoc.split(fileSep)
             newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
+            print(newName, "newName in encDecTerminal")
             targetLoc = fileSep.join(targetLoc)
             popText = "Decrypting..."
 
         if not isPartOfFolder:
-            self.encPop = self.encPopup(self, type, popText, [d], [targetLoc]) #self, labText, d, newLoc, **kwargs
+            self.encPop = self.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
             mainthread(Clock.schedule_once(self.encPop.open, -1))
 
         if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
-            self.encryptProcess = threading.Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
+            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
             self.encryptProcess.start()
         else:
             print("File name too long :(")
             self.encPop.dismiss()
             print("Dismissed?")
-            pop = Popup(title="Invalid file name.", content=Label(text="File name too long,\nplease try again with shorter\nfile name."))
+            pop = Popup(title="Invalid file name.", content=Label(text="File name too long,\nplease try again with shorter\nfile name."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
             pop.open()
 
     def openFile(self, location, startLoc):
-        if sys.platform.startswith("win32"):
+        if fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) #Windows actually accepts forward slashes in terminal
             command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
@@ -1336,7 +1349,7 @@ class MainScreen(Screen, FloatLayout):
             self.popup.open()
             return False
 
-    def encDecDir(self, encType, d, targetLoc):
+    def encDecDir(self, encType, d, targetLoc, op=True):
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
@@ -1345,11 +1358,13 @@ class MainScreen(Screen, FloatLayout):
         self.locList = []
         self.encDecDirCore(d, targetLoc)
 
-        self.encPop = self.encPopup(self, encType, "Encrypting...", self.fileList, self.locList) #self, labText, fileList, locList, **kwargs
+        self.encPop = self.encPopup(self, encType, "Encrypting...", self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-    def decryptDir(self, buttonInstance=None):
-        pass
+    def decryptDir(self, fileObj, button):
+        print(button, "lol button boi")
+        selectPop = self.decryptDirPop(self, fileObj)
+        selectPop.open()
 
     def encDecDirCore(self, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)
@@ -1406,7 +1421,7 @@ class MainScreen(Screen, FloatLayout):
     def clearUpTempFiles(self):     #Deletes temp files.
         print("Deleting temp files.")
         try:
-            shutil.rmtree(osTemp+"FileMate"+fileSep)
+            rmtree(osTemp+"FileMate"+fileSep) # Imported from shutil
         except:
             print("No temp files.")
 ###########################

@@ -69,6 +69,21 @@
             hint_text: "Name"
             on_text_validate: root.makeFolder(self.text)
 
+<decryptDirPop@Popup>:
+    title: "Decrypt Folder"
+    size_hint: .7, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: True
+    GridLayout:
+        cols: 1
+        Label:
+            text: "Input the destination directory."
+        TextInput:
+            id: decDirInput
+            size_hint: .7, .4
+            multiline: False
+            hint_text: "Directory:"
+            on_text_validate: root.checkCanDec(self.text)
 
 
 <LoginScreen>:

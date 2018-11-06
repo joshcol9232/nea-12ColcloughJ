@@ -184,7 +184,7 @@ func expandKey(inputKey []byte) ([176]byte) {
   for i := 0; i < 16; i++ {
     expandedKeys[i] = inputKey[i]
   }
-  var bytesGenerated int = 16 //needs to get to 176
+  var bytesGenerated int = 16 //needs to get to 176 to fill expandedKeys with 11 keys, one for every round.
   var rconIteration int = 1
   var temp [4]byte
 
@@ -195,13 +195,13 @@ func expandKey(inputKey []byte) ([176]byte) {
       temp[x] = expandedKeys[x + bytesGenerated - 4]
     }
 
-    if bytesGenerated % 16 == 0 {    //keys are length 16 bytes so every 16 bytes generated, expand.
+    if bytesGenerated % 16 == 0 {    //Keys are length 16 bytes so every 16 bytes generated, expand.
       temp = keyExpansionCore(temp, rconIteration)
       rconIteration += 1
     }
 
     for y := 0; y < 4; y++ {
-      expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]
+      expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]  //XOR first 4 bytes of previous key with the temporary list.
       bytesGenerated += 1
     }
   }
@@ -209,83 +209,39 @@ func expandKey(inputKey []byte) ([176]byte) {
   return expandedKeys
 }
 
-func addRoundKey(state []byte, roundKey []byte) ([]byte) {       //is also it's own inverse
+func addRoundKey(state []byte, roundKey []byte) ([]byte) {       //Add round key is also it's own inverse
   for i := 0; i < 16; i++ {
-    state[i] ^= roundKey[i]
+    state[i] ^= roundKey[i] //XOR each byte of the key with each byte of the state.
   }
   return state
 }
 
-func subBytes(state []byte) ([]byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = sBox[state[i]]
-  }
-  return state
+func subBytes(state []byte) ([]byte) {              //Substitute each byte in the state with it's corresponding value in the sbox. (Adds confusion)
+  return []byte{sBox[state[ 0]], sBox[state[ 1]], sBox[state[ 2]], sBox[state[ 3]],
+                sBox[state[ 4]], sBox[state[ 5]], sBox[state[ 6]], sBox[state[ 7]],
+                sBox[state[ 8]], sBox[state[ 9]], sBox[state[10]], sBox[state[11]],
+                sBox[state[12]], sBox[state[13]], sBox[state[14]], sBox[state[15]]}
 }
 
-func invSubBytes(state []byte) ([]byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = invSBox[state[i]]
-  }
-  return state
+func invSubBytes(state []byte) ([]byte) {  //Inverse of subBytes. Uses inverse table to get original values put into subBytes.
+  return []byte{invSBox[state[ 0]], invSBox[state[ 1]], invSBox[state[ 2]], invSBox[state[ 3]],
+                invSBox[state[ 4]], invSBox[state[ 5]], invSBox[state[ 6]], invSBox[state[ 7]],
+                invSBox[state[ 8]], invSBox[state[ 9]], invSBox[state[10]], invSBox[state[11]],
+                invSBox[state[12]], invSBox[state[13]], invSBox[state[14]], invSBox[state[15]]}
 }
 
 func shiftRows(state []byte) ([]byte) {
-  var temp = []byte {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
-  //col1
-  temp[0] = state[0] //Mixes it like this:
-  temp[1] = state[5] //
-  temp[2] = state[10]// 0  4  8 12         0  4  8 12  shifted left by 0
-  temp[3] = state[15]// 1  5  9 13  ---->  5  9 13  1  shifted left by 1
-  //col2             // 2  6 10 14  ----> 10 14  2  6  shifted left by 2
-  temp[4] = state[4] // 3  7 11 15        15  3  7 11  shifted left by 3
-  temp[5] = state[9]
-  temp[6] = state[14]
-  temp[7] = state[3]
-  //col3
-  temp[8] = state[8]
-  temp[9] = state[13]
-  temp[10] = state[2]
-  temp[11] = state[7]
-  //col4
-  temp[12] = state[12]
-  temp[13] = state[1]
-  temp[14] = state[6]
-  temp[15] = state[11]
-
-  return temp
+  return []byte{state[ 0], state[ 5], state[10], state[15],
+                state[ 4], state[ 9], state[14], state[ 3],
+                state[ 8], state[13], state[ 2], state[ 7],
+                state[12], state[ 1], state[ 6], state[11]}
 }
 
 func invShiftRows(state []byte) ([]byte) {
-  var temp = []byte {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-  //  0  4  8 12         0  4  8 12
-  //  5  9 13  1  ---->  1  5  9 13
-  // 10 14  2  6  ---->  2  6 10 14
-  // 15  3  7 11         3  7 11 15
-
-  //col1
-  temp[0] = state[0]
-  temp[5] = state[1]
-  temp[10] = state[2]
-  temp[15] = state[3]
-  //col2
-  temp[4] = state[4]
-  temp[9] = state[5]
-  temp[14] = state[6]
-  temp[3] = state[7]
-  //col3
-  temp[8] = state[8]
-  temp[13] = state[9]
-  temp[2] = state[10]
-  temp[7] = state[11]
-  //col4
-  temp[12] = state[12]
-  temp[1] = state[13]
-  temp[6] = state[14]
-  temp[11] = state[15]
-
-  return temp
+  return []byte{state[ 0], state[13], state[10], state[ 7],
+                state[ 4], state[ 1], state[14], state[11],
+                state[ 8], state[ 5], state[ 2], state[15],
+                state[12], state[ 9], state[ 6], state[ 3]}
 }
 
 func mixColumns(state []byte) ([]byte) {
@@ -293,58 +249,47 @@ func mixColumns(state []byte) ([]byte) {
   //Uses lookup tables to make it faster, as you only ever multiply by 1, 2 or 3, as Rijndael uses a pre defined matrix to multiply by. Addition is just XOR
   //to prevent overflow
 
-  var temp = []byte {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+  return []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
+                state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
+                state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
+                mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]],
 
-  //Col 1
-  temp[0] = mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3]
-  temp[1] = state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3]
-  temp[2] = state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]]
-  temp[3] = mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]]
-  //Col 2
-  temp[4] = mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7]
-  temp[5] = state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7]
-  temp[6] = state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]]
-  temp[7] = mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]]
-  //Col 3
-  temp[8] = mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11]
-  temp[9] = state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11]
-  temp[10] = state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]]
-  temp[11] = mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]]
-  //Col 4
-  temp[12] = mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15]
-  temp[13] = state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15]
-  temp[14] = state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]]
-  temp[15] = mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]
+                mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7],
+                state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7],
+                state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]],
+                mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]],
 
-  return temp
+              mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11],
+              state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11],
+              state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]],
+              mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]],
+
+            mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
+            state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+            state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+            mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
 }
 
 func invMixColumns(state []byte) ([]byte) {
-  var temp = []byte {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-  //Unmixes the columns
+  return []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],  //Note how the operation shifts right one each time
+                mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
+                mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
+                mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
 
-  //Col 1
-  temp[0] = mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]]  //Note how the operation shifts right one each time
-  temp[1] = mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]]
-  temp[2] = mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]]
-  temp[3] = mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]]
-  //Col 2
-  temp[4] = mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]]
-  temp[5] = mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]]
-  temp[6] = mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]]
-  temp[7] = mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]]
-  //Col 3
-  temp[8] = mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]]
-  temp[9] = mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]]
-  temp[10] = mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]]
-  temp[11] = mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]]
-  //Col 4
-  temp[12] = mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]]
-  temp[13] = mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]]
-  temp[14] = mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]]
-  temp[15] = mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
+                mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]],
+                mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]],
+                mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]],
+                mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]],
 
-  return temp
+              mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]],
+              mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]],
+              mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]],
+              mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]],
+
+            mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+            mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+            mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+            mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]}
 }
 
 
