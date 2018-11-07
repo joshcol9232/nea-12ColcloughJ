@@ -1,0 +1,36 @@
+<LoginScreen>:
+
+    keyInput: keyInput
+
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    Label:
+        id: labelLogin
+        size_hint: .46, .08
+        text: root.needToSetKey()
+        font_size: 22
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    TextInput:
+        id: keyInput
+        size_hint: .7, .08
+        font_size: 22
+        hint_text: "Key (16 characters maximum)"
+        pos_hint: {"center_x": 0.5, "center_y": 0.6}
+        password: True
+        multiline: False
+        #on_text_validate: app.root.current = root.checkKey(keyInput.text)
+
+    Button:
+        id: submitKey
+        size_hint: .16, .16
+        font_size: 22
+        text: "Submit"
+        pos_hint: {"center_x": 0.5, "center_y": 0.4}
+        #on_release: app.root.current = root.checkKey(keyInput.text)

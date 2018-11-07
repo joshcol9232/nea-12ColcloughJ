@@ -1,5 +1,6 @@
 #: import Window kivy.core.window.Window
 #: import Clock kivy.clock.Clock
+
 <listButton@Button>:
     font_size: 14
     halign: "left"
@@ -52,7 +53,6 @@
             size_hint: .4, .3
             on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
-
 <addNewFolderPop@Popup>:
     title: "Add New Folder"
     size_hint: .7, .4
@@ -85,67 +85,98 @@
             hint_text: "Directory:"
             on_text_validate: root.checkCanDec(self.text)
 
+<addFileScreen@Popup>:
+    name: "addFile"
+    id: addFile
+    submitDirs: submitDirs
+    FloatLayout:
+        Label:
+            size_hint: .46, .08
+            font_size: 18
+            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with '--' if you want to do multiple locations."
+            pos_hint: {"center_x": 0.5, "y": 0.8}
 
-<LoginScreen>:
+        Button:
+            id: submitDirs
+            size_hint: .16, .16
+            pos_hint: {"center_x": .5, "center_y": .4}
+            text: "Submit"
+            on_release: root.checkIfSure(Search.text)
 
-    keyInput: keyInput
+        Button:
+            id: cancel
+            size_hint: .16, .08
+            pos_hint: {"center_x": .5, "center_y": .24}
+            text: "Close"
+            on_release: root.dismiss()
 
-    RelativeLayout:                 #Adds background in case fade transition breaks.
-        canvas.before:
-            Color:
-                rgba: 0,0,0,1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-
-    Label:
-        id: labelLogin
-        size_hint: .46, .08
-        text: root.needToSetKey()
-        font_size: 22
-        pos_hint: {"center_x": 0.5, "y": 0.8}
-
-    TextInput:
-        id: keyInput
-        size_hint: .7, .08
-        font_size: 22
-        hint_text: "Key (16 characters maximum)"
-        pos_hint: {"center_x": 0.5, "center_y": 0.6}
-        password: True
-        multiline: False
-        on_text_validate: app.root.current = root.checkKey(keyInput.text)
-
-    Button:
-        id: submitKey
-        size_hint: .16, .16
-        font_size: 22
-        text: "Submit"
-        pos_hint: {"center_x": 0.5, "center_y": 0.4}
-        #on_release: app.root.current = root.checkKey(keyInput.text)
-        on_release: app.root.current = root.checkKey(keyInput.text)
+        TextInput:
+            id: Search
+            size_hint: .7, .08
+            font_size: 22
+            hint_text: "Directories"
+            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+            multiline: False
 
 
-<LoginScreenBT>:
+<SettingsPop@Popup>:
+    auto_dismiss: False
+    newLoc: newLoc
+    GridLayout:
+        cols: 2
+        Label:
+            text: "Vault Location:"
+            font_size: 20
+        Label:
+            text: root.outerScreen.path
+            font_size: 14
 
-    RelativeLayout:                 #Adds background in case fade transition breaks.
-        canvas.before:
-            Color:
-                rgba: 0,0,0,1
-            Rectangle:
-                pos: self.pos
-                size: self.size
+        Label:
+            text: "Change Vault Location:"
+            font_size: 16
+        GridLayout:
+            cols: 2
+            TextInput:
+                id: newLoc
+                size_hint_x: .85
+                font_size: 22
+                hint_text: "Location"
+            Button:
+                size_hint_x: .15
+                text: "Submit"
+                on_release: root.changeVaultLoc(newLoc.text)
 
-    Label:
-        id: labelLogin
-        size_hint: .46, .08
-        text: "Connect via bluetooth."
-        font_size: 22
-        pos_hint: {"center_x": 0.5, "y": 0.8}
 
-    Label:
-        id: clientLabel
-        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        Label:
+            text: "Search folders recursively"
+        Switch:
+            id: searchSwitch
+            active: root.outerScreen.searchRecursively
+            #on_touch_down: root.editConfLoc("searchRecursively", str(not root.outerScreen.searchRecursively), "search faggot")
 
+        Label:
+            text: "Use Bluetooth"
+        Switch:
+            id: btSwitch
+            active: root.outerScreen.useBTTemp
+            #on_touch_down: root.editConfLoc("bluetooth", str(not root.outerScreen.useBTTemp), "bt faggot")
+
+        Label:
+        Label:
+
+        Label:
+        Label:
+
+        Label:
+            text: "Note: Changes that you make that affect the login method only take effect once the program is restarted."
+            text_size: self.size
+        Label:
+
+        Button:
+            text: "Exit"
+            font_size: 20
+
+            on_release: root.dismiss()
 
 <MainScreen>:
     addFile: addFile
@@ -278,98 +309,3 @@
             pos_hint: {"x": 0.4, "y": 0.82}
             size_hint: .16, .16
             text: root.values(True)
-
-
-
-<addFileScreen@Popup>:
-    name: "addFile"
-    id: addFile
-    submitDirs: submitDirs
-    FloatLayout:
-        Label:
-            size_hint: .46, .08
-            font_size: 18
-            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with '--' if you want to do multiple locations."
-            pos_hint: {"center_x": 0.5, "y": 0.8}
-
-        Button:
-            id: submitDirs
-            size_hint: .16, .16
-            pos_hint: {"center_x": .5, "center_y": .4}
-            text: "Submit"
-            on_release: root.checkIfSure(Search.text)
-
-        Button:
-            id: cancel
-            size_hint: .16, .08
-            pos_hint: {"center_x": .5, "center_y": .24}
-            text: "Close"
-            on_release: root.dismiss()
-
-        TextInput:
-            id: Search
-            size_hint: .7, .08
-            font_size: 22
-            hint_text: "Directories"
-            pos_hint: {"center_x": 0.5, "center_y": 0.7}
-            multiline: False
-
-
-<SettingsPop@Popup>:
-    auto_dismiss: False
-    newLoc: newLoc
-    GridLayout:
-        cols: 2
-        Label:
-            text: "Vault Location:"
-            font_size: 20
-        Label:
-            text: root.outerScreen.path
-            font_size: 14
-
-        Label:
-            text: "Change Vault Location:"
-            font_size: 16
-        GridLayout:
-            cols: 2
-            TextInput:
-                id: newLoc
-                size_hint_x: .85
-                font_size: 22
-                hint_text: "Location"
-            Button:
-                size_hint_x: .15
-                text: "Submit"
-                on_release: root.changeVaultLoc(newLoc.text)
-
-
-        Label:
-            text: "Search folders recursively"
-        Switch:
-            id: searchSwitch
-            active: root.outerScreen.searchRecursively
-            #on_touch_down: root.editConfLoc("searchRecursively", str(not root.outerScreen.searchRecursively), "search faggot")
-
-        Label:
-            text: "Use Bluetooth"
-        Switch:
-            id: btSwitch
-            active: root.outerScreen.useBTTemp
-            #on_touch_down: root.editConfLoc("bluetooth", str(not root.outerScreen.useBTTemp), "bt faggot")
-
-        Label:
-        Label:
-
-        Label:
-        Label:
-
-        Label:
-            text: "Note: Changes that you make that affect the login method only take effect once the program is restarted."
-            text_size: self.size
-        Label:
-
-        Button:
-            text: "Exit"
-            font_size: 20
-
-            on_release: root.dismiss()

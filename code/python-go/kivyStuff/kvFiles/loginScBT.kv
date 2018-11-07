@@ -1,0 +1,20 @@
+<LoginScreenBT>:
+
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    Label:
+        id: labelLogin
+        size_hint: .46, .08
+        text: "Connect via bluetooth."
+        font_size: 22
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    Label:
+        id: clientLabel
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
