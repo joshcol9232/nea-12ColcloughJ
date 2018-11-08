@@ -1,8 +1,5 @@
-#from threading import Thread
-#from functools import partial
 from tempfile import gettempdir
-#from subprocess import Popen, PIPE
-#from time import time, sleep
+import shutil
 
 from kivy.config import Config
 Config.set("graphics", "resizable", False)
@@ -20,6 +17,7 @@ from mainScClass import MainScreen
 from loginClass import LoginScreen
 from loginBTClass import LoginScreenBT
 
+#########Import config functions########
 import configOperations
 
 ############Import SHA Module###########
@@ -33,15 +31,14 @@ import sortsCy
 
 
 def runUI():
-    
-
     ui = uiApp(title="FileMate")
     ui.run()
 
     # When program closes:
     print("Deleting temp files.")
     try:
-        rmtree(osTemp+"FileMate"+fileSep) # Imported from shutil
+        fSep = configOperations.getFileSep()
+        shutil.rmtree(gettempdir()+fSep+"FileMate"+fSep) # Imported from shutil
     except:
         print("No temp files.")
     print("App closed.")

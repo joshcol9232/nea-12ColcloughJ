@@ -45,9 +45,9 @@ class MainScreen(Screen):
             super(Popup, self).__init__(**kwargs)
             self.outerScreen = mainScreen
 
-        def dirInputValid(self, inp):       #much rather re define it than do "self.outerScreen.SettingsPop.dirInputValid(self.outerScreen.SettingsPop, self.outerScreen.currentDir+text)" later on
-            valid = (inp[0] == self.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-            inp = inp.split(self.fileSep)
+        def dirInputValid(self, inp):
+            valid = (inp[0] == self.outerScreen.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+            inp = inp.split(self.outerScreen.fileSep)
             focusIsSlash = False
             for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
                 if item == "":
@@ -73,8 +73,8 @@ class MainScreen(Screen):
     class SettingsPop(Popup):
 
         def __init__(self, mainScreen, **kwargs):
-            self.outerScreen = mainScreen
             super(Popup, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
 
             self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
             self.ids.btSwitch.bind(active=self.btSwitchCallback)
@@ -105,9 +105,9 @@ class MainScreen(Screen):
                 self.outerScreen.searchRecursively = not self.outerScreen.searchRecursively
 
 
-        def dirInputValid(self, inp):
-            valid = (inp[0] == self.outerScreen.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-            inp = inp.split(self.outerScreen.fileSep)
+        def dirInputValid(self, inp, fileSep):      # Filesep required when self is none
+            valid = (inp[0] == fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+            inp = inp.split(fileSep)
             focusIsSlash = False
             for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
                 if item == "":
@@ -124,7 +124,7 @@ class MainScreen(Screen):
             else:
                 if inp[len(inp)-1] != self.outerScreen.fileSep:
                     inp += self.outerScreen.fileSep
-                if self.dirInputValid(inp):
+                if self.dirInputValid(inp, self.outerScreen.fileSep):
                     if os.path.exists(inp) and os.path.isdir(inp):
                         self.editConfLoc("vaultDir", inp)
                         print("EDITING")
@@ -401,9 +401,11 @@ class MainScreen(Screen):
 
         def checkCanDec(self, inp):
             print("FileObj", self.fileObj)
-            if self.outerScreen.SettingsPop.dirInputValid(None, inp): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+            if self.outerScreen.SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
                 if not os.path.exists(inp):
                     os.makedirs(inp)
+                if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
+                print(inp, "inp")
                 self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
 
 
@@ -736,12 +738,14 @@ class MainScreen(Screen):
         self.grid.bind(minimum_height=self.grid.setter("height"))
         self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
-        self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
 
         if sort:
             self.createButtonsCore(sortedArray)
         else:
             self.createButtonsCore(fileObjects)
+
+        self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
+
 
     def removeButtons(self):    #Remove the list of files.
         self.grid.clear_widgets()
@@ -1028,10 +1032,11 @@ class MainScreen(Screen):
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)
             fileName = tempDir[len(tempDir)-1]
-            targetLoc = targetLoc.split(self.fileSep)
-            newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
-            print(newName, "newName in encDecTerminal")
-            targetLoc = self.fileSep.join(targetLoc)
+            if newName == None:
+                targetLoc = targetLoc.split(self.fileSep)
+                newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
+                print(newName, "newName in encDecTerminal")
+                targetLoc = self.fileSep.join(targetLoc)
             popText = "Decrypting..."
 
         if not isPartOfFolder:
@@ -1095,7 +1100,6 @@ class MainScreen(Screen):
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptDir(self, fileObj, button):
-        print(button, "lol button boi")
         selectPop = self.decryptDirPop(self, fileObj)
         selectPop.open()
 
