@@ -1,15 +1,16 @@
+from os.path import getsize
 import aesFName
 
 class File:
 
-    def __init__(self, screen, hexPath, hexName, isDir=False, name=None, path=None):
+    def __init__(self, screen, hexPath, hexName, fileSep, isDir=False, name=None, path=None):
         self.outerScreen = screen
-        self.hexPath, self.hexName, self.isDir = hexPath, hexName, isDir
-        self.rawSize = self.getFileSize()
+        self.hexPath, self.hexName, self.isDir, self.fileSep = hexPath, hexName, isDir, fileSep
+        self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
         if path == None:
-            self.path = self.getNormDir(self.hexPath)
+            self.path = self._getNormDir(self.hexPath)
         else:
             self.path = path
         if name == None:
@@ -18,19 +19,19 @@ class File:
             self.name = name
 
         if self.isDir:
-            self.hexPath += fileSep
-            self.path += fileSep
+            self.hexPath += self.fileSep
+            self.path += self.fileSep
 
 
-    def getNormDir(self, hexDir):
+    def _getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
         hexDir = hexDir.replace(self.outerScreen.path, "")
-        hexDir = hexDir.split(fileSep)
+        hexDir = hexDir.split(self.fileSep)
         for i in range(len(hexDir)):
             hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
 
-        return fileSep.join(hexDir)
+        return self.fileSep.join(hexDir)
 
-    def getFileSize(self, recurse=True):
+    def _getFileSize(self, recurse=True):
         if self.isDir:
             if recurse:
                 self.outerScreen.totalSize = 0
@@ -41,7 +42,7 @@ class File:
                 return " -"
         else:
             try:
-                size = os.path.getsize(self.hexPath)
+                size = getsize(self.hexPath) # Imported from os module
                 return size
             except Exception as e:
                 print(e, "couldn't get size.")

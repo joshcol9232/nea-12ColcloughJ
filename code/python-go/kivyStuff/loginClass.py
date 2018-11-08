@@ -4,19 +4,17 @@ from subprocess import Popen, PIPE
 
 from kivy.uix.screenmanager import Screen
 from kivy.lang.builder import Builder
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
+
+import SHA
 
 class LoginScreen(Screen):
 
-    def __init__(self, fileSep, startDir, **kwargs):
+    def __init__(self, fileSep, path, startDir, **kwargs):
+        self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
         super(Screen, self).__init__(**kwargs)
-        self.fileSep, self.startDir = fileSep, startDir
-        #Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginSc.kv")
-        print("Got to init login")
         self.key = ""
-
-    def on_enter(self):
-        print("Screen started login")
-
 
     def findFile(self, dir):    #For finding a file to decrypt first block and compare it with key given.
         fs = listdir(dir)
@@ -41,10 +39,10 @@ class LoginScreen(Screen):
         return out
 
     def getIfValidKey(self, inputKey):              #Gets the output of the AES key checker.
-        if len(listdir(sharedPath)) != 0:
+        if len(listdir(self.path)) != 0:
             self.decryptTestFile = ""
             self.count = 0
-            self.findFile(sharedPath)
+            self.findFile(self.path)
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
             if diditwork == b"-Valid-\n": #The go program prints "-Valid-\n" or "-Invalid-\n" once it is done checking the key.
                 return True
@@ -84,7 +82,7 @@ class LoginScreen(Screen):
                     return "Login"
 
     def needToSetKey(self):             #For checking if the user needs to make a new key.
-        if len(listdir(sharedPath)) == 0:
+        if len(listdir(self.path)) == 0:
             return "Input New Key (Write this down if you have to)"
         else:
             return "Input Key"

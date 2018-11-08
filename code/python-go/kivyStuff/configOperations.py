@@ -27,49 +27,66 @@ def findConfigFile(startDir, fileSep):
     return config
 
 
-def readConfigFile(configLocation):
+def readConfigFile(configLocation=None, lineNumToRead=None):
+    if configLocation == None:
+        fSep = getFileSep()
+        configLocation = findConfigFile(getStartDir(fSep)[0], fSep)
+
     configFile = open(configLocation, "r")
-    for line in configFile:
-        lineSplit = line.split("--")
+    if lineNumToRead == None:
+        for line in configFile:
+            lineSplit = line.split("--")
+            lineSplit[1] = lineSplit[1].replace("\n", "")
+            if lineSplit[0] == "vaultDir":
+                path = lineSplit[1]
+            elif lineSplit[0] == "searchRecursively":
+                if lineSplit[1] == "True":
+                    recurse = True
+                elif lineSplit[1] == "False":
+                    recurse = False
+                else:
+                    raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
+            elif lineSplit[0] == "bluetooth":
+                if lineSplit[1] == "True":
+                    bt = True
+                elif lineSplit[1] == "False":
+                    bt = False
+                else:
+                    raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+
+        configFile.close()
+
+        return path, recurse, bt
+
+    else:
+        lineSplit = configFile.readlines()[lineNumToRead].split("--")
         lineSplit[1] = lineSplit[1].replace("\n", "")
-        if lineSplit[0] == "vaultDir":
-            path = lineSplit[1]
-        elif lineSplit[0] == "searchRecursively":
-            if lineSplit[1] == "True":
-                recurse = True
-            elif lineSplit[1] == "False":
-                recurse = False
-            else:
-                raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
-        elif lineSplit[0] == "bluetooth":
-            if lineSplit[1] == "True":
-                bt = True
-            elif lineSplit[1] == "False":
-                bt = False
-            else:
-                raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+        return lineSplit[1]
 
-    configFile.close()
-
-    return path, recurse, bt
-
-
-def runConfigOperations():
+def getFileSep():
     if platform.startswith("win32"): # Find out what operating system is running.
-        fileSep = "\\"
+        return "\\"
     else:          #windows bad
-        fileSep = "/"
-    osTemp = gettempdir()+fileSep #From tempfile module
+        return "/"
 
-    # Get config settings.
+def getStartDir(fileSep=None):
+    if fileSep == None:
+        fileSep = getFileSep()
     startDir = osPath.dirname(osPath.realpath(__file__))+fileSep
     tempDir = startDir.split(fileSep)
     del tempDir[len(tempDir)-2]
     startDir = fileSep.join(tempDir)
+    return startDir, tempDir
+
+def runConfigOperations():
+    fileSep = getFileSep()
+    osTemp = gettempdir()+fileSep #From tempfile module
+    # Get config settings.
+    startDir, tempDir = getStartDir(fileSep)
     for i in range(2):
         del tempDir[len(tempDir)-2]
     sharedAssets = fileSep.join(tempDir)
     sharedAssets += "assets"+fileSep+"exports"+fileSep
 
     path, recurse, bt = readConfigFile(findConfigFile(startDir, fileSep))
-    return fileSep, osTemp, startDir, tempDir, path, recurse, bt  # 7 Outputs in total.
+    return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt  # 7 Outputs in total.

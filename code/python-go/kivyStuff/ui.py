@@ -33,20 +33,9 @@ import sortsCy
 
 
 def runUI():
-    sm = ScreenManager()
+    
 
-    fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT = configOperations.runConfigOperations()
-    print("Screen manager starting.")
-    if useBT:
-        print("Using BT")
-        sm.add_widget(LoginScreenBT(fileSep, startDir, name="Login"))
-    else:
-        sm.add_widget(LoginScreen(fileSep, startDir, name="Login"))
-
-    sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, name="main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
-    sm.current = "Login"
-
-    ui = uiApp(sm, title="FileMate")
+    ui = uiApp(title="FileMate")
     ui.run()
 
     # When program closes:
@@ -60,13 +49,27 @@ def runUI():
 
 class uiApp(App):
 
-    def __init__(self, sm, **kwargs):
-        super(uiApp, self).__init__(**kwargs)
-        print("In app init")
-        self.sm = sm
-
     def build(self):
-        return self.sm
+        sm = ScreenManager()
+
+        sm.transition = FadeTransition()
+        fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT = configOperations.runConfigOperations()
+        print("Screen manager starting.")
+        # Load kv files for each screen.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")
+
+        if useBT:
+            print("Using BT")
+            Builder.load_file(startDir+"kivyStuff/kvFiles/loginScBT.kv")
+            sm.add_widget(LoginScreenBT(fileSep, path, startDir, name="Login"))
+        else:
+            Builder.load_file(startDir+"kivyStuff/kvFiles/loginSc.kv")
+            sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login")) #fileSep, startDir, sharedPath, 
+
+        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, name="main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
+        sm.current = "Login"
+
+        return sm
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@
         pos_hint: {"center_x": 0.5, "center_y": 0.6}
         password: True
         multiline: False
-        #on_text_validate: app.root.current = root.checkKey(keyInput.text)
+        on_text_validate: root.manager.current = root.checkKey(keyInput.text)
 
     Button:
         id: submitKey
@@ -33,4 +33,4 @@
         font_size: 22
         text: "Submit"
         pos_hint: {"center_x": 0.5, "center_y": 0.4}
-        #on_release: app.root.current = root.checkKey(keyInput.text)
+        on_release: root.manager.current = root.checkKey(keyInput.text)

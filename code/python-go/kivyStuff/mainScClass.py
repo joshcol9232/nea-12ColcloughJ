@@ -18,15 +18,17 @@ from kivy.uix.popup import Popup
 from kivy.properties import StringProperty
 from kivy.uix.screenmanager import Screen
 
-import fileClass as File
+from fileClass import File
 import aesFName
+import sortsCy
 
 import configOperations
 
-_, _, _, _, _, _, useBT = configOperations.runConfigOperations()
-
-if useBT:
+useBT = configOperations.readConfigFile(lineNumToRead=2)  # 2 = third line == bluetooth
+if useBT == "True": # Using bool(useBT) returns True even if it is "False", because it is checking the variable exists.
     from bluetooth import *
+
+    
 
 class MainScreen(Screen):
 
@@ -104,8 +106,8 @@ class MainScreen(Screen):
 
 
         def dirInputValid(self, inp):
-            valid = (inp[0] == self.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-            inp = inp.split(self.fileSep)
+            valid = (inp[0] == self.outerScreen.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+            inp = inp.split(self.outerScreen.fileSep)
             focusIsSlash = False
             for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
                 if item == "":
@@ -120,8 +122,8 @@ class MainScreen(Screen):
             if inp == "":
                 pass
             else:
-                if inp[len(inp)-1] != self.fileSep:
-                    inp += self.fileSep
+                if inp[len(inp)-1] != self.outerScreen.fileSep:
+                    inp += self.outerScreen.fileSep
                 if self.dirInputValid(inp):
                     if os.path.exists(inp) and os.path.isdir(inp):
                         self.editConfLoc("vaultDir", inp)
@@ -147,8 +149,8 @@ class MainScreen(Screen):
                             warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             warn.open()
                         else:
-                            if inp[len(inp)-1] != self.fileSep:
-                                inp += self.fileSep
+                            if inp[len(inp)-1] != self.outerScreen.fileSep:
+                                inp += self.outerScreen.fileSep
                             self.editConfLoc("vaultDir", inp)
                             done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                             self.outerScreen.path = inp
@@ -301,9 +303,9 @@ class MainScreen(Screen):
             self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
             print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
 
-            newLoc = self.osTemp+"FileMate"+self.fileSep+fileObj.name
-            if not os.path.isdir(self.osTemp+"FileMate"+self.fileSep):
-                os.makedirs(self.osTemp+"FileMate"+self.fileSep)
+            newLoc = self.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
+            if not os.path.isdir(self.osTemp+"FileMate"+self.outerScreen.fileSep):
+                os.makedirs(self.osTemp+"FileMate"+self.outerScreen.fileSep)
 
             self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
 
@@ -425,13 +427,8 @@ class MainScreen(Screen):
 
 
     def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs):
-        print(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, "Inputs to init bruv")
-        super(MainScreen, self).__init__(**kwargs)
         self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT
-        
-        Builder.load_file(self.startDir+"kivyStuff/kvFiles/mainSc.kv")
-
-        #self.manager = manager
+        super(Screen, self).__init__(**kwargs)
         self.ascending = True
         self.key = ""
         self.encPop = None
@@ -890,9 +887,9 @@ class MainScreen(Screen):
         listOfFiles = []
         for item in fs:
             if os.path.isdir(dir+item):
-                listOfFolders.append(File(self, dir+item, item, True))
+                listOfFolders.append(File(self, dir+item, item, self.fileSep, True))
             else:
-                listOfFiles.append(File(self, dir+item, item))
+                listOfFiles.append(File(self, dir+item, item, self.fileSep))
         return listOfFolders+listOfFiles
 
     def getPathBack(self, origPath):  #Gets the path above the current folder.

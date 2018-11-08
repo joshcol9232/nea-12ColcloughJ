@@ -9,8 +9,9 @@ from bluetooth import *
 
 class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScreen, but some overwritten with bluetooth.
 
-    def __init__(self, **kwargs):
-        super(LoginScreenBT, self).__init__(**kwargs)
+    def __init__(self, fileSep, path, startDir, **kwargs):
+        self.fileSep, self.path, self.startDir = fileSep, path, startDir
+        super(Screen, self).__init__(**kwargs)
         Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv")
         self.key = ""
 
