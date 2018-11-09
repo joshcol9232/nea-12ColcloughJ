@@ -21,6 +21,12 @@ from kivy.uix.screenmanager import Screen
 from fileClass import File
 import aesFName
 import sortsCy
+# Own kivy classes
+import mainBtns
+import mainLargePops as mainLPops
+import mainSmallPops as mainSPops
+
+
 
 import configOperations
 
@@ -30,403 +36,10 @@ if useBT == "True": # Using bool(useBT) returns True even if it is "False", beca
 
     
 
-class MainScreen(Screen):
-
-    class listButton(Button):           #File button when using main screen.
-
-        def __init__(self, mainScreen, fileObj, **kwargs):
-            super(Button, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.fileObj = fileObj          #The file the button corresponds to.
-
-    class addNewFolderPop(Popup):
-
-        def __init__(self, mainScreen, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-
-        def dirInputValid(self, inp):
-            valid = (inp[0] == self.outerScreen.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-            inp = inp.split(self.outerScreen.fileSep)
-            focusIsSlash = False
-            for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
-                if item == "":
-                    if focusIsSlash:
-                        valid = False
-                    focusIsSlash = True
-                else:
-                    focusIsSlash = False
-            return valid
-
-        def makeFolder(self, text):
-            if self.dirInputValid(self.outerScreen.currentDir+text):
-                try:
-                    os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
-                except OSError as e:
-                    if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
-                        pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})
-                        pop.open()
-
-                self.outerScreen.refreshFiles()
-                self.dismiss()
-
-    class SettingsPop(Popup):
-
-        def __init__(self, mainScreen, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-
-            self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
-            self.ids.btSwitch.bind(active=self.btSwitchCallback)
-
-        def searchSwitchCallback(self, switch, value):
-            return self.editConfLoc("searchRecursively", str(value))
-
-        def btSwitchCallback(self, switch, value):
-            return self.editConfLoc("bluetooth", str(value))
-
-
-        def editConfLoc(self, term, newContent):
-            with open(config, "r") as conf:
-                confContent = conf.readlines()
-
-            for i in range(len(confContent)):
-                a = confContent[i].split("--")
-                if term == a[0]:
-                    a[1] = newContent+"\n"
-                    confContent[i] = "--".join(a)
-
-            with open(config, "w") as confW:
-                confW.writelines(confContent)
-
-            if term == "bluetooth":
-                self.outerScreen.useBTTemp = not self.outerScreen.useBTTemp
-            elif term == "searchRecursively":
-                self.outerScreen.searchRecursively = not self.outerScreen.searchRecursively
-
-
-        def dirInputValid(self, inp, fileSep):      # Filesep required when self is none
-            valid = (inp[0] == fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-            inp = inp.split(fileSep)
-            focusIsSlash = False
-            for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
-                if item == "":
-                    if focusIsSlash:
-                        valid = False
-                    focusIsSlash = True
-                else:
-                    focusIsSlash = False
-            return valid
-
-        def changeVaultLoc(self, inp):      #Sorts out the UI while the vault location is changed.
-            if inp == "":
-                pass
-            else:
-                if inp[len(inp)-1] != self.outerScreen.fileSep:
-                    inp += self.outerScreen.fileSep
-                if self.dirInputValid(inp, self.outerScreen.fileSep):
-                    if os.path.exists(inp) and os.path.isdir(inp):
-                        self.editConfLoc("vaultDir", inp)
-                        print("EDITING")
-                        done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                        self.outerScreen.path = inp
-                        self.outerScreen.currentDir = inp
-                        self.outerScreen.resetButtons()
-                        done.open()
-                    else:
-                        try:
-                            os.makedirs(inp)
-                            os.makedirs(inp+aesFName.encryptFileName(self.outerScreen.key, ".$recycling"))
-                        except FileNotFoundError:
-                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                            warn.open()
-                        except PermissionError as e:
-                            print(e, "what.")
-                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                            warn.open()
-                        except Exception as e:
-                            print(e)
-                            warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                            warn.open()
-                        else:
-                            if inp[len(inp)-1] != self.outerScreen.fileSep:
-                                inp += self.outerScreen.fileSep
-                            self.editConfLoc("vaultDir", inp)
-                            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                            self.outerScreen.path = inp
-                            self.outerScreen.currentDir = inp
-                            self.outerScreen.resetButtons()
-                            done.open()
-                else:
-                    warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-                    warn.open()
-
-    class infoButton(Button):       #The button that displays information about the file.
-
-        def __init__(self, mainScreen, fileObj, **kwargs):
-            super(Button, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.fileObj = fileObj
+class MainScreen(Screen):    
 
     class infoLabel(Label):
         pass
-
-    class encPopup(Popup): #For single files
-
-        def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = outerScreen
-            #kivy stuff
-            self.title = "Please wait..."
-            self.pos_hint = {"center_x": .5, "center_y": .5}
-            self.size_hint = (.7, .4)
-            self.auto_dismiss = False
-
-            self.fileList = fileList
-            self.locList = locList
-
-            self.grid = GridLayout(cols=1)
-            self.subGrid = GridLayout(cols=3)
-            self.currFile = Label(text="")
-            self.per = Label(text="")
-            self.spd = Label(text="")
-            self.tim = Label(text="")
-            self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
-            self.wholePb = ProgressBar(value=0, max=self.getTotalSize(), size_hint=(.9, .2))
-            self.grid.add_widget(Label(text=labText))
-            self.grid.add_widget(self.currFile)
-            self.subGrid.add_widget(self.per)
-            self.subGrid.add_widget(self.spd)
-            self.subGrid.add_widget(self.tim)
-            self.grid.add_widget(self.subGrid)
-            self.grid.add_widget(self.pb)
-            self.grid.add_widget(self.wholePb)
-            self.content = self.grid
-
-            self.checkThread = Thread(target=self.enc, args=(encType, op,), daemon=True)
-            self.checkThread.start()
-
-        def getTotalSize(self):
-            total = 0
-            for file in self.fileList:
-                total += os.path.getsize(file)
-            return total
-
-        def getGoodUnit(self, bps):
-            divCount = 0
-            divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
-            while bps > 1000:
-                bps = bps/1000
-                divCount += 1
-
-            return ("%.2f" % bps) + divisions[divCount]
-
-        def enc(self, encType, op):
-            total = 0
-            totalPer = 0
-            for i in range(len(self.fileList)):
-                self.pb.value = 0
-                self.pb.max = os.path.getsize(self.fileList[i])
-                if i == len(self.fileList)-1:
-                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
-                else:
-                    self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
-
-                prevInt = 0
-                timeFor1per = 0
-                timeAtLastP = time()
-                lastSize = 0
-                per = 0
-                while self.pb.value_normalized < 0.99: # Padding can cause issues as original size is not known.
-                    self.currFile.text = str(self.fileList[i] +"   "+ str(i)+"/"+str(len(self.fileList)))
-                    try:
-                        self.pb.value = os.path.getsize(self.locList[i])
-                        self.wholePb.value = total + self.pb.value
-                    except:
-                        pass
-
-                    else:
-                        per = self.wholePb.value_normalized*100
-
-                        if per-prevInt > 0.5:
-                            timeFor1per = time()- timeAtLastP
-                            timeAtLastP = time()
-
-                            self.tim.text = "{0:.1f}\nSeconds left.".format(timeFor1per*(((self.wholePb.max - self.wholePb.value)/self.wholePb.max)*100))
-                            sizeDelta = self.wholePb.value - lastSize
-                            self.spd.text = self.getGoodUnit(sizeDelta/timeFor1per)
-
-                            prevInt = per
-                            lastSize = self.wholePb.value
-
-                        self.per.text = "{0:.2f}%".format(per)
-                    sleep(0.05) # Imported from time module
-
-                totalPer += 100
-                total += self.pb.value
-
-            self.dismiss()
-
-
-    class btTransferPop(encPopup):
-
-        def __init__(self, mainScreen, fileObjTmp, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.title = "Please wait..."
-            self.size_hint = (.7, .4)
-            self.pos_hint = {"center_x": .5, "center_y": .5}
-            self.auto_dismiss = False
-            self.grid = GridLayout(cols=1)
-            self.subGrid = GridLayout(cols=3)
-            self.currFile = Label(text=fileObjTmp.path)
-            self.per = Label(text="")
-            self.spd = Label(text="")
-            self.tim = Label(text="")
-            self.pb = ProgressBar(value=0, max=1, size_hint=(.9, .2))
-            self.grid.add_widget(Label(text="Sending..."))
-            self.grid.add_widget(self.currFile)
-            self.subGrid.add_widget(self.per)
-            self.subGrid.add_widget(self.spd)
-            self.subGrid.add_widget(self.tim)
-            self.grid.add_widget(self.subGrid)
-            self.grid.add_widget(self.pb)
-            self.content = self.grid
-
-            self.sendThread = Thread(target=self.sendFile, args=(fileObjTmp,), daemon=True) # can be cancelled mid way through
-            self.sendThread.start()
-
-        def sendFile(self, fileObj):
-            # File name is sent with !NAME!#!!<name here>!!~
-            # File data is sent right afterwards, ending with ~!!ENDF!
-            # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
-            self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
-            print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
-
-            newLoc = self.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
-            if not os.path.isdir(self.osTemp+"FileMate"+self.outerScreen.fileSep):
-                os.makedirs(self.osTemp+"FileMate"+self.outerScreen.fileSep)
-
-            self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
-
-            bufferSize = 1024
-            buff = []
-            fr = open(newLoc, "rb")
-            buff = fr.read(bufferSize)    #Read 1Kb of data
-            buffCount = 0
-            self.per.text = "{0:.2f}%".format(0)
-
-            start = time()
-            #Send data
-            while buff:
-                self.outerScreen.clientSock.send(buff)
-                buffCount += bufferSize
-                buff = fr.read(bufferSize)
-
-                self.pb.value = buffCount/fileObj.rawSize
-                self.per.text = "{0:.2f}%".format(self.pb.value*100)
-                self.spd.text = self.getGoodUnit(buffCount/(time() - start))
-
-            self.outerScreen.clientSock.send("~!!ENDF!")
-            self.dismiss()
-
-
-
-
-    class deleteButton(Button):
-
-        def __init__(self, mainScreen, fileObj, **kwargs):
-            super(Button, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.fileObj = fileObj
-
-    class nameSortButton(Button):           #Sorts the listButtons alphabetically and by folders/files.
-
-        def __init__(self, mainScreen, **kwargs):
-            super(Button, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-
-        def changeSortOrder(self):
-            self.outerScreen.ascending = not self.outerScreen.ascending
-            if self.outerScreen.ascending:
-                self.text = "^"
-                self.outerScreen.removeButtons()
-                self.outerScreen.createButtons(self.outerScreen.currentList, True)
-            else:
-                self.text = "v"
-                self.outerScreen.removeButtons()
-                self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
-
-    class sizeSortButton(Button):           #Sorts the files/folders by size
-
-        def __init__(self, mainScreen, **kwargs):
-            super(Button, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.ascending = True
-            self.sortList = []
-
-
-        def sortBySize(self):
-            self.sortList = sortsCy.quickSortSize(self.outerScreen.currentList)
-            if not self.ascending:
-                self.sortList = self.sortList[::-1]
-
-            self.outerScreen.removeButtons()
-            self.outerScreen.createButtons(self.sortList, False)
-
-        def changeSizeOrder(self):
-            self.ascending = not self.ascending
-            if self.ascending:
-                self.text = "v"
-            else:
-                self.text = "^"
-
-            if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):
-                self.sortList = self.sortList[::-1]
-                self.outerScreen.currentList = self.sortList
-                print("Using old list")
-                self.outerScreen.removeButtons()
-                self.outerScreen.createButtons(self.sortList, False)
-            else:
-                self.outerScreen.previousDir = self.outerScreen.currentDir
-                print("Re-sorting")
-                self.sortBySize()
-
-    class decryptDirPop(Popup):
-
-        def __init__(self, mainScreen, fileObj, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-            self.fileObj = fileObj
-
-        def checkCanDec(self, inp):
-            print("FileObj", self.fileObj)
-            if self.outerScreen.SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
-                if not os.path.exists(inp):
-                    os.makedirs(inp)
-                if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-                print(inp, "inp")
-                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
-
-
-    class addFileScreen(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
-
-        def __init__(self, mainScreen, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.outerScreen = mainScreen
-
-        class ConfirmationPopup(Popup):     #Popup for confirming encryption.
-
-            def __init__(self, fileScreen, input, **kwargs):
-                super(Popup, self).__init__(**kwargs)
-                self.fileScreen = fileScreen
-                self.inputText = input
-
-
-        def checkIfSure(self, input):
-            sure = self.ConfirmationPopup(self, input)
-            sure.open()
-
 
     def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs):
         self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT
@@ -470,6 +83,11 @@ class MainScreen(Screen):
             self.createButtons(self.List(self.currentDir)) # Loads previous directory.
 
     def on_leave(self):     #Kept separate from lock because i may want to add more screens.
+        try:
+            self.remove_widget(self.largePop)
+            self.remove_widget(self.smallPop)
+        except Exception as e:
+            print(e, "Already closed?")
         self.remove_widget(self.scroll)
 
     def lock(self):         #Procedure for when the program is locked.
@@ -645,8 +263,8 @@ class MainScreen(Screen):
 
     def setupSortButtons(self):
         self.sortsGrid = GridLayout(cols=2, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
-        self.nameSort = self.nameSortButton(self, text="^", size_hint_x=.87)
-        self.sizeSort = self.sizeSortButton(self, size_hint_x=.13)
+        self.nameSort = mainBtns.nameSortButton(self, text="^", size_hint_x=.87)
+        self.sizeSort = mainBtns.sizeSortButton(self, size_hint_x=.13)
         self.sortsGrid.add_widget(self.nameSort)
         self.sortsGrid.add_widget(self.sizeSort)
         self.add_widget(self.sortsGrid) #Add the sort buttons grid to the float layout of MainScreen.
@@ -715,11 +333,11 @@ class MainScreen(Screen):
         for item in array:
             if item.name != ".$recycling":
                 if item.isDir:
-                    btn = self.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
-                    info = self.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
+                    btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
+                    info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
                 else:
-                    btn = self.listButton(self, item, text=("    "+item.name))
-                    info = self.infoButton(self, item)
+                    btn = mainBtns.listButton(self, item, text=("    "+item.name))
+                    info = mainBtns.infoButton(self, item)
 
                 btn.bind(size=btn.setter("text_size"))
                 info.bind(size=info.setter("text_size"))
@@ -773,6 +391,17 @@ class MainScreen(Screen):
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 
+    def openSettingsPop(self):
+        self.largePop = mainLPops.SettingsPop(self)
+        self.largePop.open()
+
+    def openAddFilePop(self):
+        self.largePop = mainLPops.addFilePop(self)
+        self.largePop.open()
+
+    def openAddFolderPop(self):
+        self.smallPop = mainSPops.addNewFolderPop(self)
+        self.smallPop.open()
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
         fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
@@ -812,13 +441,13 @@ class MainScreen(Screen):
         if self.recycleFolder in self.currentDir:
             delText = "Delete Permanently"
 
-        internalLayout.add_widget(self.deleteButton(self, fileObj,text=delText))
+        internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
 
     def makeSendFile(self, fileObj, buttonInstance=None):
-        self.sendFile = self.btTransferPop(self, fileObj)
+        self.sendFile = mainFSPops.btTransferPop(self, fileObj)
         self.sendFile.open()
 
     def makeFolder(self, folderName):
@@ -1000,9 +629,9 @@ class MainScreen(Screen):
             if self.encPop != None:
                 self.encPop.dismiss()
                 self.encPop = None
-
-            print("Refreshing files.")
-            self.refreshFiles()
+            if type == "y":
+                self.refreshFiles()
+                print("Refreshing files.")
 
         if type == "n" and op and endOfFolderList:
             mainthread(self.openFileTh(targetLoc, d))
@@ -1040,11 +669,11 @@ class MainScreen(Screen):
             popText = "Decrypting..."
 
         if not isPartOfFolder:
-            self.encPop = self.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
+            self.encPop = mainSPops.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
             mainthread(Clock.schedule_once(self.encPop.open, -1))
 
         if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
-            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=False) #Don't want to be mid-way through decrypting otherwise it may corrupt file.
+            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
             self.encryptProcess.start()
         else:
             print("File name too long :(")
@@ -1054,6 +683,11 @@ class MainScreen(Screen):
             pop.open()
 
     def openFile(self, location, startLoc):
+        locationFolder = location.split(self.fileSep)
+        locationFolder = self.fileSep.join(locationFolder[:len(locationFolder)-1])
+        print(locationFolder, "locationFolder")
+
+        startList = os.listdir(locationFolder)
         if self.fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) #Windows actually accepts forward slashes in terminal
@@ -1061,7 +695,17 @@ class MainScreen(Screen):
         else:
             command = "xdg-open "+'"'+location+'"'      #Quotation marks for if the dir has spaces in it
         os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
-        self.encDecTerminal("y", location, startLoc)   #Is encrypted when program closes anyway
+        endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
+        diffAdded = [d for d in endList if d not in startList]
+        tempLoc = startLoc.split(self.fileSep)
+        for i in diffAdded:
+            print("Difference found:", i)
+            tempLoc = self.fileSep.join(tempLoc[:len(tempLoc)-1]) # Remove last file name
+            tempLoc += i
+            print(locationFolder+self.fileSep+i, "new dir for extra file")
+            self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
+        if tempLoc[len(tempLoc)-1] in endList:
+            self.encDecTerminal("y", location)
 
 
     def onFileDrop(self, window, filePath):  #Drag + drop files
@@ -1094,19 +738,22 @@ class MainScreen(Screen):
 
         self.fileList = []
         self.locList = []
-        self.encDecDirCore(d, targetLoc)
+        self.encDecDirCore(encType, d, targetLoc)
 
-        self.encPop = self.encPopup(self, encType, "Encrypting...", self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
+        self.encPop = mainSPops.encPopup(self, encType, "Encrypting...", self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptDir(self, fileObj, button):
         selectPop = self.decryptDirPop(self, fileObj)
         selectPop.open()
 
-    def encDecDirCore(self, d, targetLoc): #Encrypts whole directory.
+    def encDecDirCore(self, encType, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)
         targetLoc = targetLoc.split(self.fileSep)
-        targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
+        if encType == "y":
+            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
+        else:
+            targetLoc[len(targetLoc)-1] = aesFName.decryptFileName(self.key, targetLoc[len(targetLoc)-1])
         targetLoc = self.fileSep.join(targetLoc)
         for item in fs:
             if os.path.isdir(d+item):

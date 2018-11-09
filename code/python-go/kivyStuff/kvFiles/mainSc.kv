@@ -85,10 +85,11 @@
             hint_text: "Directory:"
             on_text_validate: root.checkCanDec(self.text)
 
-<addFileScreen@Popup>:
+<addFilePop@Popup>:
     name: "addFile"
     id: addFile
     submitDirs: submitDirs
+    title: "Add File"
     FloatLayout:
         Label:
             size_hint: .46, .08
@@ -122,6 +123,7 @@
 <SettingsPop@Popup>:
     auto_dismiss: False
     newLoc: newLoc
+    title: "Settings"
     GridLayout:
         cols: 2
         Label:
@@ -220,7 +222,7 @@
             id: settings
             size_hint: .06, .08
             pos_hint: {"x": 0.62, "top": 1}
-            on_release: a = root.SettingsPop(root, title="Settings");a.open()
+            on_release: root.openSettingsPop()
             Image:
                 source: root.getPathForButton("settings.png")
                 x: self.parent.x+10
@@ -244,7 +246,7 @@
             id: addFile
             size_hint: .16, .16
             pos_hint: {"right": 1, "top": 1}
-            on_release: root.addFile = root.addFileScreen(root, title="Add File");root.addFile.open()
+            on_release: root.openAddFilePop()
             Image:
                 source: root.getPathForButton("addFile.png")
                 x: self.parent.x + self.parent.size[0]/5
@@ -282,7 +284,7 @@
             pos_hint: {"right": 1, "y": 0.68}
             text: "Add Folder"
             text_size: self.size
-            on_release: root.addFolder = root.addNewFolderPop(root); root.addFolder.open()
+            on_release: root.openAddFolderPop()
 
         Button:
             id: recyclingBin
