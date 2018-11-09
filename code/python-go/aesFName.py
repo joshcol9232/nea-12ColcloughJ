@@ -171,8 +171,6 @@ mul14 = [0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x62,0x48,0x46,0
 
 def keyExpansionCore(inp, i):
     #Shift the inp left by moving the first byte to the end (rotate).
-    #t = inp[0]
-    #inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], t
     inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], inp[0]
 
     #S-Box the bytes
@@ -231,115 +229,72 @@ def invSubBytes(state):
 
 
 def shiftRows(state):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    #col1
-    temp[0] = state[0] #Mixes it like this:
-    temp[1] = state[5] #
-    temp[2] = state[10]# 0  4  8 12         0  4  8 12  shifted left by 0
-    temp[3] = state[15]# 1  5  9 13  ---->  5  9 13  1  shifted left by 1
-    #col2              # 2  6 10 14  ----> 10 14  2  6  shifted left by 2
-    temp[4] = state[4] # 3  7 11 15        15  3  7 11  shifted left by 3
-    temp[5] = state[9]
-    temp[6] = state[14]
-    temp[7] = state[3]
-    #col3
-    temp[8] = state[8]
-    temp[9] = state[13]
-    temp[10] = state[2]
-    temp[11] = state[7]
-    #col4
-    temp[12] = state[12]
-    temp[13] = state[1]
-    temp[14] = state[6]
-    temp[15] = state[11]
-
-    return temp
+    return [state[ 0], state[ 5], state[10], state[15],
+            state[ 4], state[ 9], state[14], state[ 3],
+            state[ 8], state[13], state[ 2], state[ 7],
+            state[12], state[ 1], state[ 6], state[11]]
+    # Shifts it like this:
+    #
+    # 0  4  8 12         0  4  8 12  shifted left by 0
+    # 1  5  9 13  ---->  5  9 13  1  shifted left by 1
+    # 2  6 10 14  ----> 10 14  2  6  shifted left by 2
+    # 3  7 11 15        15  3  7 11  shifted left by 3
 
 def invShiftRows(state):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    return [state[ 0], state[13], state[10], state[ 7],
+            state[ 4], state[ 1], state[14], state[11],
+            state[ 8], state[ 5], state[ 2], state[15],
+            state[12], state[ 9], state[ 6], state[ 3]]
+
     #  0  4  8 12         0  4  8 12
     #  5  9 13  1  ---->  1  5  9 13
     # 10 14  2  6  ---->  2  6 10 14
     # 15  3  7 11         3  7 11 15
 
-    #col1
-    temp[0] = state[0]
-    temp[5] = state[1]
-    temp[10] = state[2]
-    temp[15] = state[3]
-    #col2
-    temp[4] = state[4]
-    temp[9] = state[5]
-    temp[14] = state[6]
-    temp[3] = state[7]
-    #col3
-    temp[8] = state[8]
-    temp[13] = state[9]
-    temp[2] = state[10]
-    temp[7] = state[11]
-    #col4
-    temp[12] = state[12]
-    temp[1] = state[13]
-    temp[6] = state[14]
-    temp[11] = state[15]
-
-    return temp
-
 def mixColumns(state):
-    #Dot product galois feilds of each byte in row x, column x, and reduce to 8 bits if necissary using pre determined num.
+    #Dot product galois feilds of each byte in row x, column x.
     #Uses lookup tables to make it faster, as you only ever multiply by 1, 2 or 3, as Rijndael uses a pre defined matrix to multiply by. Addition is just XOR
+    return [mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],  # Col 1
+            state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
+            state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
+            mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]],
 
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7],  # Col 2
+            state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7],
+            state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]],
+            mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]],
 
-    #Col 1
-    temp[0] = mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3]
-    temp[1] = state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3]
-    temp[2] = state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]]
-    temp[3] = mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]]
-    #Col 2
-    temp[4] = mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7]
-    temp[5] = state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7]
-    temp[6] = state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]]
-    temp[7] = mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]]
-    #Col 3
-    temp[8] = mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11]
-    temp[9] = state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11]
-    temp[10] = state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]]
-    temp[11] = mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]]
-    #Col 4
-    temp[12] = mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15]
-    temp[13] = state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15]
-    temp[14] = state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]]
-    temp[15] = mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]
-
-    return temp
+          mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11],  # Col 3
+          state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11],
+          state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]],
+          mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]],
+          
+        mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],  # Col 4
+        state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+        state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+        mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]]
 
 def invMixColumns(state):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    return [mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],  #Note how the operation shifts right one each time
+            mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
+            mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
+            mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
 
-    #Col 1
-    temp[0] = mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]]  #Note how the operation shifts right one each time
-    temp[1] = mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]]
-    temp[2] = mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]]
-    temp[3] = mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]]
-    #Col 2
-    temp[4] = mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]]
-    temp[5] = mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]]
-    temp[6] = mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]]
-    temp[7] = mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]]
-    #Col 3
-    temp[8] = mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]]
-    temp[9] = mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]]
-    temp[10] = mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]]
-    temp[11] = mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]]
-    #Col 4
-    temp[12] = mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]]
-    temp[13] = mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]]
-    temp[14] = mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]]
-    temp[15] = mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
+            mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]],
+            mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]],
+            mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]],
+            mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]],
 
-    return temp
+          mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]],
+          mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]],
+          mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]],
+          mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]],
+
+        mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+        mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+        mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+        mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]]
+
 
 
 def padKey(key):    #Use sha128 to produce key of length 128 bits from original input

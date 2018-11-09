@@ -1,5 +1,3 @@
-global k
-
 k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    #Round constants
      0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -19,7 +17,6 @@ k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    #Round constants
 
 def makeBitArray(inp):
     bitArray = []
-    #print(inp, "INP")
     for element in inp:
         tempByte = intToBits(element)
         for bit in tempByte:
@@ -35,8 +32,7 @@ def intToBits(inp, bitLength=8):
     return tempByte
 
 def bitsToInt(inp):
-    byteString = "".join(str(i) for i in inp)
-    return int(byteString, 2)
+    return int("".join(str(i) for i in inp), 2)
 
 
 def pad(inpBits):   #https://csrc.nist.gov/csrc/media/publications/fips/180/4/archive/2012-03-06/documents/fips180-4.pdf section 5.1
@@ -95,12 +91,6 @@ def andBitArrays(array1, array2):
         temp[i] = array1[i] & array2[i]
     return temp
 
-def orBitArrays(array1, array2):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    for i in range(len(array1)-1):
-        temp[i] = array1[i] | array2[i]
-    return temp
-
 def RotL(word, amount):
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #32Bits
     for i in range(32):
@@ -117,8 +107,7 @@ def RotR(word, amount):
 def addMod2W(array1, array2, W=32):
     if len(array1) != len(array2):
         raise IndexError("Arrays not same size - ", array1, array2)
-    result = (bitsToInt(array1) + bitsToInt(array2)) % 2**W
-    return intToBits(result, 32)
+    return intToBits((bitsToInt(array1) + bitsToInt(array2)) % 2**W, 32)
 
 def ShR(x, n):
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -233,34 +222,27 @@ def getSHA128of16(data):
 
     return temp
 
-def roundUpOnly(fl):    #for rounding up numbers only. Accepts float
-    fl = str(fl)
-    temp = fl.split(".")
-    if temp[1] != 0:
-        return int(temp[0])+1
-    else:
-        return int(temp[0])
 
-def xorBlocks(inp):
-    while len(inp) != 1:
-        inp[0] = xorArrays(inp[0], inp[1])
-        del inp[1]
-    return inp
+def test():
+    import random
+    import time
 
-def feed(data):         #accepts string
-    if len(data) > 16:
-        arrayOfOut = []
-        for i in range(roundUpOnly(len(data)/16)):
-            arrayOfOut.append(sha256(data[(i*16):((i+1)*16)]))
-        #xor each 32 bytes with each other to produce a 32 byte output
-        return xorBlocks(arrayOfOut)
+    def makeList(wordNum):
+        out = []
+        for y in range(wordNum*32):
+            out.append(random.randint(0, 255))
+        return out
 
-    else:
-        return sha256(data)
+    roundNum = 100
+    inp = makeList(roundNum) # Do it 1000 times
+    print("Made inp list")
+    start = time.time()
+    for i in range(roundNum):
+        sha256(inp[roundNum:roundNum+32])
+
+    print(((roundNum*4)/(time.time()-start))/1000, "KB/s")
+
 
 
 if __name__ == "__main__":
-    print(len("123456789012345678901234567890121234567890123456789012345689012 "))
-    geg = feed("123456789012345678901234567890121234567890123456789012345689012")
-    for i in geg:
-        print(i, len(i))
+    test()

@@ -235,6 +235,12 @@ func shiftRows(state []byte) ([]byte) {
                 state[ 4], state[ 9], state[14], state[ 3],
                 state[ 8], state[13], state[ 2], state[ 7],
                 state[12], state[ 1], state[ 6], state[11]}
+  // Shifts it like this:
+  //
+  // 0  4  8 12         0  4  8 12   Shifted left by 0
+  // 1  5  9 13  ---->  5  9 13  1   Shifted left by 1
+  // 2  6 10 14  ----> 10 14  2  6   Shifted left by 2
+  // 3  7 11 15        15  3  7 11   Shifted left by 3
 }
 
 func invShiftRows(state []byte) ([]byte) {
@@ -242,10 +248,15 @@ func invShiftRows(state []byte) ([]byte) {
                 state[ 4], state[ 1], state[14], state[11],
                 state[ 8], state[ 5], state[ 2], state[15],
                 state[12], state[ 9], state[ 6], state[ 3]}
+
+  //  0  4  8 12         0  4  8 12   Shifted right by 0
+  //  5  9 13  1  ---->  1  5  9 13   Shifted right by 1
+  // 10 14  2  6  ---->  2  6 10 14   Shifted right by 2
+  // 15  3  7 11         3  7 11 15   Shifted right by 3
 }
 
 func mixColumns(state []byte) ([]byte) {
-  //Dot product galois feilds of each byte in row x, column x, and reduce to 8 bits if necissary using pre determined num.
+  //Dot product galois feilds of each byte in row x, column x.
   //Uses lookup tables to make it faster, as you only ever multiply by 1, 2 or 3, as Rijndael uses a pre defined matrix to multiply by. Addition is just XOR
   //to prevent overflow
 
