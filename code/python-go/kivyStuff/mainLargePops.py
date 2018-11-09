@@ -32,8 +32,9 @@ class addFilePop(Popup):     #The screen (it's actually a Popup) for adding fold
 
 class SettingsPop(Popup):
 
-    def __init__(self, mainScreen, **kwargs):
+    def __init__(self, mainScreen, configLoc, **kwargs):
         self.outerScreen = mainScreen
+        self.config = configLoc
         super(Popup, self).__init__(**kwargs)
 
         self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
@@ -46,7 +47,7 @@ class SettingsPop(Popup):
         return self.editConfLoc("bluetooth", str(value))
 
     def editConfLoc(self, term, newContent):
-        with open(config, "r") as conf:
+        with open(self.config, "r") as conf:
             confContent = conf.readlines()
 
         for i in range(len(confContent)):
@@ -55,7 +56,7 @@ class SettingsPop(Popup):
                 a[1] = newContent+"\n"
                 confContent[i] = "--".join(a)
 
-        with open(config, "w") as confW:
+        with open(self.config, "w") as confW:
             confW.writelines(confContent)
 
         if term == "bluetooth":

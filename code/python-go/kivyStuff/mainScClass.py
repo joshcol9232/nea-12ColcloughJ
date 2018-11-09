@@ -34,15 +34,14 @@ useBT = configOperations.readConfigFile(lineNumToRead=2)  # 2 = third line == bl
 if useBT == "True": # Using bool(useBT) returns True even if it is "False", because it is checking the variable exists.
     from bluetooth import *
 
-    
 
-class MainScreen(Screen):    
+class MainScreen(Screen):
 
     class infoLabel(Label):
         pass
 
-    def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs):
-        self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT
+    def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, **kwargs):
+        self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT, self.configLoc = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc
         super(Screen, self).__init__(**kwargs)
         self.ascending = True
         self.key = ""
@@ -392,7 +391,7 @@ class MainScreen(Screen):
             self.refreshFiles()
 
     def openSettingsPop(self):
-        self.largePop = mainLPops.SettingsPop(self)
+        self.largePop = mainLPops.SettingsPop(self, self.configLoc)
         self.largePop.open()
 
     def openAddFilePop(self):
@@ -426,6 +425,14 @@ class MainScreen(Screen):
         internalLayout.add_widget(self.infoLabel())
 
 
+        delText = "Delete"
+        if self.recycleFolder in self.currentDir:
+           delText = "Delete Permanently"
+
+        internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
+
+
+
         if self.useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.makeSendFile, fileObj))
@@ -436,12 +443,6 @@ class MainScreen(Screen):
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
             decBtn.bind(on_release=partial(self.decryptDir, fileObj))
             internalLayout.add_widget(decBtn)
-
-        delText = "Delete"
-        if self.recycleFolder in self.currentDir:
-            delText = "Delete Permanently"
-
-        internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
         internalView.add_widget(internalLayout)
         self.infoPopup.open()
@@ -466,7 +467,9 @@ class MainScreen(Screen):
                 print("Moving", fileObj.hexPath)
                 move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
             else:
-                print("Deleting", fileObj.hexPath)
+                print("Deleting:", fileObj.hexPath, "and checking temp.")
+                if os.path.exists(self.osTemp+"FileMate"+self.fileSep+fileObj.name):
+                    os.remove(self.osTemp+"FileMate"+self.fileSep+fileObj.name)
                 if fileObj.isDir:
                     rmtree(fileObj.hexPath) # Imported from shutil
                 else:
@@ -701,8 +704,9 @@ class MainScreen(Screen):
         for i in diffAdded:
             print("Difference found:", i)
             tempLoc = self.fileSep.join(tempLoc[:len(tempLoc)-1]) # Remove last file name
-            tempLoc += i
-            print(locationFolder+self.fileSep+i, "new dir for extra file")
+            tempLoc += self.fileSep+i
+            print(locationFolder+self.fileSep+i, "current dir of extra file.")
+            print(tempLoc, "current targetLoc for extra file.")
             self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
         if tempLoc[len(tempLoc)-1] in endList:
             self.encDecTerminal("y", location)

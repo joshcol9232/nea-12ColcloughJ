@@ -42,7 +42,6 @@ def runUI():
     except:
         print("No temp files.")
     print("App closed.")
-    
 
 class uiApp(App):
 
@@ -50,7 +49,7 @@ class uiApp(App):
         sm = ScreenManager()
 
         sm.transition = FadeTransition()
-        fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT = configOperations.runConfigOperations()
+        fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc = configOperations.runConfigOperations()
         print("Screen manager starting.")
         # Load kv files for each screen.
         Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")
@@ -63,7 +62,7 @@ class uiApp(App):
             Builder.load_file(startDir+"kivyStuff/kvFiles/loginSc.kv")
             sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login")) #fileSep, startDir, sharedPath, 
 
-        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, name="main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
+        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
         sm.current = "Login"
 
         return sm

@@ -1,6 +1,7 @@
 import os
 from threading import Thread
 from time import time, sleep
+from random import uniform as randUniform
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -11,6 +12,8 @@ from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
+
+import aesFName
 
 class encPopup(Popup): #For single files
 
@@ -101,7 +104,10 @@ class encPopup(Popup): #For single files
                         lastSize = self.wholePb.value
 
                     self.per.text = "{0:.2f}%".format(per)
-                sleep(0.05) # Imported from time module
+                sleep(randUniform(0.08, 0.1)) # Sleep imported from time module
+                # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
+                # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
+                # values, so this randomness in measuring it makes the speed reading a bit more interesting.
 
             totalPer += 100
             total += self.pb.value
@@ -172,7 +178,7 @@ class btTransferPop(encPopup):
         self.dismiss()
 
 
-class decryptDirPop(Popup):
+class decryptDirPop(Popup): # Input box for location of where directory is to be saved.
 
     def __init__(self, mainScreen, fileObj, **kwargs):
         super(Popup, self).__init__(**kwargs)

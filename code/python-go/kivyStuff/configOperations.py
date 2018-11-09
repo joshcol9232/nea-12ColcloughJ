@@ -88,5 +88,6 @@ def runConfigOperations():
     sharedAssets = fileSep.join(tempDir)
     sharedAssets += "assets"+fileSep+"exports"+fileSep
 
-    path, recurse, bt = readConfigFile(findConfigFile(startDir, fileSep))
-    return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt  # 7 Outputs in total.
+    configLoc = findConfigFile(startDir, fileSep)
+    path, recurse, bt = readConfigFile(configLoc)
+    return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt, configLoc  # 8 Outputs in total.
