@@ -224,23 +224,23 @@ def getSHA128of16(data):
 
 
 def test():
-    import random
-    import time
+    from random import randint
+    from time import time
 
     def makeList(wordNum):
         out = []
         for y in range(wordNum*32):
-            out.append(random.randint(0, 255))
+            out.append(randint(0, 255))
         return out
 
     roundNum = 100
     inp = makeList(roundNum) # Do it 1000 times
     print("Made inp list")
-    start = time.time()
+    start = time()
     for i in range(roundNum):
         sha256(inp[roundNum:roundNum+32])
 
-    print(((roundNum*4)/(time.time()-start))/1000, "KB/s")
+    print(((roundNum*4)/(time()-start))/1000, "KB/s")
 
 
 

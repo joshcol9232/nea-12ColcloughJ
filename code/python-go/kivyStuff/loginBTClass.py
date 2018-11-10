@@ -24,8 +24,8 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
         key = " ".join(str(i) for i in inputKey)    #Formatting for AES
         valid = self.getIfValidKey(key)
         if valid:
-            self.ids.keyInput.text = "" #reset key input if valid
             self.key = key
+            self.manager.get_screen("main").key = key
             return True
         else:
             return False
