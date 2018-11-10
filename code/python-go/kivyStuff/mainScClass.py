@@ -83,10 +83,22 @@ class MainScreen(Screen):
 
     def on_leave(self):     #Kept separate from lock because i may want to add more screens.
         try:
+            self.largePop.dismiss()
             self.remove_widget(self.largePop)
+        except Exception as e:
+            print(e, "Already closed?")
+        try:
+            self.smallPop.dismiss()
             self.remove_widget(self.smallPop)
         except Exception as e:
             print(e, "Already closed?")
+        try:
+            self.encPop.dismiss()
+            self.remove_widget(self.encPop)
+        except Exception as e:
+            print(e, "Already closed?")
+
+
         self.remove_widget(self.scroll)
 
     def lock(self):         #Procedure for when the program is locked.
@@ -294,7 +306,7 @@ class MainScreen(Screen):
         filesSort = sortsCy.quickSortAlph(files)
 
         if inverse: #If inverse
-            foldersSort = foldersSort[::-1] #Invert the array/
+            foldersSort = foldersSort[::-1] #Invert the array
             filesSort = filesSort[::-1]
 
         return foldersSort+filesSort
@@ -374,10 +386,6 @@ class MainScreen(Screen):
             print(e, "Already removed?")
 
 
-    def getFileNameFromText(self, itemName):    #Get the file name.
-        return itemName[4:]
-
-
     def traverseButton(self, fileObj):  #Function when file is clicked.
         if self.recycleFolder not in self.currentDir:
             if fileObj.isDir:   #If is a folder, then display files within that folder.
@@ -449,7 +457,7 @@ class MainScreen(Screen):
         self.infoPopup.open()
 
     def makeSendFile(self, fileObj, buttonInstance=None):
-        self.sendFile = mainFSPops.btTransferPop(self, fileObj)
+        self.sendFile = mainSPops.btTransferPop(self, fileObj)
         self.sendFile.open()
 
     def makeFolder(self, folderName):

@@ -150,9 +150,9 @@ class btTransferPop(encPopup):
         self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
         print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
 
-        newLoc = self.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
-        if not os.path.isdir(self.osTemp+"FileMate"+self.outerScreen.fileSep):
-            os.makedirs(self.osTemp+"FileMate"+self.outerScreen.fileSep)
+        newLoc = self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
+        if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
+            os.makedirs(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep)
 
         self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
 
