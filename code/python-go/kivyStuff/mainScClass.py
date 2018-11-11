@@ -262,7 +262,7 @@ class MainScreen(Screen):
 ##Functions for changing screen within threads
     @mainthread
     def changeToMain(self):
-        self.manager.current = "main"
+        self.manager.current = "Main"
 
     @mainthread
     def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.

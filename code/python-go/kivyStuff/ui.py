@@ -62,7 +62,7 @@ class uiApp(App):
             Builder.load_file(startDir+"kivyStuff/kvFiles/loginSc.kv")
             sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login")) #fileSep, startDir, sharedPath, 
 
-        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
+        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="Main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
         sm.current = "Login"
 
         return sm

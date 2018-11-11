@@ -74,8 +74,7 @@ class LoginScreen(Screen):
                 if valid:
                     self.ids.keyInput.text = "" #reset key input if valid
                     self.key = key
-                    #self.manager.current = "main"
-                    return "main"
+                    return "Main"
                 else:
                     pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
                     pop.open()
