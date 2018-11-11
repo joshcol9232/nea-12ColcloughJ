@@ -104,7 +104,7 @@ class encPopup(Popup): #For single files
                         lastSize = self.wholePb.value
 
                     self.per.text = "{0:.2f}%".format(per)
-                sleep(randUniform(0.08, 0.1)) # Sleep imported from time module
+                sleep(randUniform(0.05, 0.07)) # Sleep imported from time module
                 # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
                 # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
                 # values, so this randomness in measuring it makes the speed reading a bit more interesting.

@@ -771,7 +771,7 @@ class MainScreen(Screen):
         for item in fs:
             if os.path.isdir(d+item):
                 try:
-                    self.encDecDirCore(d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
+                    self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
                 except OSError:
                     pass
             else:

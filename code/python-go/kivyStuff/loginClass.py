@@ -39,7 +39,7 @@ class LoginScreen(Screen):
         return out
 
     def getIfValidKey(self, inputKey):              #Gets the output of the AES key checker.
-        if len(listdir(self.path)) != 0:
+        if len(listdir(self.path)) > 1:
             self.decryptTestFile = ""
             self.count = 0
             self.findFile(self.path)
