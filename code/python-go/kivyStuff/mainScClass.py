@@ -5,7 +5,6 @@ from functools import partial
 from subprocess import Popen, PIPE
 from time import time, sleep
 
-from kivy.lang.builder import Builder
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
@@ -15,7 +14,6 @@ from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
-from kivy.properties import StringProperty
 from kivy.uix.screenmanager import Screen
 
 from fileClass import File
@@ -474,6 +472,11 @@ class MainScreen(Screen):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
             if self.recycleFolder not in self.currentDir:
                 print("Moving", fileObj.hexPath)
+                if os.path.exists(self.recycleFolder+fileObj.hexName):
+                    if os.path.isdir(self.recycleFolder+fileObj.hexName):
+                        rmtree(self.recycleFolder+fileObj.hexName)
+                    else:
+                        os.remove(self.recycleFolder+fileObj.hexName)
                 move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
             else:
                 print("Deleting:", fileObj.hexPath, "and checking temp.")

@@ -30,11 +30,12 @@ class encPopup(Popup): #For single files
         self.auto_dismiss = False
 
         self.grid = GridLayout(cols=1)
-        self.subGrid = GridLayout(cols=3)
+        self.subGrid = GridLayout(cols=4)
         self.currFile = Label(text="")
         self.per = Label(text="")
         self.spd = Label(text="")
         self.tim = Label(text="")
+        self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
         self.wholePb = ProgressBar(value=0, max=self.getTotalSize(), size_hint=(.9, .2))
         self.grid.add_widget(Label(text=labText))
@@ -42,6 +43,7 @@ class encPopup(Popup): #For single files
         self.subGrid.add_widget(self.per)
         self.subGrid.add_widget(self.spd)
         self.subGrid.add_widget(self.tim)
+        self.subGrid.add_widget(self.outOf)
         self.grid.add_widget(self.subGrid)
         self.grid.add_widget(self.pb)
         self.grid.add_widget(self.wholePb)
@@ -81,8 +83,10 @@ class encPopup(Popup): #For single files
             timeAtLastP = time()
             lastSize = 0
             per = 0
+            sleepTime = bool(self.pb.max > 100000) # If more than 100KB, then sleep.
             while self.pb.value_normalized < 0.99: # Padding can cause issues as original size is not known.
-                self.currFile.text = str(self.fileList[i] +"   "+ str(i)+"/"+str(len(self.fileList)))
+                self.outOf.text = str(i)+"/"+str(len(self.fileList))
+                self.currFile.text = str(self.fileList[i])
                 try:
                     self.pb.value = os.path.getsize(self.locList[i])
                     self.wholePb.value = total + self.pb.value
@@ -104,7 +108,8 @@ class encPopup(Popup): #For single files
                         lastSize = self.wholePb.value
 
                     self.per.text = "{0:.2f}%".format(per)
-                sleep(randUniform(0.05, 0.07)) # Sleep imported from time module
+                if self.pb.value_normalized < 0.99 and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
+                    sleep(randUniform(0.01, 0.05)) # Sleep imported from time module
                 # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
                 # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
                 # values, so this randomness in measuring it makes the speed reading a bit more interesting.

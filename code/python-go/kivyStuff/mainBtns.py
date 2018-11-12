@@ -1,12 +1,4 @@
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.label import Label
-from kivy.clock import Clock
-from kivy.clock import mainthread
-from kivy.core.window import Window
 from kivy.uix.button import Button
-from kivy.uix.progressbar import ProgressBar
-from kivy.uix.popup import Popup
 
 from sortsCy import quickSortSize
 

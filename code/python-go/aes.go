@@ -190,7 +190,6 @@ func expandKey(inputKey []byte) ([176]byte) {
 
   for bytesGenerated < 176{
     //Read 4 bytes for use in keyExpansionCore
-
     for x := 0; x < 4; x++ {
       temp[x] = expandedKeys[x + bytesGenerated - 4]
     }

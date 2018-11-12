@@ -209,16 +209,10 @@ def sha256(inp):
     return result
 
 def getSHA128of16(data):
-    #print("getShakey", inpKey)
     out = sha256(data)
-    half1, half2 = out[:16], out[16:]
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(16):
-        temp[i] = half1[i] ^ half2[i]   #XOR both halves to get a 128 bit output for 128 bit AES
-
-    # result = ""
-    # for x in temp:
-    #     result += hex(x)
+        temp[i] = out[i] ^ out[i+16]   #XOR both halves to get a 128 bit output for 128 bit AES
 
     return temp
 

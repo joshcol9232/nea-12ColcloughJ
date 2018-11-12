@@ -1,12 +1,4 @@
-import os
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.label import Label
-from kivy.clock import Clock
-from kivy.clock import mainthread
-from kivy.core.window import Window
-from kivy.uix.button import Button
-from kivy.uix.progressbar import ProgressBar
+from os import path, makedirs
 from kivy.uix.popup import Popup
 
 # Large popups are popups that fill the entire screen.
@@ -84,7 +76,7 @@ class SettingsPop(Popup):
             if inp[len(inp)-1] != self.outerScreen.fileSep:
                 inp += self.outerScreen.fileSep
             if self.dirInputValid(inp, self.outerScreen.fileSep):
-                if os.path.exists(inp) and os.path.isdir(inp):
+                if path.exists(inp) and path.isdir(inp):
                     self.editConfLoc("vaultDir", inp)
                     print("EDITING")
                     done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
@@ -94,8 +86,8 @@ class SettingsPop(Popup):
                     done.open()
                 else:
                     try:
-                        os.makedirs(inp)
-                        os.makedirs(inp+aesFName.encryptFileName(self.outerScreen.key, ".$recycling"))
+                        makedirs(inp)
+                        makedirs(inp+aesFName.encryptFileName(self.outerScreen.key, ".$recycling"))
                     except FileNotFoundError:
                         warn = Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                         warn.open()

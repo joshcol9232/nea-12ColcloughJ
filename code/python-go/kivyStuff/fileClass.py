@@ -9,23 +9,19 @@ class File:
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
+        self.path = path
+        self.name = name
         if path == None:
             self.path = self._getNormDir(self.hexPath)
-        else:
-            self.path = path
         if name == None:
             self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
-        else:
-            self.name = name
-
         if self.isDir:
             self.hexPath += self.fileSep
             self.path += self.fileSep
 
 
     def _getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
-        hexDir = hexDir.replace(self.outerScreen.path, "")
-        hexDir = hexDir.split(self.fileSep)
+        hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
         for i in range(len(hexDir)):
             hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
 
