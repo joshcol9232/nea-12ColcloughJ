@@ -22,6 +22,7 @@ class encPopup(Popup): #For single files
         self.outerScreen = outerScreen
         self.fileList = fileList
         self.locList = locList
+        self.done = False
 
         #kivy stuff
         self.title = "Please wait..."
@@ -71,6 +72,7 @@ class encPopup(Popup): #For single files
         total = 0
         totalPer = 0
         for i in range(len(self.fileList)):
+            self.done = False
             self.pb.value = 0
             self.pb.max = os.path.getsize(self.fileList[i])
             if i == len(self.fileList)-1:
@@ -83,16 +85,19 @@ class encPopup(Popup): #For single files
             timeAtLastP = time()
             lastSize = 0
             per = 0
-            sleepTime = bool(self.pb.max > 100000) # If more than 100KB, then sleep.
-            while self.pb.value_normalized < 0.99: # Padding can cause issues as original size is not known.
-                self.outOf.text = str(i)+"/"+str(len(self.fileList))
-                self.currFile.text = str(self.fileList[i])
+            self.outOf.text = str(i)+"/"+str(len(self.fileList))
+            if encType == "n":
+                fileName = self.fileList[i].split(self.outerScreen.fileSep)
+                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, fileName[len(fileName)-1])
+            else:
+                self.currFile.text = self.fileList[i]
+
+            while not self.done: # Padding can cause issues as original size is not known.
                 try:
                     self.pb.value = os.path.getsize(self.locList[i])
                     self.wholePb.value = total + self.pb.value
                 except:
                     pass
-
                 else:
                     per = self.wholePb.value_normalized*100
 
@@ -108,14 +113,17 @@ class encPopup(Popup): #For single files
                         lastSize = self.wholePb.value
 
                     self.per.text = "{0:.2f}%".format(per)
-                if self.pb.value_normalized < 0.99 and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
+
+                if self.pb.value_normalized > 0.99:
+                    self.done = True
+
+                if self.done and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
                     sleep(randUniform(0.01, 0.05)) # Sleep imported from time module
                 # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
                 # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
                 # values, so this randomness in measuring it makes the speed reading a bit more interesting.
-
             totalPer += 100
-            total += self.pb.value
+            total += self.pb.max
 
         self.dismiss()
 

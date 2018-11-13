@@ -640,6 +640,8 @@ class MainScreen(Screen):
         if err != None:
             raise ValueError("Key not valid.")
 
+        if self.encPop != None:
+            self.encPop.done = True
         if endOfFolderList:
             if self.encPop != None:
                 self.encPop.dismiss()
