@@ -32,5 +32,4 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
 
 
     def startSrv(self, dt=None):
-        self.serverThread = Thread(target=self.manager.get_screen("Main").startBT, daemon=True)       #Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
-        self.serverThread.start()   #Starting server in thread lets the screen be rendered while the server is waiting.
+        Thread(target=self.manager.get_screen("Main").startBT, daemon=True).start()  #Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched

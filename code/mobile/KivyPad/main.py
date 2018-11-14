@@ -110,6 +110,10 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
             data = rStream.read()
         except Exception as e:
             print e, u"Failed recieving file."
+            if buffCount > 0:
+                fo.close()
+                fo = open(downloadsDir+"/"+fileName, "wb")  # At least empty file if not fully received, as to fully delete the file I would have to use entire os module due to buildozer.
+                fo.close()
             return False
         else:
             buff.append(data)
@@ -321,9 +325,6 @@ class MainScreen(Screen, FloatLayout):
         def on_open(self):
             time.sleep(0.2)
             recieveFile()
-        #     self.recieveThread = Process(target=self.recieveFile, daemon=True)
-        #     self.recieveThread.start()
-
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)

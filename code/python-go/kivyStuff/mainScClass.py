@@ -222,8 +222,9 @@ class MainScreen(Screen):
 
         self.clientSock.close()
         self.serverSock.close()
-        print("all done, LOCK")
         self.lock()
+        if not self.validBTKey:
+            self.runServMain()
 
 
     def sendFileList(self, fileList):
