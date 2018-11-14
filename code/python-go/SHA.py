@@ -234,7 +234,7 @@ def test():
     for i in range(roundNum):
         sha256(inp[roundNum:roundNum+32])
 
-    print(((roundNum*4)/(time()-start))/1000, "KB/s")
+    print(((roundNum*32)/(time()-start))/1000, "KB/s")
 
 
 
