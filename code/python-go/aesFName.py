@@ -1,3 +1,5 @@
+# For more information on each function, look at aes.go since most of this is the same.
+
 #Lookup tables
 #       0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f         - first digit of input
 sBox = [0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76, #00
@@ -339,16 +341,6 @@ def encryptFileName(key, name):
 
     return outString
 
-def convHexDigestToBytes(hexIn):
-    hexList = []
-    for i in range(len(hexIn)):
-        if i % 2 == 0:
-            hexList.append(hexIn[i]+hexIn[i+1])
-    for j in range(len(hexList)):
-        hexList[j] = int("0x"+hexList[j], 16)
-
-    return bytearray(hexList)
-
 
 def decryptFileName(key, hexIn):
     key = key.split(" ")
@@ -411,6 +403,18 @@ def test(singleInput=False):
             encryptFileName(key, inp[roundNum:roundNum+16])
 
         print(((roundNum*16)/(time()-start))/1000, "KB/s")
+
+
+def convHexDigestToBytes(hexIn):
+    hexList = []
+    for i in range(len(hexIn)):
+        if i % 2 == 0:
+            hexList.append(hexIn[i]+hexIn[i+1])
+    for j in range(len(hexList)):
+        hexList[j] = int("0x"+hexList[j], 16)
+
+    return bytearray(hexList)
+
 
 if __name__ == "__main__":
     test()#True)

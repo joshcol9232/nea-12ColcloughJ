@@ -161,10 +161,7 @@ def sha256(inp):
     #Main part
 
     for x in range(16, 64): #Expand current bits to be 64 words
-        s0 = SigExpansion0(bits[x-15])
-        s1 = SigExpansion1(bits[x-2])
-        bits[x] = addMod2W(addMod2W(addMod2W(bits[x-16], s0), bits[x-7]), s1)
-
+        bits[x] = addMod2W(addMod2W(addMod2W(bits[x-16], SigExpansion0(bits[x-15])), bits[x-7]), SigExpansion1(bits[x-2]))
 
     a = intToBits(hList[0], 32)
     b = intToBits(hList[1], 32)
@@ -176,12 +173,9 @@ def sha256(inp):
     h = intToBits(hList[7], 32)
 
     for i in range(64):
-        S1 = Sig1(e)
-        ch = Ch(e, f, g)
-        temp1 = addMod2W(addMod2W(addMod2W(addMod2W(h, S1), ch), intToBits(k[i], 32)), bits[i])
+        temp1 = addMod2W(addMod2W(addMod2W(addMod2W(h, Sig1(e)), Ch(e, f, g)), intToBits(k[i], 32)), bits[i])
         S0 = Sig0(a)
         maj = Maj(a, b, c)
-        temp2 = addMod2W(S0, maj)
 
         h = g
         g = f
@@ -190,18 +184,11 @@ def sha256(inp):
         d = c
         c = b
         b = a
-        a = addMod2W(temp1, temp2)
+        a = addMod2W(temp1, addMod2W(S0, maj))
 
-    h0 = addMod2W(intToBits(hList[0], 32), a)
-    h1 = addMod2W(intToBits(hList[1], 32), b)
-    h2 = addMod2W(intToBits(hList[2], 32), c)
-    h3 = addMod2W(intToBits(hList[3], 32), d)
-    h4 = addMod2W(intToBits(hList[4], 32), e)
-    h5 = addMod2W(intToBits(hList[5], 32), f)
-    h6 = addMod2W(intToBits(hList[6], 32), g)
-    h7 = addMod2W(intToBits(hList[7], 32), h)
+    resultBits = addMod2W(intToBits(hList[0], 32), a)+addMod2W(intToBits(hList[1], 32), b)+addMod2W(intToBits(hList[2], 32), c)+addMod2W(intToBits(hList[3], 32), d)+addMod2W(intToBits(hList[4], 32), e)+addMod2W(intToBits(hList[5], 32), f)+addMod2W(intToBits(hList[6], 32), g)+addMod2W(intToBits(hList[7], 32), h)
+    # Looks really ugly but works better
 
-    resultBits = h0+h1+h2+h3+h4+h5+h6+h7
     resultBytes = [resultBits[x:x+8] for x in range(0, len(resultBits), 8)]
     result = []
     for byte in resultBytes:
@@ -210,11 +197,7 @@ def sha256(inp):
 
 def getSHA128of16(data):
     out = sha256(data)
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    for i in range(16):
-        temp[i] = out[i] ^ out[i+16]   #XOR both halves to get a 128 bit output for 128 bit AES
-
-    return temp
+    return [out[i]^out[i+16] for i in range(16)]
 
 
 def test():
