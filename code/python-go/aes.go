@@ -190,9 +190,7 @@ func expandKey(inputKey []byte) ([176]byte) {
 
   for bytesGenerated < 176{
     //Read 4 bytes for use in keyExpansionCore
-    for x := 0; x < 4; x++ {
-      temp[x] = expandedKeys[x + bytesGenerated - 4]
-    }
+    copy(temp[:], expandedKeys[bytesGenerated-4:bytesGenerated])
 
     if bytesGenerated % 16 == 0 {    //Keys are length 16 bytes so every 16 bytes generated, expand.
       temp = keyExpansionCore(temp, rconIteration)
