@@ -350,7 +350,8 @@ $$
 3d4 &= x^8 + 2x^7 + x^6 + x^5 + x^4 + x^3 + x^2\\
 &= (x^4 + x^3 + x + 1) + 2x^7 + x^6 + x^5 + x^4 + x^3 + x^2\\
 &= 2x^7 + x^6 + x^5 + 2x^4 + 2x^3 + x^2 + x + 1\\
-&= x^6 + x^5 + x^2 + x + 1 \space \space \space \text{Here is where I did MOD2} \\
+&= 0x^7 + x^6 + x^5 + 0x^4 + 0x^3 + x^2 + x + 1 \space \space \space \text{Here is where I did MOD2} \\
+&= x^6 + x^5 + x^2 + x + 1
 \end{align*}
 $$
 Again with $d4*2$:
