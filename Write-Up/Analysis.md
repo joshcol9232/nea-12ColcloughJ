@@ -184,7 +184,7 @@ And that's all of the preparations done.
 
 Here is a diagram of the operation (I will explain each step in detail below):
 
-![](Diagrams/aesAbst.png)
+<img src="Diagrams/aesAbst.png" width=400px/>
 
 In total there are 11 rounds (9 regular rounds). For each round, the corresponding round key (that we calculated beforehand) is used in the operation.
 
@@ -396,7 +396,7 @@ This trades a few kilobytes of memory for a drastic improvement in speed.
 
 Decryption is just encryption, but in reverse. This uses the inverse functions of each function used to encrypt the data. Here is the algorithm:
 
-![](Diagrams/decAbst.png)
+<img src="Diagrams/decAbst.png" width=400px/>
 
 It is literally just the encryption algorithm in reverse.
 
@@ -507,7 +507,7 @@ When doing operations on the data, it will be done in 32 bit words. The message 
 
 
 
-<img src="Diagrams/dataBlockSHA.png" width=500px/>
+<img src="Diagrams/dataBlockSHA.png" width=400px/>
 
 SHA is operates on every 32 bit word.
 
@@ -565,10 +565,58 @@ H_6 = 1f83d9ab\\
 H_7 = 5be0cd19\\
 $$
 
-Next, each word has to be expanded from 32 bits to 64 bits.
+Next, each 32 bit word in the message has to be expanded from 32 bits to 64 bits.
 
-To do this, we need two functions, $\sigma_0$ and $\sigma_1$.####################
+Here is the algorithm:
 
+<img src="Diagrams/SHAWordExpansion.png" width=350px/>
+
+To do this, we need two functions,  sigma 0 $\sigma_0$ and sigma 1 $\sigma_1$.
+
+###### Sigma 0 (Expansion) ($\sigma_0$):
+
+Sigma 0 (Expansion) looks like this:
+$$
+\sigma_0(x) = (x >>> 7) \oplus (x >>> 18) \oplus (x >>  3)
+$$
+$>>>$ means that we rotate the 32 bit word $x$ right by the number given ($y$). What this does is shift the bytes along $y$ places to the right, and wraps them around to the start of $x$.
+
+I will do an example of $>>>$ with a 4 bit nibble:
+$$
+\begin{align*}
+f(x) &= x >>> 1\\
+f(1011) &= 1011 >>> 1\\
+f(1011) &= 1101
+\end{align*}
+$$
+As you can see, the $1$ bit at the end gets moved to the front, as I shifted it right by 1.
+
+$>>$ Means shift the 32 bit word $x$ right by the number given ($y$). This is different from $>>>$, because instead of wrapping the bits around to the beginning of the word again, we just shove a $0$ bit at the front instead.
+
+$\bigoplus$ is just XOR.
+
+For example:
+$$
+\begin{align*}
+f(x) &= x >> 1\\
+f(1011) &= 1011 >> 1\\
+f(1011) &= 0101\\
+\\
+g(x) &= x >> 2\\
+g(0101) &= 0101 >> 2\\
+g(0101) &= 0001
+\end{align*}
+$$
+Here the byte is shifted right, and the bytes are removed as they are shifted.
+
+
+
+###### Sigma 1 (Expansion)($\sigma_1$):
+
+Sigma 1(Expansion)($\sigma_1$) is the same as Sigma 0 (Expansion)($\sigma_0$), apart from how much you rotate and shift the word:
+$$
+\sigma_0(x) = (x >>> 17) \oplus (x >>> 19) \oplus (x >> 10)
+$$
 
 
 
@@ -579,11 +627,13 @@ All addition is MOD2 to keep each bit either a 1 or a 0.
 
 Here is the full algorithm:
 
-<b>Figure 2 (Found larger )</b>
+<b>Figure 2 (Found larger on "Large Images" section)</b>
 
-<img src="Diagrams/SHA.png" width=500px/>
+<img src="Diagrams/SHA.png" width=400px/>
 
 In the diagram above, H is the array of initial hash values discussed earlier, wordList is a 2D array containing the 32 bit words. || means append, so $h0||h1||h2||...$ just appends the items together. K is the array with the round constants in (see https://csrc.nist.gov/csrc/media/publications/fips/180/4/archive/2012-03-06/documents/fips180-4.pdf section 4.2.2).
+
+The step "Expand wordList[x]" is covered in the section above.
 
 All of the SHA functions operate on 32 bit words, and return a new 32 bit word. I will now explain what the functions Sigma0 ($\Sigma_0$), Sigma1 ($\Sigma_1$), Ch and Maj.
 
@@ -605,7 +655,7 @@ Here is an example of the rotate function:
 $$
 \begin{align*}
 A &= 1001110\\
-A <<< 2 &= 1010011 \quad \text{The last two bits are moved to the end.}
+A >>> 2 &= 1010011 \quad \text{The last two bits are moved to the end.}
 \end{align*}
 $$
 
