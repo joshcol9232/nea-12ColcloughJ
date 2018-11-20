@@ -251,7 +251,7 @@ $$
 $$
 Where $r_0$ to $r_3$ is the result of the operation, and $a_0$ to $a_3$ is the 4 bytes that make up the input column.
 
-This is matrix multiplication, but we need to do dot product multiplication. This is where we multiply each corresponding element in each row of the pre-defined matrix (the one with numbers already in it), with the corresponding element in $a_0$ to $a_3$, and then adds them up MOD2 (so that it is still 1 byte).
+This is matrix multiplication, but we need to do dot product multiplication. This is where we multiply each corresponding element in each row of the pre-defined matrix (the one with numbers already in it), with the corresponding element in a_0 to a_3, and then adds them up MOD2, also known as XOR (so that it is still 1 byte).
 
 One way to represent this is like this:
 $$
@@ -746,11 +746,9 @@ $$
 
 
 
-
-
 ---
 
-### UI Design:
+### UI Research:
 
 For the UI of both apps, I will use Kivy (a Python module) to make both the mobile app and the PC program. I have chosen Kivy as using it on both the app and the main program means that the design will stay consistent, and Kivy does look quite nice "out of the box".
 
