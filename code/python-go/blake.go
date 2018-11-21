@@ -39,20 +39,23 @@ func rotR64(in uint64, n int) uint64 {  // For 64 bit words
 }
 
 func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
-  mo := math.Pow(2, 64)
-  v[a] = uint64(math.Mod(float64(v[a] + v[b] + x), mo))
+  v[a] = v[a] + v[b] + x
   v[d] = rotR64((v[d] ^ v[a]), 32)
-  v[c] = uint64(math.Mod(float64(v[c] + v[d]), mo))
+
+  v[c] = v[c] + v[d]
   v[b] = rotR64((v[b] ^ v[c]), 24)
-  v[a] = uint64(math.Mod(float64(v[a] + v[b] + y), mo))
+
+  v[a] = v[a] + v[b] + y
   v[d] = rotR64((v[d] ^ v[a]), 16)
-  v[c] = uint64(math.Mod(float64(v[c] + v[d]), mo))
+
+  v[c] = v[c] + v[d]
   v[b] = rotR64((v[b] ^ v[c]), 63)
 
   return v
 }
 
-func compress(h [8]uint64, block [16]byte, t int, lastBlock bool) [8]uint64 {  // Compressing function
+func compress(h [8]uint64, block [128]byte, t int, lastBlock bool) [8]uint64 {  // Compressing function
+  fmt.Println(block, "block------------------------")
   var v = [16]uint64{} // Current vector
   for i := 0; i < 8; i++ {
     v[i] = h[i]
@@ -61,29 +64,42 @@ func compress(h [8]uint64, block [16]byte, t int, lastBlock bool) [8]uint64 {  /
     v[i] = k[i-8]
   }
 
-  v[12] = v[12] ^ uint64(math.Mod(float64(t), math.Pow(2, 64)))
+  v[12] = v[12] ^ uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
   v[13] = v[13] ^ (uint64(t) >> 64)
 
   if lastBlock {
-    v[14] = v[14] ^ 0xFFFFFFFFFFFFFFFF
+    v[14] = ^v[14] // NOT
+  }
+
+  j := 0
+  var m [16]uint64
+  for k := 0; k < 16; k++ {
+    fmt.Println(j, "j")
+    m[k] = uint64(block[j]) | (uint64(block[j+1]) << 8) | (uint64(block[j+2]) << 16) | (uint64(block[j+3]) << 24) | (uint64(block[j+4]) << 32) | (uint64(block[j+5]) << 40) | (uint64(block[j+6]) << 48) | (uint64(block[j+7]) << 56)
+    j += 8
   }
 
   for i := 0; i < 12; i++ {
-    sigRow := int(math.Mod(float64(i), 10))
+    sigRow := sigma[int(math.Mod(float64(i), 10))]
+    fmt.Printf("%xSIGMA ROW\n", sigRow)
     // Mix
-    v = mix(v, 0, 4,  8, 12, uint64(block[sigma[sigRow][0]]), uint64(block[sigma[sigRow][1]]))
-    v = mix(v, 1, 5,  9, 13, uint64(block[sigma[sigRow][2]]), uint64(block[sigma[sigRow][3]]))
-    v = mix(v, 2, 6, 10, 14, uint64(block[sigma[sigRow][4]]), uint64(block[sigma[sigRow][5]]))
-    v = mix(v, 3, 7, 11, 15, uint64(block[sigma[sigRow][6]]), uint64(block[sigma[sigRow][7]]))
+    v = mix(v, 0, 4,  8, 12, m[sigRow[0]], m[sigRow[1]])
+    v = mix(v, 1, 5,  9, 13, m[sigRow[2]], m[sigRow[3]])
+    v = mix(v, 2, 6, 10, 14, m[sigRow[4]], m[sigRow[5]])
+    v = mix(v, 3, 7, 11, 15, m[sigRow[6]], m[sigRow[7]])
 
-    v = mix(v, 0, 5, 10, 15, uint64(block[sigma[sigRow][ 8]]), uint64(block[sigma[sigRow][ 9]]))   // Rows have been shifted
-    v = mix(v, 1, 6, 11, 12, uint64(block[sigma[sigRow][10]]), uint64(block[sigma[sigRow][11]]))
-    v = mix(v, 2, 7,  8, 13, uint64(block[sigma[sigRow][12]]), uint64(block[sigma[sigRow][13]]))
-    v = mix(v, 3, 4,  9, 14, uint64(block[sigma[sigRow][14]]), uint64(block[sigma[sigRow][15]]))
+    v = mix(v, 0, 5, 10, 15, m[sigRow[ 8]], m[sigRow[ 9]])   // Rows have been shifted
+    v = mix(v, 1, 6, 11, 12, m[sigRow[10]], m[sigRow[11]])
+    v = mix(v, 2, 7,  8, 13, m[sigRow[12]], m[sigRow[13]])
+    v = mix(v, 3, 4,  9, 14, m[sigRow[14]], m[sigRow[15]])
+
+    fmt.Printf("%x\n", v)
+    fmt.Println(i, "i")
   }
 
   for i := 0; i < 8; i++ {
-    h[i] = h[i] ^ v[i] ^ v[i+8]
+    h[i] ^= v[i]
+    h[i] ^= v[i+8]
   }
 
   return h
@@ -91,31 +107,18 @@ func compress(h [8]uint64, block [16]byte, t int, lastBlock bool) [8]uint64 {  /
 
 // w = 64
 // r = 12 rounds
-// 128 bytes per block
-
-func blake2b(data []byte, l, hashL int) [8]uint64 {  // M is message, l is length of message, hashL is length of hash wanted.
+// 16 64-bit words per block.
+// 512 bit
+func blake2b(data []byte, hashL int) [8]uint64 {  // M is message, l is length of message, hashL is length of hash wanted.
   h := k
 
-  fmt.Println(h[0], "h before")
-  h[0] = h[0] ^ 0x01010000 ^ (0 << 8) ^ uint64(hashL) // Not using a key, so where "0 << 8" is, 0 would be the key.
+  h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
-  fmt.Println(h[0], "h")
+  var block [128]byte
 
-  var bytesCompressed int = 0
-  var bytesRemaining int = l
-
-  fmt.Println(bytesRemaining, "remaining")
-
-  var block [16]byte
-
-  for (bytesRemaining > 16) {
-    copy(block[:], data[bytesCompressed:bytesCompressed+16])
-    bytesRemaining += - 16
-    bytesCompressed += 16
-    fmt.Println(block)
-  }
   copy(block[:], data)
-  bytesCompressed = bytesCompressed+bytesRemaining
+  fmt.Println(block, "block")
+
   h = compress(h, block, 11, true)
 
   return h
@@ -123,17 +126,8 @@ func blake2b(data []byte, l, hashL int) [8]uint64 {  // M is message, l is lengt
 
 
 func main() {
-  //var g = []byte{}
-  //for i := 0; i < 128; i++ {
-  //  g = append(g, byte(i))
-  //}
+  g := []byte("")
 
-  g := []byte("The quick brown fox jumps over the lazy dog")
-
-  fmt.Println(len(g), "len of g")
-  h := blake2b(g, len(g), 128)
-  fmt.Println(h)
-  for _, i := range h {
-    fmt.Printf("%x", i)
-  }
+  h := blake2b(g, 128)
+  fmt.Printf("%x\nLAST", h)
 }
