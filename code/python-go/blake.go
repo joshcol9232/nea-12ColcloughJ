@@ -5,7 +5,6 @@ import (
   "math"
 )
 
-
 // Inital constants.
 var k = [8]uint64 {0x6A09E667F3BCC908,
                    0xBB67AE8584CAA73B,
@@ -15,7 +14,6 @@ var k = [8]uint64 {0x6A09E667F3BCC908,
                    0x9B05688C2B3E6C1F,
                    0x1F83D9ABFB41BD6B,
                    0x5BE0CD19137E2179}
-
 
 var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
                             {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3},
@@ -31,10 +29,6 @@ var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 1
                             {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}}
 
 // Research: https://tools.ietf.org/pdf/rfc7693.pdf
-
-func rotRB(in byte, n int) byte {
-  return (in >> uint(n)) ^ (in << (8 - uint(n)))
-}
 
 func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
@@ -57,7 +51,7 @@ func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
 }
 
 
-func get64(in []uint64) uint64 {
+func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64-bit bytes.
   return uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
 }
 
@@ -68,27 +62,19 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
     v[i] = h[i]
     v[i+8] = k[i]
   }
-
-  fmt.Printf("%x V12 before", v[12])
-  v[12] = v[12] ^ uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000 //ISSUE
+  v[12] = v[12] ^ uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
   v[13] = v[13] ^ (uint64(t) >> 64)
 
   if lastBlock {
     v[14] = ^v[14] // NOT
   }
 
-
-  fmt.Printf("%x V IN COMPRESS!!!!\n", v)
-
   var m [16] uint64
   for i := 0; i < 16; i++ {
     m[i] = get64(block[i*8:(i*8)+8])
   }
-  fmt.Printf("%x M\n", m)
   for i := 0; i < 12; i++ {
     sigRow := sigma[i]
-    fmt.Printf("%xSIGMA ROW\n", sigRow)
-    fmt.Println(i, "i")
     // Mix
     v = mix(v, 0, 4,  8, 12, m[sigRow[0]], m[sigRow[1]])
     v = mix(v, 1, 5,  9, 13, m[sigRow[2]], m[sigRow[3]])
@@ -99,8 +85,6 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
     v = mix(v, 1, 6, 11, 12, m[sigRow[10]], m[sigRow[11]])
     v = mix(v, 2, 7,  8, 13, m[sigRow[12]], m[sigRow[13]])
     v = mix(v, 3, 4,  9, 14, m[sigRow[14]], m[sigRow[15]])
-
-    fmt.Printf("%x\nV\n", v)
   }
 
   for i := 0; i < 8; i++ {
@@ -117,12 +101,7 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
 // 512 bit
 func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
   h := k
-
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
-
-  fmt.Printf("%x H!!!!!!\n", h)
-
-  data[0] = [128]uint64{0x0000000000636261}
 
   if len(data) > 1 {
     for i := 0; i < len(data)-2; i++ {  // Do all blocks apart from last one.
@@ -131,12 +110,11 @@ func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split in
   }
 
   h = compress(h, data[len(data)-1], l, true)
-
-  fmt.Printf("%x h before\n", h)
+  // Get the output as hashL bytes of the little endian of h
   var out [8][8]byte
   for i := 0; i < 8; i++ {
-    for j := 0; j < 8; j++ {
-      out[i][j] = byte(((h[i] << uint64(64 - (j+1)*8)) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    for j := 8; j != 0; j-- {
+      out[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
     }
   }
 
@@ -144,9 +122,38 @@ func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split in
 }
 
 
-func main() {
-  g := [][128]uint64{{0}} //{2, 3, 5, 1, 2, 66, 99}}
+// Functions to manage input to blake2b
+func splitData(data []byte) ([][128]uint64, int) {  // Data will be given to the program in bytes.
+  var out = [][128]uint64{{}}
+  var l int = len(data)
 
-  h := blake2b(g, 3, 64)
-  fmt.Printf("%x", h)
+  for i := range data {
+    count := 0
+    if (math.Mod(float64(i), 128) == 0) && (i != 0) {
+      count++
+    }
+    fmt.Println(i)
+    out[count][i] = uint64(data[i])
+  }
+
+  if len(out) == 0 {
+    out = [][128]uint64{{0}}
+  }
+
+  return out, l
+}
+
+
+func main() {
+  data := []byte("The quick brown fox jumps over the lazy dog")
+  fmt.Println(len(data), "len of data")
+
+  g, l := splitData(data)
+  fmt.Println(g, "g")
+
+  h := blake2b(g, l, 64)
+  fmt.Println(h)
+  for i := range h {
+    fmt.Printf("%x\n", h[i])
+  }
 }
