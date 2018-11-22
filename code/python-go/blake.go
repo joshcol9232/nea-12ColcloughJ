@@ -144,16 +144,14 @@ func splitData(data []byte) ([][128]uint64, int) {  // Data will be given to the
   var l int = len(data)
   var out = [][128]uint64{{}}
   count2 := 0
+  count1 := 0
   for i := range data {
-    count1 := 0
     if (math.Mod(float64(i), 128) == 0) && (i != 0) {
       count1++
       count2 = 0
       out = append(out, [128]uint64{0})
     }
-    fmt.Println(out, "out")
     out[count1][count2] = uint64(data[i])
-
     count2++
   }
   if len(out) == 0 {
@@ -171,14 +169,6 @@ func getNumOfCores() int {  //Gets the number of cores so it determines buffer s
   return numCPU
 }
 
-func byte128To64(data []byte) [128]uint64 {
-  var out = [128]uint64{}
-  for i := range data {
-    out[i] = uint64(data[i])
-  }
-  return out
-}
-
 func BLAKEchecksum(f string, hashL int) [8][8]byte {
   // Going to feed in the chunks very similar to AES.
   h := k  // Initialize h0-7 with initial values.
@@ -191,45 +181,42 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
 
   fileSize := int(aInfo.Size()) // Get size of original file
 
-  var bufferSize int = 65536*getNumOfCores()  //Get the buffer size
+  var bufferSize int = 65536
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
-    fmt.Println("READING WHOLE FILE")
+    //fmt.Println("READING WHOLE FILE")
   }
 
   var buffCount int = 0   // Keeps track of how far through the file we are
   var bytesFed int = 0
+  var bytesLeft int = fileSize
 
   for buffCount < fileSize {
     if bufferSize > (fileSize - buffCount) {
       bufferSize = fileSize - buffCount
-      fmt.Println("BUFFER SIZE CHANGED")
+      //fmt.Println("BUFFER SIZE CHANGED")
     }
-    fmt.Printf("%x H\n", h)
     buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
     _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
                                    // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
-
-    //fmt.Println(buff, "buff")
     currBuff, _ := splitData(buff)
-    //fmt.Println(currBuff, len(currBuff))
-    if len(currBuff) > 1 {
-      for i := 0; i < len(currBuff)-1; i++ {
+
+    //fmt.Println(currBuff)
+    for i := range currBuff {
+      if bytesLeft <= 128 {
+        bytesFed += bytesLeft
+        fmt.Println("DOING FINAL BLOCK", bytesLeft)
+        h = compress(h, currBuff[i], bytesFed, true)
+        //fmt.Printf("%x h\n", h)
+      } else {
         bytesFed += 128
+        bytesLeft -= 128
+        //fmt.Println("DOING NORMAL BLOCK", bytesFed)
         h = compress(h, currBuff[i], bytesFed, false)
+        //fmt.Printf("%x h\n", h)
       }
-    }
-    if fileSize - bytesFed <= 128 {
-      fmt.Println("LAST EXECUTED", fileSize, bytesFed)
-      bytesFed += 128
-      //fmt.Println(currBuff[len(currBuff)-1])
-      h = compress(h, currBuff[len(currBuff)-1], fileSize, true)
-    } else {
-//      fmt.Println("Bytes fed in:", 128+(lastI*128)+buffCount)
-      bytesFed += 128
-      h = compress(h, currBuff[len(currBuff)-1], bytesFed, false)
     }
 
     buffCount += bufferSize
@@ -249,7 +236,8 @@ func main() {
 //    fmt.Printf("%x\n", h[i])
 //  }
 
-  f := "/home/josh/e.txt"
+  //f := "/home/josh/e.txt"
+  f := "/home/josh/NEA Guide.pdf"
   //f := "/home/josh/geg.txt"
   //f := "/home/josh/mandelbrot high.png"
   fmt.Printf("%x", BLAKEchecksum(f, 64))
