@@ -57,12 +57,10 @@ func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
 }
 
 
-func getLilEndian(in []uint64) uint64 {
-  fmt.Println(in, "Input to lil endian")
-  a := uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
-  fmt.Println(a , "Out lil endian")
-  return a
+func get64(in []uint64) uint64 {
+  return uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
 }
+
 
 func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
   var v = [16]uint64{} // Current vector
@@ -84,7 +82,7 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
 
   var m [16] uint64
   for i := 0; i < 16; i++ {
-    m[i] = getLilEndian(block[i*8:(i*8)+8])
+    m[i] = get64(block[i*8:(i*8)+8])
   }
   fmt.Printf("%x M\n", m)
   for i := 0; i < 12; i++ {
@@ -117,10 +115,10 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
 // r = 12 rounds
 // 16 64-bit words per block.
 // 512 bit
-func blake2b(data [][128]uint64, hashL int) [8]uint64 {  // data is split into 16 64-bit words.
+func blake2b(data [][128]uint64, l, hashL int) [8]uint64 {  // data is split into 16 64-bit words.
   h := k
 
-  h[0] = h[0] ^ (0x01010000 ^ uint64(64)) // Not using a key
+  h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
   fmt.Printf("%x H!!!!!!\n", h)
 
@@ -133,7 +131,7 @@ func blake2b(data [][128]uint64, hashL int) [8]uint64 {  // data is split into 1
     }
   }
 
-  h = compress(h, data[len(data)-1], 3, true)
+  h = compress(h, data[len(data)-1], l, true)
 
   return h
 }
@@ -142,6 +140,6 @@ func blake2b(data [][128]uint64, hashL int) [8]uint64 {  // data is split into 1
 func main() {
   g := [][128]uint64{{0}} //{2, 3, 5, 1, 2, 66, 99}}
 
-  h := blake2b(g, 128)
+  h := blake2b(g, 3, 64)
   fmt.Printf("%x\nLAST", h)
 }
