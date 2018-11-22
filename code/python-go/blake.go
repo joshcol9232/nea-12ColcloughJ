@@ -115,13 +115,12 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
 // r = 12 rounds
 // 16 64-bit words per block.
 // 512 bit
-func blake2b(data [][128]uint64, l, hashL int) [8]uint64 {  // data is split into 16 64-bit words.
+func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
   h := k
 
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
   fmt.Printf("%x H!!!!!!\n", h)
-
 
   data[0] = [128]uint64{0x0000000000636261}
 
@@ -133,7 +132,15 @@ func blake2b(data [][128]uint64, l, hashL int) [8]uint64 {  // data is split int
 
   h = compress(h, data[len(data)-1], l, true)
 
-  return h
+  fmt.Printf("%x h before\n", h)
+  var out [8][8]byte
+  for i := 0; i < 8; i++ {
+    for j := 0; j < 8; j++ {
+      out[i][j] = byte(((h[i] << uint64(64 - (j+1)*8)) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    }
+  }
+
+  return out
 }
 
 
@@ -141,5 +148,5 @@ func main() {
   g := [][128]uint64{{0}} //{2, 3, 5, 1, 2, 66, 99}}
 
   h := blake2b(g, 3, 64)
-  fmt.Printf("%x\nLAST", h)
+  fmt.Printf("%x", h)
 }
