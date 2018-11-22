@@ -3,6 +3,9 @@ package main
 import (
   "fmt"
   "math"
+  "os"
+  "io"
+  "runtime"
 )
 
 // Inital constants.
@@ -29,6 +32,14 @@ var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 1
                             {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}}
 
 // Research: https://tools.ietf.org/pdf/rfc7693.pdf
+
+func check(e error) {     //Used for checking errors when reading/writing to files.
+  if e != nil {
+    panic(e)
+  }
+}
+
+
 
 func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
@@ -95,12 +106,25 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
   return h
 }
 
+func getNiceOutput(h [8]uint64) [8][8]byte {
+  var out [8][8]byte
+  for i := 0; i < 8; i++ {
+    for j := 8; j != 0; j-- {
+      out[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    }
+  }
+  return out
+}
+
 // w = 64
 // r = 12 rounds
 // 16 64-bit words per block.
 // 512 bit
-func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
-  h := k
+func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
+  var data [][128]uint64
+  data, l := splitData(dataIn)
+
+  h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
   if len(data) > 1 {
@@ -111,49 +135,122 @@ func blake2b(data [][128]uint64, l, hashL int) [8][8]byte {  // data is split in
 
   h = compress(h, data[len(data)-1], l, true)
   // Get the output as hashL bytes of the little endian of h
-  var out [8][8]byte
-  for i := 0; i < 8; i++ {
-    for j := 8; j != 0; j-- {
-      out[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
-    }
-  }
-
+  out := getNiceOutput(h)
   return out
 }
 
-
 // Functions to manage input to blake2b
 func splitData(data []byte) ([][128]uint64, int) {  // Data will be given to the program in bytes.
-  var out = [][128]uint64{{}}
   var l int = len(data)
-
+  var out = [][128]uint64{{}}
+  count2 := 0
   for i := range data {
-    count := 0
+    count1 := 0
     if (math.Mod(float64(i), 128) == 0) && (i != 0) {
-      count++
+      count1++
+      count2 = 0
+      out = append(out, [128]uint64{0})
     }
-    fmt.Println(i)
-    out[count][i] = uint64(data[i])
-  }
+    fmt.Println(out, "out")
+    out[count1][count2] = uint64(data[i])
 
+    count2++
+  }
   if len(out) == 0 {
     out = [][128]uint64{{0}}
   }
-
   return out, l
+}
+
+func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
+  maxProcs := runtime.GOMAXPROCS(0)
+  numCPU := runtime.NumCPU()
+  if maxProcs < numCPU {
+    return maxProcs
+  }
+  return numCPU
+}
+
+func byte128To64(data []byte) [128]uint64 {
+  var out = [128]uint64{}
+  for i := range data {
+    out[i] = uint64(data[i])
+  }
+  return out
+}
+
+func BLAKEchecksum(f string, hashL int) [8][8]byte {
+  // Going to feed in the chunks very similar to AES.
+  h := k  // Initialize h0-7 with initial values.
+  h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
+
+  a, err := os.Open(f)    // Open original file to get statistics
+  check(err)
+  aInfo, err := a.Stat()  // Get statistics
+  check(err)
+
+  fileSize := int(aInfo.Size()) // Get size of original file
+
+  var bufferSize int = 65536*getNumOfCores()  //Get the buffer size
+
+  if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
+    bufferSize = fileSize
+    fmt.Println("READING WHOLE FILE")
+  }
+
+  var buffCount int = 0   // Keeps track of how far through the file we are
+  var bytesFed int = 0
+
+  for buffCount < fileSize {
+    if bufferSize > (fileSize - buffCount) {
+      bufferSize = fileSize - buffCount
+      fmt.Println("BUFFER SIZE CHANGED")
+    }
+    fmt.Printf("%x H\n", h)
+    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+    check(err)
+
+    //fmt.Println(buff, "buff")
+    currBuff, _ := splitData(buff)
+    //fmt.Println(currBuff, len(currBuff))
+    if len(currBuff) > 1 {
+      for i := 0; i < len(currBuff)-1; i++ {
+        bytesFed += 128
+        h = compress(h, currBuff[i], bytesFed, false)
+      }
+    }
+    if fileSize - bytesFed <= 128 {
+      fmt.Println("LAST EXECUTED", fileSize, bytesFed)
+      bytesFed += 128
+      //fmt.Println(currBuff[len(currBuff)-1])
+      h = compress(h, currBuff[len(currBuff)-1], fileSize, true)
+    } else {
+//      fmt.Println("Bytes fed in:", 128+(lastI*128)+buffCount)
+      bytesFed += 128
+      h = compress(h, currBuff[len(currBuff)-1], bytesFed, false)
+    }
+
+    buffCount += bufferSize
+  }
+  fmt.Println(buffCount, fileSize)
+  a.Close()
+
+  return getNiceOutput(h)
 }
 
 
 func main() {
-  data := []byte("The quick brown fox jumps over the lazy dog")
-  fmt.Println(len(data), "len of data")
+//  data := []byte("")
+//  h := BLAKE2b(data, 64)
+//  fmt.Println(h)
+//  for i := range h {
+//    fmt.Printf("%x\n", h[i])
+//  }
 
-  g, l := splitData(data)
-  fmt.Println(g, "g")
-
-  h := blake2b(g, l, 64)
-  fmt.Println(h)
-  for i := range h {
-    fmt.Printf("%x\n", h[i])
-  }
+  f := "/home/josh/e.txt"
+  //f := "/home/josh/geg.txt"
+  //f := "/home/josh/mandelbrot high.png"
+  fmt.Printf("%x", BLAKEchecksum(f, 64))
 }

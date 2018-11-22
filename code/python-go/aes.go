@@ -344,12 +344,12 @@ func check(e error) {     //Used for checking errors when reading/writing to fil
 
 
 func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
-    maxProcs := runtime.GOMAXPROCS(0)
-    numCPU := runtime.NumCPU()
-    if maxProcs < numCPU {
-        return maxProcs
-    }
-    return numCPU
+  maxProcs := runtime.GOMAXPROCS(0)
+  numCPU := runtime.NumCPU()
+  if maxProcs < numCPU {
+    return maxProcs
+  }
+  return numCPU
 }
 
 func compareSlices(slice1, slice2 []byte) bool {    //Function used for checking first block of a file with the key when decrypting.
@@ -392,7 +392,7 @@ func encryptFile(key []byte, f, w string) {
   e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) //Open file for appending.
   check(err)  //Check it opened correctly
 
-  //Append key to act as checksum
+  //Append key so that when decrypting, the key can be checked before decrypting the whole file.
   e.Write(encrypt(key, expandedKeys, 9))
   e.Seek(16, 0) //Move where we are writing to past the key.
 
