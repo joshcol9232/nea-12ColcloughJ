@@ -138,15 +138,17 @@ func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64
 
 // Functions to manage input to blake2b
 func splitData(data []byte) [][128]uint64 {  // Data will be given to the program in bytes.
-  fmt.Println(data, "data in")
-  var out = [][128]uint64{}
-  fmt.Println(len(data))
-  for i := 0; i < len(data); i += 128 {
-    out = append(out, [128]uint64{0})
-    for j := 0; j < len(data[i:]); j++ {
-      fmt.Println(i/128, j)
-      out[i/128][j] = uint64(data[i+j])
+  var out = [][128]uint64{{}}
+  var count1 int = 0
+  var count2 int = 0
+  for i := range data {
+    if (math.Mod(float64(i), 128) == 0) && (i != 0) {
+      count2++
+      count1 = 0
+      out = append(out, [128]uint64{})
     }
+    out[count2][count1] = uint64(data[i])
+    count1++
   }
 
   return out
@@ -183,7 +185,6 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
                                    // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
     currBuff := splitData(buff)
-    fmt.Println(currBuff, "currBuff")
 
     for i := range currBuff {
       if bytesLeft <= 128 {
@@ -204,6 +205,9 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
   return getNiceOutput(h)
 }
 
+//func test() {
+//  math.Rand
+//}
 
 func main() {
 //  data := []byte("")
@@ -213,9 +217,12 @@ func main() {
 //    fmt.Printf("%x\n", h[i])
 //  }
 
-  f := "/home/josh/e.txt"
+  //f := "/home/josh/e.txt"
+  //f := "/home/josh/personal_statement.txt"
+  //f := "/home/josh/1_Bill-Bailey.jpg"
+
   //f := "/home/josh/NEA Guide.pdf"
-  //f := "/home/josh/GentooMin.iso"
+  f := "/home/josh/GentooMin.iso"
   //f := "/home/josh/geg.txt"
   //f := "/home/josh/mandelbrot high.png"
   fmt.Printf("%x", BLAKEchecksum(f, 64))
