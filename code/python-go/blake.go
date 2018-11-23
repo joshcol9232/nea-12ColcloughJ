@@ -5,7 +5,6 @@ import (
   "math"
   "os"
   "io"
-  "runtime"
 )
 
 // Inital constants.
@@ -38,8 +37,6 @@ func check(e error) {     //Used for checking errors when reading/writing to fil
     panic(e)
   }
 }
-
-
 
 func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
@@ -85,17 +82,16 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
     m[i] = get64(block[i*8:(i*8)+8])
   }
   for i := 0; i < 12; i++ {
-    sigRow := sigma[i]
     // Mix
-    v = mix(v, 0, 4,  8, 12, m[sigRow[0]], m[sigRow[1]])
-    v = mix(v, 1, 5,  9, 13, m[sigRow[2]], m[sigRow[3]])
-    v = mix(v, 2, 6, 10, 14, m[sigRow[4]], m[sigRow[5]])
-    v = mix(v, 3, 7, 11, 15, m[sigRow[6]], m[sigRow[7]])
+    v = mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
+    v = mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
+    v = mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
+    v = mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
 
-    v = mix(v, 0, 5, 10, 15, m[sigRow[ 8]], m[sigRow[ 9]])   // Rows have been shifted
-    v = mix(v, 1, 6, 11, 12, m[sigRow[10]], m[sigRow[11]])
-    v = mix(v, 2, 7,  8, 13, m[sigRow[12]], m[sigRow[13]])
-    v = mix(v, 3, 4,  9, 14, m[sigRow[14]], m[sigRow[15]])
+    v = mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
+    v = mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
+    v = mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
+    v = mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
   }
 
   for i := 0; i < 8; i++ {
@@ -122,7 +118,8 @@ func getNiceOutput(h [8]uint64) [8][8]byte {
 // 512 bit
 func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
   var data [][128]uint64
-  data, l := splitData(dataIn)
+  l := len(dataIn)
+  data = splitData(dataIn)
 
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
@@ -140,33 +137,19 @@ func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64
 }
 
 // Functions to manage input to blake2b
-func splitData(data []byte) ([][128]uint64, int) {  // Data will be given to the program in bytes.
-  var l int = len(data)
-  var out = [][128]uint64{{}}
-  count2 := 0
-  count1 := 0
-  for i := range data {
-    if (math.Mod(float64(i), 128) == 0) && (i != 0) {
-      count1++
-      count2 = 0
-      out = append(out, [128]uint64{0})
+func splitData(data []byte) [][128]uint64 {  // Data will be given to the program in bytes.
+  fmt.Println(data, "data in")
+  var out = [][128]uint64{}
+  fmt.Println(len(data))
+  for i := 0; i < len(data); i += 128 {
+    out = append(out, [128]uint64{0})
+    for j := 0; j < len(data[i:]); j++ {
+      fmt.Println(i/128, j)
+      out[i/128][j] = uint64(data[i+j])
     }
-    out[count1][count2] = uint64(data[i])
-    count2++
   }
-  if len(out) == 0 {
-    out = [][128]uint64{{0}}
-  }
-  return out, l
-}
 
-func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
-  maxProcs := runtime.GOMAXPROCS(0)
-  numCPU := runtime.NumCPU()
-  if maxProcs < numCPU {
-    return maxProcs
-  }
-  return numCPU
+  return out
 }
 
 func BLAKEchecksum(f string, hashL int) [8][8]byte {
@@ -185,7 +168,6 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
-    //fmt.Println("READING WHOLE FILE")
   }
 
   var buffCount int = 0   // Keeps track of how far through the file we are
@@ -195,33 +177,28 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
   for buffCount < fileSize {
     if bufferSize > (fileSize - buffCount) {
       bufferSize = fileSize - buffCount
-      //fmt.Println("BUFFER SIZE CHANGED")
     }
     buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
     _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
                                    // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
-    currBuff, _ := splitData(buff)
+    currBuff := splitData(buff)
+    fmt.Println(currBuff, "currBuff")
 
-    //fmt.Println(currBuff)
     for i := range currBuff {
       if bytesLeft <= 128 {
         bytesFed += bytesLeft
         fmt.Println("DOING FINAL BLOCK", bytesLeft)
         h = compress(h, currBuff[i], bytesFed, true)
-        //fmt.Printf("%x h\n", h)
       } else {
         bytesFed += 128
         bytesLeft -= 128
-        //fmt.Println("DOING NORMAL BLOCK", bytesFed)
         h = compress(h, currBuff[i], bytesFed, false)
-        //fmt.Printf("%x h\n", h)
       }
     }
 
     buffCount += bufferSize
   }
-  fmt.Println(buffCount, fileSize)
   a.Close()
 
   return getNiceOutput(h)
@@ -236,8 +213,9 @@ func main() {
 //    fmt.Printf("%x\n", h[i])
 //  }
 
-  //f := "/home/josh/e.txt"
-  f := "/home/josh/NEA Guide.pdf"
+  f := "/home/josh/e.txt"
+  //f := "/home/josh/NEA Guide.pdf"
+  //f := "/home/josh/GentooMin.iso"
   //f := "/home/josh/geg.txt"
   //f := "/home/josh/mandelbrot high.png"
   fmt.Printf("%x", BLAKEchecksum(f, 64))
