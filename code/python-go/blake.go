@@ -166,7 +166,7 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
 
   fileSize := int(aInfo.Size()) // Get size of original file
 
-  var bufferSize int = 65536
+  var bufferSize int = 128  // Has to be a multiple of 128
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
@@ -184,18 +184,19 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
     _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
                                    // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
-    currBuff := splitData(buff)
+    currBuff := [128]uint64{}
+    for i := range buff {
+      currBuff[i] = uint64(buff[i])
+    }
+//    currBuff := splitData(buff)
 
-    for i := range currBuff {
-      if bytesLeft <= 128 {
-        bytesFed += bytesLeft
-        fmt.Println("DOING FINAL BLOCK", bytesLeft)
-        h = compress(h, currBuff[i], bytesFed, true)
-      } else {
-        bytesFed += 128
-        bytesLeft -= 128
-        h = compress(h, currBuff[i], bytesFed, false)
-      }
+    if bytesLeft <= 128 {
+      bytesFed += bytesLeft
+      h = compress(h, currBuff, bytesFed, true)
+    } else {
+      bytesFed += 128
+      bytesLeft -= 128
+      h = compress(h, currBuff, bytesFed, false)
     }
 
     buffCount += bufferSize
@@ -221,8 +222,9 @@ func main() {
   //f := "/home/josh/personal_statement.txt"
   //f := "/home/josh/1_Bill-Bailey.jpg"
 
+  f := "/home/josh/bil.jpg"
   //f := "/home/josh/NEA Guide.pdf"
-  f := "/home/josh/GentooMin.iso"
+  //f := "/home/josh/GentooMin.iso"
   //f := "/home/josh/geg.txt"
   //f := "/home/josh/mandelbrot high.png"
   fmt.Printf("%x", BLAKEchecksum(f, 64))
