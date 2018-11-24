@@ -655,9 +655,13 @@ class MainScreen(Screen):
             mainthread(self.openFileTh(targetLoc, d))
         return out
 
-    def openFileTh(self, fileLoc, startLoc):
-        self.openFileThread = Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
-        self.openFileThread.start()
+    def getCheckSum(self, location):
+        goproc = Popen(self.startDir+"blake", stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((location).encode())
+        if err != None:
+            raise ValueError(err)
+
+        return out.decode()
 
     def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True):     #Handels passToPipe and UI while encryption/decryption happens.
         fileName = ""
@@ -700,19 +704,31 @@ class MainScreen(Screen):
             pop = Popup(title="Invalid file name.", content=Label(text="File name too long,\nplease try again with shorter\nfile name."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
             pop.open()
 
+    def openFileTh(self, fileLoc, startLoc):
+        self.openFileThread = Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
+        self.openFileThread.start()
+
     def openFile(self, location, startLoc):
         locationFolder = location.split(self.fileSep)
+        nameOfOriginal = locationFolder[len(locationFolder)-1]
         locationFolder = self.fileSep.join(locationFolder[:len(locationFolder)-1])
-        print(locationFolder, "locationFolder")
-
         startList = os.listdir(locationFolder)
         if self.fileSep == "\\":
             location = location.split("\\")
-            location = "/".join(location) #Windows actually accepts forward slashes in terminal
+            location = "/".join(location) # Windows actually accepts forward slashes in terminal
             command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
         else:
-            command = "xdg-open "+'"'+location+'"'      #Quotation marks for if the dir has spaces in it
-        os.system(command)#Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
+            command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
+
+        startCheckSum = self.getCheckSum(location)
+        print(startCheckSum, "START CHECK SUM")
+
+        os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
+        # After this line, the file has been closed.
+
+        endCheckSum = self.getCheckSum(location)
+        print(endCheckSum, "END CHECK SUM")
+
         endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
         diffAdded = [d for d in endList if d not in startList]
         tempLoc = startLoc.split(self.fileSep)
@@ -723,9 +739,12 @@ class MainScreen(Screen):
             print(locationFolder+self.fileSep+i, "current dir of extra file.")
             print(tempLoc, "current targetLoc for extra file.")
             self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
-        if tempLoc[len(tempLoc)-1] in endList:
-            self.encDecTerminal("y", location)
 
+        if nameOfOriginal in endList:
+            print("Still here")
+            if endCheckSum != startCheckSum:
+                print("Original file has changed.")
+                self.encDecTerminal("y", location, startLoc)
 
     def onFileDrop(self, window, filePath):  #Drag + drop files
         self.checkCanEncrypt(filePath.decode())

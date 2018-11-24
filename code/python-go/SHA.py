@@ -43,9 +43,7 @@ def pad(inpBits):   #https://csrc.nist.gov/csrc/media/publications/fips/180/4/ar
         inpBits.append(1) #Add one to the end of the message
         # 448%512 = k + l + 1
         #k = 448-(l+1)
-        k = 0
-        while ((l+1+k)-448)%512 != 0:   #Smallest value of k that makes that work
-            k += 1
+        k = 448-(l+1)
         for i in range(k):
             inpBits.append(0)
         #Pad with message length expessed as 64 bit binary number
@@ -152,8 +150,6 @@ def sha256(inp):
              0x1f83d9ab,    # H6
              0x5be0cd19]    # H7
 
-    #https://en.wikipedia.org/wiki/SHA-2
-
     bits = makeBitArray(inp)
     bits = pad(bits)
     bits = [bits[x:x+32] for x in range(0, len(bits), 32)]  #Split padded message into 32 bit words
@@ -200,24 +196,31 @@ def getSHA128of16(data):
     return [out[i]^out[i+16] for i in range(16)]
 
 
-def test():
-    from random import randint
-    from time import time
+def test(single=False):
 
-    def makeList(wordNum):
-        out = []
-        for y in range(wordNum*32):
-            out.append(randint(0, 255))
-        return out
+    if single:
+        print(sha256([0]))
 
-    roundNum = 100
-    inp = makeList(roundNum) # Do it 1000 times
-    print("Made inp list")
-    start = time()
-    for i in range(roundNum):
-        sha256(inp[roundNum:roundNum+32])
+        #bits = makeBitArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ,12])
+        #print(pad(bits))
+    else:
+        from random import randint
+        from time import time
 
-    print(((roundNum*32)/(time()-start))/1000, "KB/s")
+        def makeList(wordNum):
+            out = []
+            for y in range(wordNum*32):
+                out.append(randint(0, 255))
+            return out
+
+        roundNum = 100
+        inp = makeList(roundNum) # Do it 1000 times
+        print("Made inp list")
+        start = time()
+        for i in range(roundNum):
+            sha256(inp[roundNum:roundNum+32])
+
+        print(((roundNum*32)/(time()-start))/1000, "KB/s")
 
 
 

@@ -1,3 +1,4 @@
+// Package blake
 package main
 
 import (
@@ -5,7 +6,10 @@ import (
   "math"
   "os"
   "io"
+  "io/ioutil"
+  //"strings"
 )
+
 
 // Inital constants.
 var k = [8]uint64 {0x6A09E667F3BCC908,
@@ -64,7 +68,7 @@ func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64
 }
 
 
-func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
+func blakeCompress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
   var v = [16]uint64{} // Current vector
   for i := 0; i < 8; i++ {
     v[i] = h[i]
@@ -102,11 +106,18 @@ func compress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {
   return h
 }
 
-func getNiceOutput(h [8]uint64) [8][8]byte {
-  var out [8][8]byte
+func getNiceOutput(h [8]uint64) [64]byte {
+  var out [64]byte
+  var temp [8][8]byte
   for i := 0; i < 8; i++ {
     for j := 8; j != 0; j-- {
-      out[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+      temp[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    }
+  }
+
+  for i := 0; i < 8; i++ {
+    for j := 0; j < 8; j++ {
+      out[(i*8)+j] = temp[i][j]
     }
   }
   return out
@@ -116,7 +127,7 @@ func getNiceOutput(h [8]uint64) [8][8]byte {
 // r = 12 rounds
 // 16 64-bit words per block.
 // 512 bit
-func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64-bit words.
+func BLAKE2b(dataIn []byte, hashL int) [64]byte {  // data is split into 16 64-bit words.
   var data [][128]uint64
   l := len(dataIn)
   data = splitData(dataIn)
@@ -126,11 +137,11 @@ func BLAKE2b(dataIn []byte, hashL int) [8][8]byte {  // data is split into 16 64
 
   if len(data) > 1 {
     for i := 0; i < len(data)-2; i++ {  // Do all blocks apart from last one.
-      h = compress(h, data[i], (i+1)*128, false)  //128 block bytes = 16 64-bit words.
+      h = blakeCompress(h, data[i], (i+1)*128, false)  //128 block bytes = 16 64-bit words.
     }
   }
 
-  h = compress(h, data[len(data)-1], l, true)
+  h = blakeCompress(h, data[len(data)-1], l, true)
   // Get the output as hashL bytes of the little endian of h
   out := getNiceOutput(h)
   return out
@@ -154,7 +165,7 @@ func splitData(data []byte) [][128]uint64 {  // Data will be given to the progra
   return out
 }
 
-func BLAKEchecksum(f string, hashL int) [8][8]byte {
+func BLAKEchecksum(f string, hashL int) [64]byte {
   // Going to feed in the chunks very similar to AES.
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
@@ -192,11 +203,11 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
 
     if bytesLeft <= 128 {
       bytesFed += bytesLeft
-      h = compress(h, currBuff, bytesFed, true)
+      h = blakeCompress(h, currBuff, bytesFed, true)
     } else {
       bytesFed += 128
       bytesLeft -= 128
-      h = compress(h, currBuff, bytesFed, false)
+      h = blakeCompress(h, currBuff, bytesFed, false)
     }
 
     buffCount += bufferSize
@@ -211,6 +222,12 @@ func BLAKEchecksum(f string, hashL int) [8][8]byte {
 //}
 
 func main() {
+  bytes, err := ioutil.ReadAll(os.Stdin)
+  check(err)
+  f := string(bytes)
+
+  fmt.Printf("%x", BLAKEchecksum(f, 64))
+}
 //  data := []byte("")
 //  h := BLAKE2b(data, 64)
 //  fmt.Println(h)
@@ -218,14 +235,5 @@ func main() {
 //    fmt.Printf("%x\n", h[i])
 //  }
 
-  //f := "/home/josh/e.txt"
-  //f := "/home/josh/personal_statement.txt"
-  //f := "/home/josh/1_Bill-Bailey.jpg"
-
-  f := "/home/josh/bil.jpg"
-  //f := "/home/josh/NEA Guide.pdf"
   //f := "/home/josh/GentooMin.iso"
-  //f := "/home/josh/geg.txt"
-  //f := "/home/josh/mandelbrot high.png"
-  fmt.Printf("%x", BLAKEchecksum(f, 64))
-}
+  //fmt.Printf("%x", BLAKEchecksum(f, 64))

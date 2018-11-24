@@ -1,4 +1,6 @@
 from os.path import getsize
+from subprocess import Popen, PIPE
+
 import aesFName
 
 class File:
@@ -9,12 +11,15 @@ class File:
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
-        self.path = path
-        self.name = name
         if path == None:
             self.path = self._getNormDir(self.hexPath)
+        else:
+            self.path = path
         if name == None:
             self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
+        else:
+            self.name = name
+
         if self.isDir:
             self.hexPath += self.fileSep
             self.path += self.fileSep
@@ -43,3 +48,12 @@ class File:
             except Exception as e:
                 print(e, "couldn't get size.")
                 return " -"
+
+    def getCheckSum(self):
+        goproc = Popen(self.outerScreen.startDir+"blake", stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((self.hexPath).encode())
+        if err != None:
+            raise ValueError(err)
+
+        return out.decode()
+

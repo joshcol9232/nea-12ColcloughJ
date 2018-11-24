@@ -177,8 +177,7 @@ def expandKey(inputKey, expandedKeys):
 
     while bytesGenerated < 176:
         #Read 4 bytes for use in keyExpansionCore
-        for i in range(4):
-            temp[i] = expandedKeys[i + bytesGenerated - 4]
+        temp = expandedKeys[bytesGenerated-4:bytesGenerated]
 
         if bytesGenerated % 16 == 0:    #keys are length 16 bytes so every 16 bytes generated, expand.
             temp = keyExpansionCore(temp, rconIteration)
@@ -417,4 +416,4 @@ def convHexDigestToBytes(hexIn):
 
 
 if __name__ == "__main__":
-    test()#True)
+    test(True)
