@@ -548,36 +548,19 @@ class MainScreen(Screen):
         return tempDir
 
 ###########Sorts + Searches############
-    def quickSortTuples(self, tuples):  #Quick sorts tuples (for search results).
-        if len(tuples) > 1:
-            left = []
-            right = []  #Make seperate l+r lists, and add on at the end.
-            middle = []
-            pivot = tuples[int(len(tuples)/2)]
-            for i in tuples:
-                if i[0] < pivot[0]:
-                    left.append(i)
-                elif i[0] > pivot[0]:
-                    right.append(i)
-                else:
-                    middle.append(i)
-            return self.quickSortTuples(left)+middle+self.quickSortTuples(right)
-        else:
-            return tuples
-
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName)
         for fileObj in files:
-            loc = fileObj.name.find(item)
+            loc = fileObj.name.find(item) # Find where in the word the item is found, if it is a substring of the word
 
             if fileObj.name == item:
                 self.searchResults = [fileObj] + self.searchResults
                 self.removeButtons()
                 self.createButtons(self.searchResults)
-            elif loc != -1:
+            elif loc != -1: # If the search term is a substring of the current word
                 self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
 
-            if fileObj.isDir and self.searchRecursively:
+            if (fileObj.isDir and self.searchRecursively) and (fileObj.hexPath != self.recycleFolder):
                 self.findAndSortCore(fileObj.hexPath, item)
 
 
@@ -587,7 +570,7 @@ class MainScreen(Screen):
         self.findAndSortCore(self.currentDir, item)
 
         if len(self.unsorted) > 0:
-            sorted = self.quickSortTuples(self.unsorted)
+            sorted = sortsCy.quickSortTuples(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i[1])
             self.removeButtons()
