@@ -607,7 +607,7 @@ class MainScreen(Screen):
         return out
 
     def getCheckSum(self, location):
-        goproc = Popen(self.startDir+"blake", stdin=PIPE, stdout=PIPE)
+        goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((location).encode())
         if err != None:
             raise ValueError(err)

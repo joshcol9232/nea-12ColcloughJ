@@ -52,7 +52,7 @@ class File:
                 return " -"
 
     def getCheckSum(self):
-        goproc = Popen(self.outerScreen.startDir+"blake", stdin=PIPE, stdout=PIPE)
+        goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((self.hexPath).encode())
         if err != None:
             raise ValueError(err)
