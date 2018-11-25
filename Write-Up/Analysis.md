@@ -624,7 +624,7 @@ $$
 
 ##### <u>The operation:</u>
 
-All addition is MOD2 to keep each bit either a 1 or a 0.
+All addition is MOD(2^32).
 
 Here is the full algorithm:
 

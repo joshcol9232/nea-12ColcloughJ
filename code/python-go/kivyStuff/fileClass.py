@@ -1,4 +1,5 @@
-from os.path import getsize
+from os import path as osPath
+from os import listdir
 from subprocess import Popen, PIPE
 
 import aesFName
@@ -7,6 +8,7 @@ class File:
 
     def __init__(self, screen, hexPath, hexName, fileSep, isDir=False, name=None, path=None):
         self.outerScreen = screen
+        self._totalSize = 0
         self.hexPath, self.hexName, self.isDir, self.fileSep = hexPath, hexName, isDir, fileSep
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
@@ -35,15 +37,15 @@ class File:
     def _getFileSize(self, recurse=True):
         if self.isDir:
             if recurse:
-                self.outerScreen.totalSize = 0
-                self.outerScreen.recursiveSize(self.hexPath)
-                size = self.outerScreen.totalSize
+                self._totalSize = 0
+                self.recursiveSize(self.hexPath)
+                size = self._totalSize
                 return size
             else:
                 return " -"
         else:
             try:
-                size = getsize(self.hexPath) # Imported from os module
+                size = osPath.getsize(self.hexPath) # Imported from os module
                 return size
             except Exception as e:
                 print(e, "couldn't get size.")
@@ -56,4 +58,21 @@ class File:
             raise ValueError(err)
 
         return out.decode()
+
+    def recursiveSize(self, f, encrypt=False):  #Get size of folders.
+        fs = listdir(f)
+        for item in fs:
+            if encrypt:
+                item = aesFName.encryptFileName(self.key, item)
+            if osPath.isdir(f+self.fileSep+item):
+                try:
+                    self.recursiveSize(f+self.fileSep+item)
+                except OSError:
+                    pass
+            else:
+                try:
+                    self._totalSize += osPath.getsize(f+self.fileSep+item)
+                except PermissionError: #Thrown when the file is owned by another user/administrator or root.
+                    pass
+
 

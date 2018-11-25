@@ -310,24 +310,6 @@ class MainScreen(Screen):
 
         return foldersSort+filesSort
 
-
-    def recursiveSize(self, f, encrypt=False):  #Get size of folders.
-        fs = os.listdir(f)
-        for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
-            if os.path.isdir(f+self.fileSep+item):
-                try:
-                    self.recursiveSize(f+self.fileSep+item)
-                except OSError:
-                    pass
-            else:
-                try:
-                    self.totalSize += os.path.getsize(f+self.fileSep+item)
-                except PermissionError: #Thrown when the file is owned by another user/administrator or root.
-                    pass
-
-
     def openRecycling(self):
         warnPop = Popup(title="Changed Mode", content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
         warnPop.open()
@@ -342,7 +324,7 @@ class MainScreen(Screen):
     def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling":
+            if item.name != ".$recycling": # If the folder is the recycling folder, don't draw it.
                 if item.isDir:
                     btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
                     info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
@@ -547,7 +529,7 @@ class MainScreen(Screen):
         tempDir = self.fileSep.join(tempDir)
         return tempDir
 
-###########Sorts + Searches############
+###########Searches############
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName)
         for fileObj in files:
@@ -581,13 +563,10 @@ class MainScreen(Screen):
             pop.open()
 
 
-
-    def searchThread(self, item):
-        self.findAndSort(item)
-        return "Done"
-
-
-##################################
+    def searchForItem(self, item):
+        self.resetButtons()
+        self.searchResults = []
+        Thread(target=self.findAndSort, args=(item,), daemon=True).start()
 
 
 ####Progress Bar Information####
@@ -599,17 +578,6 @@ class MainScreen(Screen):
         else:
             return [values[0], values[1]]
 
-################################
-
-####Search Bar functions####
-
-    def searchForItem(self, item):
-        self.resetButtons()
-        self.searchResults = []
-        self.t = Thread(target=self.searchThread, args=(item,), daemon=True)
-        self.t.start()
-
-############################
 
 ######Encryption Stuff + opening decrypted files######
     def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.

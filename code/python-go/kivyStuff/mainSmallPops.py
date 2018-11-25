@@ -24,7 +24,7 @@ class encPopup(Popup): #For single files
         self.locList = locList
         self.done = False
 
-        #kivy stuff
+        # Kivy stuff
         self.title = "Please wait..."
         self.pos_hint = {"center_x": .5, "center_y": .5}
         self.size_hint = (.7, .4)
@@ -38,7 +38,7 @@ class encPopup(Popup): #For single files
         self.tim = Label(text="")
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
-        self.wholePb = ProgressBar(value=0, max=self.getTotalSize(), size_hint=(.9, .2))
+        self.wholePb = ProgressBar(value=0, max=self._getTotalSize(), size_hint=(.9, .2))
         self.grid.add_widget(Label(text=labText))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -53,13 +53,13 @@ class encPopup(Popup): #For single files
         self.checkThread = Thread(target=self.enc, args=(encType, op,), daemon=True)
         self.checkThread.start()
 
-    def getTotalSize(self):
+    def _getTotalSize(self):
         total = 0
         for file in self.fileList:
             total += os.path.getsize(file)
         return total
 
-    def getGoodUnit(self, bps):
+    def _getGoodUnit(self, bps):
         divCount = 0
         divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
         while bps > 1000:
@@ -107,7 +107,7 @@ class encPopup(Popup): #For single files
 
                         self.tim.text = "{0:.1f}\nSeconds left.".format(timeFor1per*(((self.wholePb.max - self.wholePb.value)/self.wholePb.max)*100))
                         sizeDelta = self.wholePb.value - lastSize
-                        self.spd.text = self.getGoodUnit(sizeDelta/timeFor1per)
+                        self.spd.text = self._getGoodUnit(sizeDelta/timeFor1per)
 
                         prevInt = per
                         lastSize = self.wholePb.value
@@ -118,7 +118,7 @@ class encPopup(Popup): #For single files
                     self.done = True
 
                 if self.done and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
-                    sleep(randUniform(0.01, 0.05)) # Sleep imported from time module
+                    sleep(randUniform(0.08, 0.1)) # Sleep imported from time module
                 # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
                 # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
                 # values, so this randomness in measuring it makes the speed reading a bit more interesting.
@@ -185,7 +185,7 @@ class btTransferPop(encPopup):
 
             self.pb.value = buffCount/fileObj.rawSize
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
-            self.spd.text = self.getGoodUnit(buffCount/(time() - start))
+            self.spd.text = self._getGoodUnit(buffCount/(time() - start))
 
         self.outerScreen.clientSock.send("~!!ENDF!")
         self.dismiss()
