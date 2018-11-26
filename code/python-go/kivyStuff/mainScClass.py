@@ -668,12 +668,10 @@ class MainScreen(Screen):
             command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
 
         startCheckSum = self.getCheckSum(location)
-        print(startCheckSum, "START CHECK SUM")
-
         os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         # After this line, the file has been closed.
-
         endCheckSum = self.getCheckSum(location)
+        print(startCheckSum, "START CHECK SUM")
         print(endCheckSum, "END CHECK SUM")
 
         endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
