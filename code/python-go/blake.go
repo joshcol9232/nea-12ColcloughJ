@@ -62,7 +62,6 @@ func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
   return v
 }
 
-
 func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64-bit bytes.
   return uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
 }
@@ -108,60 +107,11 @@ func blakeCompress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uin
 
 func getNiceOutput(h [8]uint64) [64]byte {
   var out [64]byte
-  var temp [8][8]byte
   for i := 0; i < 8; i++ {
     for j := 8; j != 0; j-- {
-      temp[i][j-1] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+      out[i*8+(j-1)] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
     }
   }
-
-  for i := 0; i < 8; i++ {
-    for j := 0; j < 8; j++ {
-      out[(i*8)+j] = temp[i][j]
-    }
-  }
-  return out
-}
-
-// w = 64
-// r = 12 rounds
-// 16 64-bit words per block.
-// 512 bit
-func BLAKE2b(dataIn []byte, hashL int) [64]byte {  // data is split into 16 64-bit words.
-  var data [][128]uint64
-  l := len(dataIn)
-  data = splitData(dataIn)
-
-  h := k  // Initialize h0-7 with initial values.
-  h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
-
-  if len(data) > 1 {
-    for i := 0; i < len(data)-2; i++ {  // Do all blocks apart from last one.
-      h = blakeCompress(h, data[i], (i+1)*128, false)  //128 block bytes = 16 64-bit words.
-    }
-  }
-
-  h = blakeCompress(h, data[len(data)-1], l, true)
-  // Get the output as hashL bytes of the little endian of h
-  out := getNiceOutput(h)
-  return out
-}
-
-// Functions to manage input to blake2b
-func splitData(data []byte) [][128]uint64 {  // Data will be given to the program in bytes.
-  var out = [][128]uint64{{}}
-  var count1 int = 0
-  var count2 int = 0
-  for i := range data {
-    if (math.Mod(float64(i), 128) == 0) && (i != 0) {
-      count2++
-      count1 = 0
-      out = append(out, [128]uint64{})
-    }
-    out[count2][count1] = uint64(data[i])
-    count1++
-  }
-
   return out
 }
 

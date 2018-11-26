@@ -374,7 +374,6 @@ func encryptFile(key []byte, f, w string) {
   fileSize := int(aInfo.Size()) //Get size of original file
 
   var expandedKeys [176]byte
-
   expandedKeys = expandKey(key) //Expand the key for each round
 
   if _, err := os.Stat(w); err == nil { //If file already exists, delete it
@@ -414,7 +413,7 @@ func encryptFile(key []byte, f, w string) {
         extraNeeded++
       }
 
-      for len(buff) % 16 != 0{                  //Add the number of extra bytes needed to the end of the block, if the block is not long enough.
+      for i := 0; i < extraNeeded; i++{                  //Add the number of extra bytes needed to the end of the block, if the block is not long enough.
         buff = append(buff, byte(extraNeeded))  //For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
       } //This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
     }
@@ -493,7 +492,7 @@ func decryptFile(key []byte, f, w string) {
               decrypted = decrypted[:(16-focus)]  //If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
             }
           }
-          decBuff = append(decBuff, decrypted...)
+          decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
         } else {
           decBuff = append(decBuff, decrypt(buff[i:i+16], expandedKeys, 9)...)
         }
