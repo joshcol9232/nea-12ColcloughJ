@@ -421,15 +421,12 @@ class MainScreen(Screen):
 
         internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
-
-
         if self.useBT and not fileObj.isDir:
             btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
             btButton.bind(on_release=partial(self.makeSendFile, fileObj))
             internalLayout.add_widget(btButton)
 
-
-        if fileObj.isDir:
+        if fileObj.isDir and fileObj.rawSize > 0:
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
             decBtn.bind(on_release=partial(self.decryptDir, fileObj))
             internalLayout.add_widget(decBtn)
@@ -637,8 +634,8 @@ class MainScreen(Screen):
             if newName == None:
                 targetLoc = targetLoc.split(self.fileSep)
                 newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
-                print(newName, "newName in encDecTerminal")
                 targetLoc = self.fileSep.join(targetLoc)
+                fileName = newName
             popText = "Decrypting..."
 
         if not isPartOfFolder:
@@ -649,15 +646,14 @@ class MainScreen(Screen):
             self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
             self.encryptProcess.start()
         else:
-            print("File name too long :(")
+            print("File name too long: ", fileName)
             self.encPop.dismiss()
             print("Dismissed?")
-            pop = Popup(title="Invalid file name.", content=Label(text="File name too long,\nplease try again with shorter\nfile name."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+            pop = Popup(title="Invalid file name", content=Label(text="File name too long,\nplease try again with shorter\nfile name."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
             pop.open()
 
     def openFileTh(self, fileLoc, startLoc):
-        self.openFileThread = Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True)
-        self.openFileThread.start()
+        Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
 
     def openFile(self, location, startLoc):
         locationFolder = location.split(self.fileSep)
@@ -699,7 +695,6 @@ class MainScreen(Screen):
 
     def onFileDrop(self, window, filePath):  #Drag + drop files
         self.checkCanEncrypt(filePath.decode())
-        self.resetButtons()
         return "Done"
 
     def decrypt(self, fileObj, op=True):
@@ -729,34 +724,42 @@ class MainScreen(Screen):
         self.locList = []
         self.encDecDirCore(encType, d, targetLoc)
 
-        self.encPop = mainSPops.encPopup(self, encType, "Encrypting...", self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
+
+        self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptDir(self, fileObj, button):
-        selectPop = self.decryptDirPop(self, fileObj)
+        selectPop = mainSPops.decryptDirPop(self, fileObj)
         selectPop.open()
 
     def encDecDirCore(self, encType, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)
         targetLoc = targetLoc.split(self.fileSep)
-        if encType == "y":
+        if encType == "y": # Decrypt folder names
             targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
         else:
             targetLoc[len(targetLoc)-1] = aesFName.decryptFileName(self.key, targetLoc[len(targetLoc)-1])
         targetLoc = self.fileSep.join(targetLoc)
         for item in fs:
             if os.path.isdir(d+item):
-                try:
-                    self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
-                except OSError:
-                    pass
+                self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
             else:
+                if encType == "n":
+                    name = aesFName.decryptFileName(self.key, item)
+                elif encType == "y":
+                    name = aesFName.encryptFileName(self.key, item)
+                else:
+                    name = item
                 try:
                     self.createFolders(targetLoc+self.fileSep)
-                    self.fileList.append(d+item)
-                    self.locList.append(targetLoc+self.fileSep+aesFName.encryptFileName(self.key, item))
                 except PermissionError:
                     pass
+                else:
+                    self.fileList.append(d+item)
+                    self.locList.append(targetLoc+self.fileSep+name)
 
     def checkCanEncrypt(self, inp):
         if "--" in inp: #Multiple files/folders input.

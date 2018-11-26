@@ -14,6 +14,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
 import aesFName
+from mainLargePops import SettingsPop
 
 class encPopup(Popup): #For single files
 
@@ -199,12 +200,10 @@ class decryptDirPop(Popup): # Input box for location of where directory is to be
         self.fileObj = fileObj
 
     def checkCanDec(self, inp):
-        print("FileObj", self.fileObj)
-        if self.outerScreen.SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+        if SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
             if not os.path.exists(inp):
                 os.makedirs(inp)
             if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-            print(inp, "inp")
             self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
 
 class addNewFolderPop(Popup):
