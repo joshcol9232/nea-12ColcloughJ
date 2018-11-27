@@ -15,7 +15,6 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
         Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv")
         self.key = ""
 
-    def on_enter(self):
         Clock.schedule_once(self.startSrv, 0.7) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
 
     def checkKey(self, inputKey):

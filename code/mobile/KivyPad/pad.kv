@@ -19,10 +19,6 @@ ScreenManagement:
         id: Select
         manager: screenmanager
 
-
-<recievePopup@Popup>:
-    title: "Ready to recieve."
-
 <PadNum@Button>:
     font_size: 30
     on_release: root.root.addNum(self.text)
@@ -91,12 +87,6 @@ ScreenManagement:
 
         Button:
             pos_hint: {"x": .25, "y": .2}
-            size_hint: .5, .2
-            text: "Recieve files from PC"
-            on_release: Clock.schedule_once(root.recvPop.open, -1)
-
-        Button:
-            pos_hint: {"x": .25, "y": .6}
             size_hint: .5, .2
             text: "Select files from PC"
             on_release: root.manager.current = "Select"

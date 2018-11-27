@@ -421,11 +421,6 @@ class MainScreen(Screen):
 
         internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
-        if self.useBT and not fileObj.isDir:
-            btButton = Button(text="Send to mobile (BT)", halign="left", valign="middle")
-            btButton.bind(on_release=partial(self.makeSendFile, fileObj))
-            internalLayout.add_widget(btButton)
-
         if fileObj.isDir and fileObj.rawSize > 0:
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
             decBtn.bind(on_release=partial(self.decryptDir, fileObj))
