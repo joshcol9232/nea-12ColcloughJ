@@ -80,6 +80,78 @@ Another issue could be that if a file is deleted, the contents of the file might
 
 ---
 
+### Objectives:
+
+1. GUI should:
+
+   a. Be easy to use:
+
+   ​	i. Logically laid out.
+
+   ​	ii. Have simple options, but have more advanced options in a separate location to avoid clutter.
+
+   b. Display the files currently stored in the vault, along with the file extension and the size of the file.
+
+   c. Display the storage space remaining on the storage device the program is running on.
+
+   d. The user should be able to easily encrypt and decrypt files:
+
+   ​	i. Using easy to access buttons in the UI.
+
+   ​	ii. Using drag and drop.
+
+   e. Have an options menu, including the options to:
+
+   ​	i. Change security level (from 128 bit AES to 256 bit AES).
+
+   ​	ii. Change the location of the vault.
+
+   ​	iii. Change the pin code.
+
+   f. Make it easy to manage the files in the vault (drag them around, rename, etc).
+
+   g. Have a secure login screen.
+
+   ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect -	   via the app.
+
+   ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
+
+   h. Look relatively good without being bloated.
+
+2. App should:
+
+   a. Be easy to use.
+
+   b. Connect via Bluetooth to the PC.
+
+   c. Allow the user to input their pin code easily.
+
+   d. Tell the user if the pin code is invalid or not.
+
+   e. Make it easy to recover from mistakes (e.g invalid pin code, or if they make a typo).
+
+3. File handling:
+
+   a. Store the encrypted contents in the location specified by the user.
+
+   b. Encrypt and decrypt relatively quickly, while still being secure.
+
+   c. When the Bluetooth device goes out of range (if using Bluetooth),  encrypt all decrypted files and lock the program until the pin code is input correctly again.
+
+   e. Have a recycling bin so that the user can recover their files.
+
+   f. When a file is opened, check for changes once it is closed.
+
+   g. Files stored in the vault should not be accessible from outside of the app.
+
+   h. Names of the files stored in the vault should also not be view-able from outside of the app.
+
+
+
+
+
+---
+
 ## Research:
 
 ### Bluetooth:
@@ -113,6 +185,13 @@ The key will have to be hashed if I send it over Bluetooth, as it may get interc
 Here is a data flow diagram showing how the data is handled:
 
 ![](Diagrams/dataFlow.png)
+
+Also, when a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault.
+
+To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
+I will discuss which checksum I will be using in the <b>Checksum</b> section.
+
+
 
 -------
 
@@ -785,68 +864,6 @@ Here is a prototype I made in Processing:
 It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and too keep clutter at a minimum.
 
 ---
-
-### Objectives:
-
-1. GUI should:
-
-   a. Be easy to use:
-
-   ​	i. Logically laid out.
-
-   ​	ii. Have simple options, but have more advanced options in a separate location to avoid clutter.
-
-   b. Display the files currently stored in the vault, along with the file extension and the size of the file.
-
-   c. Display the storage space remaining on the storage device the program is running on.
-
-   d. The user should be able to easily encrypt and decrypt files:
-
-   ​	i. Using easy to access buttons in the UI.
-
-   ​	ii. Using drag and drop.
-
-   e. Have an options menu, including the options to:
-
-   ​	i. Change security level (from 128 bit AES to 256 bit AES).
-
-   ​	ii. Change the location of the vault.
-
-   ​	iii. Change the pin code.
-
-   f. Make it easy to manage the files in the vault (drag them around, rename, etc).
-
-   g. Have a secure login screen.
-
-   ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect -	   via the app.
-
-   ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
-
-   h. Look relatively good without being bloated.
-
-2. App should:
-
-   a. Be easy to use.
-
-   b. Connect via Bluetooth to the PC.
-
-   c. Allow the user to input their pin code easily.
-
-   d. Tell the user if the pin code is invalid or not.
-
-   e. Make it easy to recover from mistakes (e.g invalid pin code, or if they make a typo).
-
-3. Storing the files:
-
-   a. Store the encrypted contents in the location specified by the user.
-
-   b. Encrypt and decrypt relatively quickly, while still being secure.
-
-   c. When the Bluetooth device goes out of range (if using Bluetooth),  encrypt all decrypted files and lock the program until the pin code is input correctly again.
-
-   e. Have a recycling bin so that the user can recover their files.
-
-   f. Encrypt the names of the files, so that the names of the files can't just be read in the file manager.
 
 
 

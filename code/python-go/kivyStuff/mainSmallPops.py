@@ -115,7 +115,7 @@ class encPopup(Popup): #For single files
 
                     self.per.text = "{0:.2f}%".format(per)
 
-                if self.pb.value_normalized > 0.99:
+                if self.pb.value >= self.pb.max:
                     self.done = True
 
                 if self.done and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
