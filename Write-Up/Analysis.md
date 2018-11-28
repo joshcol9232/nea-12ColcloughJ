@@ -8,6 +8,8 @@ Within the vault, you should be able to easily organise your files, add more to 
 
 My program would be useful for teachers, as they have to keep documents on student’s grades, and any other student details secure. Since this is my use case, I will have to thoroughly test the security and practicality of my program to make sure teachers want to use it, and trust the program with these files. Also, I will add an optional mobile app that the user can download, which lets them connect to the program via Bluetooth to unlock the vault. This is would be useful if you are a teacher, as if you leave the room with your phone in your pocket, and it is connected to the vault, if you have forgotten to lock the vault then a student might try to browse through it while you are gone, but with the app, as soon as you disconnect the Bluetooth connection it locks the vault, so if you forgot to close it then it closes itself.
 
+The Bluetooth app should also be able to receive files from the PC app, so that the user can download files that are in the vault onto their mobile device. This would be useful for teachers that do not take their PC home (e.g not a laptop), so they can upload the files from the computer, to their phone so that they can edit the file at home or on the move (with another mobile app).
+
 The program needs to work on both Windows, Linux and MacOS, as then teachers/users have more flexibility with what operating systems they can use it on, so they can easily go from machine to machine and carry their vault with them (on a USB stick for example), and they know that they can reliably use the program on most machines.
 
 The user experience has to be pretty good. Good design practice will have to be used when making the GUI (e.g not putting the delete button next to the decrypt button), as I want my program to be easy to use by a wide range of people, so that even people who are not so good with computers can easily use the program.
@@ -118,6 +120,8 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    h. Look relatively good without being bloated.
 
+   i. Allow the user to easily read file names, and easily tell folders and files apart.
+
 2. App should:
 
    a. Be easy to use.
@@ -130,7 +134,9 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    e. Make it easy to recover from mistakes (e.g invalid pin code, or if they make a typo).
 
-3. File handling:
+   f. Allow the user to see a list of files currently in the vault, and let the user download those files onto their mobile device.
+
+1. File handling:
 
    a. Store the encrypted contents in the location specified by the user.
 
@@ -148,8 +154,6 @@ Another issue could be that if a file is deleted, the contents of the file might
 
 
 
-
-
 ---
 
 ## Research:
@@ -160,8 +164,7 @@ For the file store to be unlocked, I need to send the passcode to the computer v
 
 For the computer and android device to connect to each other, one device has to be assigned as the server, so it makes sense to me to use the computer as the server, as it will be running for the entire duration that the user wants to use the program.
 
-For the mobile app, I will be using Processing, a java IDE, to program the app. I will be using the android.bluetooth library that is included in the android SDK to transmit the data via Bluetooth.
- I will have to use android permissions to enable Bluetooth for use, and for this I will need to use other classes from the SDK.
+For the mobile app, I will be using Kivy to program the app. I am using Kivy so that the design is consistent with the design of the PC app. I will be using the android.bluetooth library that is included in the android SDK to transmit the data via Bluetooth.
 
 For the Bluetooth server (on the pc), I will be using Python to receive the pin from the mobile device using PyBluez, check the sent pin, and send a message back saying if the code was valid or not.
  If the code is not valid, a message will be displayed on the computer that the code is invalid, and the code on the screen of the phone will be erased.
@@ -169,6 +172,14 @@ For the Bluetooth server (on the pc), I will be using Python to receive the pin 
 Here is a flow diagram for what Bluetooth will be like:
 
 ![1542560590224](Diagrams/btFlow.png)
+
+To send the files, I will need a protocol. A protocol is a set of rules for communicating over a network. A protocol will allow the program to distinguish data that is being sent is a key, file list or a file itself.
+
+The protocol rules all have to be strings of bytes that are not likely to appear in a key, file list or a file. This is a necessity because otherwise mid way through sending a key, file list or file, if the program encounters a protocol rule within the key, list or file, then it may cause the program to get confused as to what is being sent, or if the current key, list or file has finished being sent.
+
+
+
+
 
 ---
 
