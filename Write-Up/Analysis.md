@@ -136,7 +136,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    f. Allow the user to see a list of files currently in the vault, and let the user download those files onto their mobile device.
 
-1. File handling:
+3. File handling:
 
    a. Store the encrypted contents in the location specified by the user.
 
@@ -175,9 +175,82 @@ Here is a flow diagram for what Bluetooth will be like:
 
 To send the files, I will need a protocol. A protocol is a set of rules for communicating over a network. A protocol will allow the program to distinguish data that is being sent is a key, file list or a file itself.
 
+#### Protocol
+
 The protocol rules all have to be strings of bytes that are not likely to appear in a key, file list or a file. This is a necessity because otherwise mid way through sending a key, file list or file, if the program encounters a protocol rule within the key, list or file, then it may cause the program to get confused as to what is being sent, or if the current key, list or file has finished being sent.
 
+For each of the possible items that are going to be sent, each item needs a start header, and an end header.
+Start header:
 
+```
+!<operation>!
+```
+
+End header:
+
+```
+~!!
+```
+
+For operations that do not have any extra data (arguments), then only the start header is sent.
+
+For sending more complex operations,  I will use objects that hold the data, pickle them (object sterilisation), and send the object data sandwiched between the `!<operation>!` header (start header) and the `~!!` header. For more complex operations that have multiple arguments, a separator is used to separate those arguments:
+
+```
+~~!~~
+```
+
+Here is an example with multiple arguments:
+
+```
+!<operation>!<argument1>~~!~~<argument2>~!!
+```
+
+This is especially useful for files, as this way I can send the metadata in one big lump, then send the file bit by bit. Here is what a file would look like when it is sent:
+
+```
+!FILE!<metadata_object>~~!~~<data>~!!
+```
+
+For the key however, since it will always be small ( < 16 bytes), I will just send it with a `#` at the start, and a `~` to finish the message. This is acceptable because when the PC program starts, it doesn't expect any requests from the client, so it is just waiting for the key. 
+
+```
+#<key>~
+```
+
+For items such as file metadata, I will use Python pickle to send an object (more of a struct) containing the metadata, rather than using separators, as then it is much easier for me to add information I want to send.
+
+#### Sending files over Bluetooth:
+
+To send a file from the vault, first it has to be decrypted to a temporary location. I could instead send the data from within AES, so that when a block is decrypted it is sent, however I don't plan on writing AES in Python since speed is essential for AES (and a new BT socket would have to be set up if using a different language).
+
+Metadata will be sent as an object before sending the file contents, as talked about in the above section.
+
+An example class for file metadata may look like this:
+
+![](Diagrams/fileMeta.png)
+
+```python
+class fileMetadata:
+    def __init__(self, name, size, isFolder):
+        self.name = name 		# The name of the file being sent.
+        self.size = size		# The size of the file being sent.        
+        self.isFolder = isFolder 	# Boolean for if the file is actually a folder.
+
+```
+
+This is more of a structure than an object, as it has no methods, and is just a collection of data.
+
+After the metadata is sent, a separator will have to be sent to separate the metadata from the file data itself. I discuss this in the above section.
+
+For the file itself, I will send the file in chunks, so that
+
+1. I don't use too much memory (since mobile devices usually have a small amount of memory compared to regular computers).
+2. The Bluetooth adapter can keep up with the amount being sent.
+
+This reduces the stress on both the mobile device and the PC.
+
+Once the full file is sent, an end header is sent to tell the program that the full file has been transmitted.
 
 
 
@@ -201,6 +274,14 @@ Also, when a file is edited, the file should be checked to see if any changes ha
 
 To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
 I will discuss which checksum I will be using in the <b>Checksum</b> section.
+
+---
+
+### Choosing the right algorithms:
+
+When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. For algorithms that do not need to be secure, 
+
+
 
 
 
@@ -868,11 +949,11 @@ The features I would include in the GUI would be:
 
 The app's UI design should be very simple, as I do not need to add much.
 All it needs to be is a number pad with a display, an enter button and a screen to have open while you are connected to the PC.
-Here is a prototype I made in Processing:
+Here is a prototype I made in Processing (A java based "software sketchbook"):
 
 <img src="Diagrams/appPrototype.png" width=200px/>
 
-It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and too keep clutter at a minimum.
+It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum.
 
 ---
 
