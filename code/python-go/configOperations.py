@@ -74,19 +74,15 @@ def getStartDir(fileSep=None):
         fileSep = getFileSep()
     startDir = osPath.dirname(osPath.realpath(__file__))+fileSep
     tempDir = startDir.split(fileSep)
-    del tempDir[len(tempDir)-2]
-    startDir = fileSep.join(tempDir)
-    return startDir, tempDir
+    for i in range(2):
+        del tempDir[len(tempDir)-2]
+    return startDir, fileSep.join(tempDir)+fileSep+"assets"+fileSep+"exports"+fileSep
 
 def runConfigOperations():
     fileSep = getFileSep()
     osTemp = gettempdir()+fileSep #From tempfile module
     # Get config settings.
-    startDir, tempDir = getStartDir(fileSep)
-    for i in range(2):
-        del tempDir[len(tempDir)-2]
-    sharedAssets = fileSep.join(tempDir)
-    sharedAssets += "assets"+fileSep+"exports"+fileSep
+    startDir, sharedAssets = getStartDir(fileSep)
 
     configLoc = findConfigFile(startDir, fileSep)
     path, recurse, bt = readConfigFile(configLoc)
