@@ -665,11 +665,14 @@ class MainScreen(Screen):
         startCheckSum = self.getCheckSum(location)
         os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         # After this line, the file has been closed.
-        endCheckSum = self.getCheckSum(location)
-        print(startCheckSum, "START CHECK SUM")
-        print(endCheckSum, "END CHECK SUM")
-
-        endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
+        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted.
+            endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
+            endCheckSum = self.getCheckSum(location)
+            print(startCheckSum, "START CHECK SUM")
+            print(endCheckSum, "END CHECK SUM")
+        else:
+            endList = []
+            endCheckSum = startCheckSum # Don't try and encrypt files that have been removed.
         diffAdded = [d for d in endList if d not in startList]
         tempLoc = startLoc.split(self.fileSep)
         for i in diffAdded:
