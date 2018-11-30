@@ -189,7 +189,7 @@ Start header:
 End header:
 
 ```
-~!!
+~!END!
 ```
 
 For operations that do not have any extra data (arguments), then only the start header is sent.
@@ -203,13 +203,13 @@ For sending more complex operations,  I will use objects that hold the data, pic
 Here is an example with multiple arguments:
 
 ```
-!<operation>!<argument1>~~!~~<argument2>~!!
+!<operation>!<argument1>~~!~~<argument2>~!END!
 ```
 
 This is especially useful for files, as this way I can send the metadata in one big lump, then send the file bit by bit. Here is what a file would look like when it is sent:
 
 ```
-!FILE!<metadata_object>~~!~~<data>~!!
+!FILE!<metadata_object>~~!~~<data>~!END!
 ```
 
 For the key however, since it will always be small ( < 16 bytes), I will just send it with a `#` at the start, and a `~` to finish the message. This is acceptable because when the PC program starts, it doesn't expect any requests from the client, so it is just waiting for the key. 
@@ -233,9 +233,9 @@ An example class for file metadata may look like this:
 ```python
 class fileMetadata:
     def __init__(self, name, size, isFolder):
-        self.name = name 		# The name of the file being sent.
-        self.size = size		# The size of the file being sent.        
-        self.isFolder = isFolder 	# Boolean for if the file is actually a folder.
+        self.name = name 		 # The name of the file being sent.
+        self.size = size		 # The size of the file being sent.        
+        self.isFolder = isFolder # Boolean for if the file is actually a folder.
 
 ```
 
@@ -251,8 +251,6 @@ For the file itself, I will send the file in chunks, so that
 This reduces the stress on both the mobile device and the PC.
 
 Once the full file is sent, an end header is sent to tell the program that the full file has been transmitted.
-
-
 
 ---
 
@@ -279,7 +277,42 @@ I will discuss which checksum I will be using in the <b>Checksum</b> section.
 
 ### Choosing the right algorithms:
 
-When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. For algorithms that do not need to be secure, 
+When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. 
+
+When hashing the key when it is input, the algorithm has to be very secure, and speed does not matter as much. A member of the SHA2 family of algorithms would be a good algorithm to do this, as it is quite slow, but it is very secure (SHA1 was found to have a lot of hash collisions). Speed does not matter as much for the key, as the input data will only ever be less than 16 bytes. A faster algorithm will only provide a few milliseconds over SHA, so there is no point compromising on security for a negligible time decrease.
+
+For getting the checksum of files, the algorithm has to be very fast, as it will be done on the data in the file before and after the file is opened to check for changes. If this algorithm is slow, then the overall user experience will be much worse if the algorithm takes ages to open and close files. I will test each algorithm I am thinking of using for hashing and compare them using this algorithm (Python):
+
+```python
+import hashlib				# Library of hashing algorithms.
+from random import randint  # Used to generate the data.
+from time import time		# Used to measure how long the operation takes.
+
+def generate(times, size):	# Generates data, each block of length "size", and "times" number of blocks.
+    data = []
+    for i in range(times):
+        for j in range(size):
+            data.append(randint(0, 255))	# Randomly generate a byte.
+    return bytearray(data)
+
+def test(times, size):
+    data = generate(times, size)    # Generate the data
+    start = time()					# Get the start time
+    for i in range(times):
+        hashlib.sha256(data[i*size:(i+1)*size]).hexdigest()	# Do the hash (in this case SHA256)
+
+    return (times*size)/(time()-start)		# Return the bytes per second.
+
+print(test(1000, 256))	# Run the program.
+```
+
+I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
+
+#### Here are the results:
+
+
+
+
 
 
 
