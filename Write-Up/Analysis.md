@@ -273,6 +273,8 @@ Also, when a file is edited, the file should be checked to see if any changes ha
 To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
 I will discuss which checksum I will be using in the <b>Checksum</b> section.
 
+
+
 ---
 
 ### Choosing the right algorithms:
@@ -303,18 +305,52 @@ def test(times, size):
 
     return (times*size)/(time()-start)		# Return the bytes per second.
 
-print(test(1000, 256))	# Run the program.
+print(test(1000, 128))	# Run the program.
 ```
 
 I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
 
 #### Here are the results:
 
+Megabytes per second for each hash function (using 1000 blocks of 128 bytes (128 kilobytes)):
 
+![](Graphs/hashFunctionSpeed.png)
 
+For my next tests, I will do data hashed against time. For this I will be using different sized files that I will make using this function:
 
+```python
+def generateFile(name, totalSize):
+    fo = open(name, "wb")
+    a = bytearray()
+    for i in range(totalSize):
+        a.append(randint(0, 255))
+    fo.write(a)
+    fo.close()
+```
 
+First I will test each hash function with encrypting very small data (< 1 KiB).
 
+These were the results:
+
+![](Graphs/hashFunctionDiffBytes.png)
+
+This image can be found larger in the <b>Large Images</b> section as <b>Figure 3</b>.
+
+Here is the start of the graph, as that is the most interesting bit:
+
+![](Graphs/hashFunctionDiffBytesSmall.png)
+
+The axis on this graph are the same as the one before it.
+
+Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. From these results I think I will use SHA256 for hashing the key, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
+
+The BLAKE algorithms were designed for big data, which is what I am going to look at next:
+
+![](Graphs/hashFunctionDiffAmounts.png)
+
+In this graph, the gradient (rate of increase) of each line is the ratio of seconds to megabytes of each function (so $\frac{x}{y} = megabytes/second$). So the less steep the line is, the faster the operation.
+
+SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is quite slow, and this is because BLAKE2s is designed for 32-bit CPU architectures, and my CPU is 64-bit. MD5 and SHA1 are both the fastest, and have similar performance, but have security problems. BLAKE2b was the fastest out of the secure functions, so I will be using BLAKE2b for checksums in the program, as checksums need to be calculated quickly, as discussed before.
 
 
 
