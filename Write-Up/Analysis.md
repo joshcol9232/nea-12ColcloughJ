@@ -114,7 +114,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    g. Have a secure login screen.
 
-   ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect -	   via the app.
+   ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
    ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
@@ -152,13 +152,11 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    h. Names of the files stored in the vault should also not be view-able from outside of the app.
 
-
-
 ---
 
-## Research:
+# Design:
 
-### Bluetooth:
+## Bluetooth:
 
 For the file store to be unlocked, I need to send the passcode to the computer via a Bluetooth connection.
 
@@ -175,7 +173,7 @@ Here is a flow diagram for what Bluetooth will be like:
 
 To send the files, I will need a protocol. A protocol is a set of rules for communicating over a network. A protocol will allow the program to distinguish data that is being sent is a key, file list or a file itself.
 
-#### Protocol
+### Protocol
 
 The protocol rules all have to be strings of bytes that are not likely to appear in a key, file list or a file. This is a necessity because otherwise mid way through sending a key, file list or file, if the program encounters a protocol rule within the key, list or file, then it may cause the program to get confused as to what is being sent, or if the current key, list or file has finished being sent.
 
@@ -220,7 +218,7 @@ For the key however, since it will always be small ( < 16 bytes), I will just se
 
 For items such as file metadata, I will use Python pickle to send an object (more of a struct) containing the metadata, rather than using separators, as then it is much easier for me to add information I want to send.
 
-#### Sending files over Bluetooth:
+### Sending files over Bluetooth:
 
 To send a file from the vault, first it has to be decrypted to a temporary location. I could instead send the data from within AES, so that when a block is decrypted it is sent, however I don't plan on writing AES in Python since speed is essential for AES (and a new BT socket would have to be set up if using a different language).
 
@@ -254,7 +252,7 @@ Once the full file is sent, an end header is sent to tell the program that the f
 
 ---
 
-### File Storage:
+## File Storage:
 
 For storing the files, I will storing the encrypted files in it’s own directory. 
  The directory will be managed using a tree structure, where the root folder contains folders for each file, with the name of every folder and file being encrypted, as otherwise anyone can see the name of your file.
@@ -264,20 +262,20 @@ The encryption method I will use AES 128 bit, as it will slightly compromise sec
 
 The key will have to be hashed if I send it over Bluetooth, as it may get intercepted, and it is also a good idea to hash it on the computer program as well, as if someone somehow manages to get the key, it will not be the user’s original input, so if the user uses it for something else, their other accounts will be fine.
 
-Here is a data flow diagram showing how the data is handled:
+Here is a data flow diagram showing how the data is handled once logged into the program:
 
-![](Diagrams/dataFlow.png)
+![](Diagrams/dataFlowMain.png)
 
-Also, when a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault.
+The key is also passed to any stages that encrypt or decrypt, as at this point the user should already be logged in.
+
+When a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault.
 
 To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
 I will discuss which checksum I will be using in the <b>Checksum</b> section.
 
-
-
 ---
 
-### Choosing the right algorithms:
+## Choosing the right algorithms:
 
 When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. 
 
@@ -310,7 +308,7 @@ print(test(1000, 128))	# Run the program.
 
 I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
 
-#### Here are the results:
+### Here are the results:
 
 Megabytes per second for each hash function (using 1000 blocks of 128 bytes (128 kilobytes)):
 
@@ -342,7 +340,7 @@ Here is the start of the graph, as that is the most interesting bit:
 
 The axis on this graph are the same as the one before it.
 
-Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. From these results I think I will use SHA256 for hashing the key, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
+Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. <b>From these results I think I will use SHA256 for hashing the key</b>, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
 
 The BLAKE algorithms were designed for big data, which is what I am going to look at next:
 
@@ -352,13 +350,11 @@ In this graph, the gradient (rate of increase) of each line is the ratio of seco
 
 SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is quite slow, and this is because BLAKE2s is designed for 32-bit CPU architectures, and my CPU is 64-bit. MD5 and SHA1 are both the fastest, and have similar performance, but have security problems. BLAKE2b was the fastest out of the secure functions, so I will be using BLAKE2b for checksums in the program, as checksums need to be calculated quickly, as discussed before.
 
+---
 
+## AES:
 
--------
-
-### AES:
-
-#### History:
+### History:
 
 In 1997, the encryption standard at the time, DES, was becoming obsolete due to the advancements in the computer industry. This resulted in the National Institute of Standards and Technology in the United States to call for a new advanced encryption standard (AES).
 
@@ -368,9 +364,9 @@ One of the reasons AES has been more successful than DES so far is that AES was 
 
 This open-source approach ended up helping the new Advanced Encryption Standard, as the program could be heavily analysed by people all across the globe.
 
-#### The Algorithm (<u>128 bit AES</u>):
+### The Algorithm (<u>128 bit AES</u>):
 
-##### <u>How the data is handled:</u>
+#### <u>How the data is handled:</u>
 
 AES works by using a block cipher, so it splits the data given into 128 bit, 192 bit or 256 bit chunks depending on what AES you choose (128, 192 or 256). You then use the algorithm on each block to get the cipher text, then you write it to the new file, and move onto the next block.
 
@@ -386,7 +382,7 @@ Decryption works exactly the same, however the cipher text is split up and decry
 
 Each 128 bit "block" of data can also be called a "state".
 
-##### <u>Before the operation starts:</u>
+#### <u>Before the operation starts:</u>
 
 First, the data has to be a multiple of 16 in length. If it isn't then more bytes need to be added to the end such that the data is 16 bytes in length (padding).
 
@@ -420,7 +416,7 @@ This process is repeated until the length of the round key array is 176 bytes, t
 
 And that's all of the preparations done.
 
-##### <u>The operation:</u>
+### <u>The operation:</u>
 
 Here is a diagram of the operation (I will explain each step in detail below):
 
@@ -434,13 +430,13 @@ The 16 bytes in the state can be represented in a 4x4 grid, to make it easier to
 
 
 
-###### Add Round Key:
+##### Add Round Key:
 
 The Add Round Key step is literally just XOR-ing each byte in the current block of 16 bytes, with each byte in the 16 byte round key, and returning the state.
 
 
 
-###### Sub Bytes:
+##### Sub Bytes:
 
 Sub bytes substitutes each byte in the state with it's corresponding value in the Rijndael substitution box:
 
@@ -455,7 +451,7 @@ For example, if I had the hex `0x1A`, it would be substituted by the value: `0xA
 
 
 
-###### Shift Rows:
+##### Shift Rows:
 
 Shift Rows shifts the rows (really?) left depending on the row number.
 
@@ -465,7 +461,7 @@ For example, the first row is shifted left by 0, second row shifted by 1 and so 
 
 
 
-###### Mix Columns:
+##### Mix Columns:
 
 Mix columns is the most confusing step of AES, so I will try to break it down into small pieces.
 
@@ -633,7 +629,7 @@ This trades a few kilobytes of memory for a drastic improvement in speed.
 
 
 
-##### <u>Decryption</u>
+#### <u>Decryption</u>
 
 Decryption is just encryption, but in reverse. This uses the inverse functions of each function used to encrypt the data. Here is the algorithm:
 
@@ -645,13 +641,13 @@ Before decryption, the exact same steps need to be taken as in encryption, apart
 
 
 
-###### Inverse Add Round Key:
+##### Inverse Add Round Key:
 
 Add round key is it's own inverse, as XOR is the same forwards as it is backwards.
 
 
 
-###### Inverse Sub Bytes:
+##### Inverse Sub Bytes:
 
 Inverse sub bytes is the same as sub bytes, it just has an inverse of the S-Box.
 
@@ -659,7 +655,7 @@ Inverse sub bytes is the same as sub bytes, it just has an inverse of the S-Box.
 
 
 
-###### Inverse Shift Rows:
+##### Inverse Shift Rows:
 
 Inverse shift rows does what shift rows does, but shifts each row right instead of left.
 
@@ -669,7 +665,7 @@ In the diagram below it takes the shifted data and orders it again.
 
 
 
-###### Inverse Mix Columns:
+##### Inverse Mix Columns:
 
 Inverse mix columns works the same as normal mix columns, but with a different matrix to multiply each element with:
 $$
@@ -695,13 +691,11 @@ The a's are the original data, the r's are the encrypted data.
 
 Just like with normal mix columns, you can just use lookup tables for each possible answer to each possible input.
 
-
-
 And that's all for AES.
 
 ---
 
-### SHA256:
+## SHA256:
 
 SHA256 (in the Secure Hash Algorithm 2 family) takes an input of 32 bytes (256 bits), and gives a 32 byte output based on the input, but is meaningless. This is useful for passwords, or pin codes like in my program, where you don't want the original password to be known, but for the password to still be unique.
 
@@ -736,13 +730,11 @@ Now you might be asking "Why are you using 256 bit SHA, when size key you need f
 
 What I am doing instead, is taking the output of SHA256, splitting it in half, and XORing each half with each other to get a 128 bit output. This doesn't affect how secure it is, as you still have the extra step of XOR, making it still more secure than SHA-1.
 
-#### The Algorithm:
+### The Algorithm:
 
 Bear in mind that SHA works on a bitwise level, so while I will be explaining it, I will be talking in terms of bits.
 
-
-
-##### <u>How the message is handled:</u>
+#### <u>How the message is handled:</u>
 
 When doing operations on the data, it will be done in 32 bit words. The message is split into 512 bit blocks, containing sixteen 32 bit words.
 
@@ -754,11 +746,11 @@ SHA is operates on every 32 bit word.
 
 Since the maximum key size for my AES will be 16 bytes (128 bits), I don't need to worry about splitting the message into 512 bit chunks, as the input will only ever be 128 bits as SHA will only ever be used for the AES key. So, for the examples below I won't go into detail on how a message bigger than 512 bits will be handled.
 
-##### <u>Before the operation starts:</u>
+#### <u>Before the operation starts:</u>
 
 Before we start, we need to <b>pad the message</b> $M$ so that it is 512 bits in length.
 
-Let $l$ = the length of the message $M$.
+Let $l$ = the length of the message $M​$.
 
 First, we need to append the bit  $1$  to the end of the message, followed by $k$  $0$  bits, where $k$ is the smallest positive solution to the equation:
 $$
@@ -789,8 +781,6 @@ $$
 $$
 The message has to be 512 bits in length so that it works with the calculations later.
 
-
-
 Then, we also need to <b>set the initial hash values</b> for each word in the current block. The initial hash values set by the creators of SHA:
 
 > "These words were obtained by taking the first thirty-two bits of the fractional parts of the square roots of the first eight prime numbers. "
@@ -814,7 +804,7 @@ Here is the algorithm:
 
 To do this, we need two functions,  sigma 0 $\sigma_0$ and sigma 1 $\sigma_1$.
 
-###### Sigma 0 (Expansion) ($\sigma_0$):
+##### Sigma 0 (Expansion) ($\sigma_0$):
 
 Sigma 0 (Expansion) looks like this:
 $$
@@ -852,7 +842,7 @@ Here the byte is shifted right, and the bytes are removed as they are shifted.
 
 
 
-###### Sigma 1 (Expansion)($\sigma_1$):
+##### Sigma 1 (Expansion)($\sigma_1$):
 
 Sigma 1(Expansion)($\sigma_1$) is the same as Sigma 0 (Expansion)($\sigma_0$), apart from how much you rotate and shift the word:
 $$
@@ -862,7 +852,7 @@ $$
 
 
 
-##### <u>The operation:</u>
+#### <u>The operation:</u>
 
 All addition is MOD(2^32).
 
@@ -880,7 +870,7 @@ All of the SHA functions operate on 32 bit words, and return a new 32 bit word. 
 
 
 
-###### Sigma 0 ($\Sigma_0$):
+##### Sigma 0 ($\Sigma_0$):
 
 $\Sigma_0$ is this equation:
 $$
@@ -921,7 +911,7 @@ It isn't too difficult it's just understanding what the $>>>$ does.
 
 
 
-###### Sigma 1 ($\Sigma_1$):
+##### Sigma 1 ($\Sigma_1$):
 
 Sigma 1 ($\Sigma_1$) is pretty much the same as $\Sigma_0$, the only difference being the amount you rotate by:
 $$
@@ -929,7 +919,7 @@ $$
 $$
 
 
-###### Ch:
+##### Ch:
 
 The Ch function looks like this:
 $$
@@ -960,7 +950,7 @@ $$
 \end{align*}
 $$
 
-###### Maj:
+##### Maj:
 
 the Maj function looks like this:
 $$
@@ -988,11 +978,11 @@ $$
 
 ---
 
-### UI Research:
+## UI Research:
 
 For the UI of both apps, I will use Kivy (a Python module) to make both the mobile app and the PC program. I have chosen Kivy as using it on both the app and the main program means that the design will stay consistent, and Kivy does look quite nice "out of the box".
 
-#### Main Program (on PC):
+### Main Program (on PC):
 
 The main program has to be designed to be easy to use, and actions that are used a lot should be easily accessible.
 
@@ -1000,21 +990,44 @@ I think I will go for a similar layout to a program that already exists, SanDisk
 
 ![](Diagrams/sanDisk.png)
 
-As you can see, it is nicely laid out, with important buttons easy to access, and gives the user a lot of information, without being too cluttered.
-
 SanDisk Secure Access did inspire this project, however I do not want to make a carbon copy of it. I will take what SanDisk have done right, and improve the areas they lacked on.
 
-The features I would include in the GUI would be:
+<b>SanDisk did these things right:</b>
 
-- The list of files displayed neatly, and easily sortable in the program.
-- The amount of space available on the device currently used to store the files, and how much you have used.
-- The option to lock and unlock the program.
-- To be able to easily manage and browse the files.
-- When encrypting or decrypting files, give the user statistics of how long the process should take and the speed it is currently running at.
-- Make it look half decent.
-- Make it easy and quick to search for files and folders.
+- The layout is pretty good because all buttons you would need regularly are available, and it doesn't differ too much in design from the Windows file explorer, so it feels familiar to it's users.
+- Shows the user how much space is left on their device.
+- Shows useful information about each file.
+- The user can easily sort the list of files however they want.
+- More options are hidden unless needed regularly.
+- Allows the user to search the vault for a file.
+- I can easily drag files in and out of the program.
 
-#### The App:
+<b>What I think SanDisk did not do too well:</b>
+
+- Looks a bit cluttered with all the extra stuff at the bottom. If I wanted to see other files on my computer I would open my file manager, and if I wanted to add files to the vault I can just drag it in easily.
+
+- Faded pictures in the background are distracting.
+
+- Some buttons are quite small, so may be hard for some users to click.
+
+- Aesthetically alright but could be better.
+
+- Some icons are confusing when first using the program (like the folder with the green arrow inside of it; too much going on).
+
+- Size is displayed in kilobytes, which is alright but is kind of hard to read for files larger than 1 megabyte.
+
+
+Taking all of these points into consideration, here is a possible design for the UI of my program:
+
+![](Design/mainProgramDesign.png)
+
+Everything grey is a clickable button. This helps the user distinguish between buttons and information. The most important buttons are large, as they will be used the most.
+
+The user can sort by name or size, and can search the entire vault for a search term.
+
+
+
+### The App:
 
 The app's UI design should be very simple, as I do not need to add much.
 All it needs to be is a number pad with a display, an enter button and a screen to have open while you are connected to the PC.
@@ -1023,8 +1036,6 @@ Here is a prototype I made in Processing (A java based "software sketchbook"):
 <img src="Diagrams/appPrototype.png" width=200px/>
 
 It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum.
-
----
 
 
 
