@@ -116,7 +116,6 @@ func getNiceOutput(h [8]uint64) [64]byte {
 }
 
 func BLAKEchecksum(f string, hashL int) [64]byte {
-  // Going to feed in the chunks very similar to AES.
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
@@ -149,7 +148,6 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
     for i := range buff {
       currBuff[i] = uint64(buff[i])
     }
-//    currBuff := splitData(buff)
 
     if bytesLeft <= 128 {
       bytesFed += bytesLeft
@@ -167,10 +165,6 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
   return getNiceOutput(h)
 }
 
-//func test() {
-//  math.Rand
-//}
-
 func main() {
   bytes, err := ioutil.ReadAll(os.Stdin)
   check(err)
@@ -186,4 +180,4 @@ func main() {
 //  }
 
   //f := "/home/josh/GentooMin.iso"
-  //fmt.Printf("%x", BLAKEchecksum(f, 64))
+  //fmt.Printf("%x", BLAKEchecksum(f, 64))k

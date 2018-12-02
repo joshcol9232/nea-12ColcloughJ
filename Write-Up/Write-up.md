@@ -154,7 +154,39 @@ Another issue could be that if a file is deleted, the contents of the file might
 
 ---
 
-# Design:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Design
 
 ## Bluetooth:
 
@@ -169,7 +201,7 @@ For the Bluetooth server (on the pc), I will be using Python to receive the pin 
 
 Here is a flow diagram for what Bluetooth will be like:
 
-![1542560590224](Diagrams/btFlow.png)
+![](Diagrams/btFlow.png)
 
 To send the files, I will need a protocol. A protocol is a set of rules for communicating over a network. A protocol will allow the program to distinguish data that is being sent is a key, file list or a file itself.
 
@@ -234,7 +266,6 @@ class fileMetadata:
         self.name = name 		 # The name of the file being sent.
         self.size = size		 # The size of the file being sent.        
         self.isFolder = isFolder # Boolean for if the file is actually a folder.
-
 ```
 
 This is more of a structure than an object, as it has no methods, and is just a collection of data.
@@ -264,20 +295,22 @@ The key will have to be hashed if I send it over Bluetooth, as it may get interc
 
 Here is a data flow diagram showing how the data is handled once logged into the program:
 
-![](Diagrams/dataFlowMain.png)
+<img src="Diagrams/dataFlowMain.png" width=500px/>
 
 The key is also passed to any stages that encrypt or decrypt, as at this point the user should already be logged in.
 
 When a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault.
 
 To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
-I will discuss which checksum I will be using in the <b>Checksum</b> section.
+I will discuss which checksum I will be using in the next section.
 
 ---
 
 ## Choosing the right algorithms:
 
 When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. 
+
+### Hashing:
 
 When hashing the key when it is input, the algorithm has to be very secure, and speed does not matter as much. A member of the SHA2 family of algorithms would be a good algorithm to do this, as it is quite slow, but it is very secure (SHA1 was found to have a lot of hash collisions). Speed does not matter as much for the key, as the input data will only ever be less than 16 bytes. A faster algorithm will only provide a few milliseconds over SHA, so there is no point compromising on security for a negligible time decrease.
 
@@ -308,11 +341,11 @@ print(test(1000, 128))	# Run the program.
 
 I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
 
-### Here are the results:
+#### Here are the results:
 
 Megabytes per second for each hash function (using 1000 blocks of 128 bytes (128 kilobytes)):
 
-![](Graphs/hashFunctionSpeed.png)
+<img src="Graphs/hashFunctionSpeed.png" width=500px/>
 
 For my next tests, I will do data hashed against time. For this I will be using different sized files that I will make using this function:
 
@@ -326,9 +359,7 @@ def generateFile(name, totalSize):
     fo.close()
 ```
 
-First I will test each hash function with encrypting very small data (< 1 KiB).
-
-These were the results:
+First I will test each hash function with encrypting very small data (< 1 KiB). These were the results:
 
 ![](Graphs/hashFunctionDiffBytes.png)
 
@@ -336,11 +367,11 @@ This image can be found larger in the <b>Large Images</b> section as <b>Figure 3
 
 Here is the start of the graph, as that is the most interesting bit:
 
-![](Graphs/hashFunctionDiffBytesSmall.png)
+<img src="Graphs/hashFunctionDiffBytesSmall.png" width=500px/>
 
 The axis on this graph are the same as the one before it.
 
-Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. <b>From these results I think I will use SHA256 for hashing the key</b>, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
+Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. From these results I think I will use SHA256 for hashing the key, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
 
 The BLAKE algorithms were designed for big data, which is what I am going to look at next:
 
@@ -349,6 +380,12 @@ The BLAKE algorithms were designed for big data, which is what I am going to loo
 In this graph, the gradient (rate of increase) of each line is the ratio of seconds to megabytes of each function (so $\frac{x}{y} = megabytes/second$). So the less steep the line is, the faster the operation.
 
 SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is quite slow, and this is because BLAKE2s is designed for 32-bit CPU architectures, and my CPU is 64-bit. MD5 and SHA1 are both the fastest, and have similar performance, but have security problems. BLAKE2b was the fastest out of the secure functions, so I will be using BLAKE2b for checksums in the program, as checksums need to be calculated quickly, as discussed before.
+
+### Encryption:
+
+For encryption, I will definitely be using AES, because it is the standard and has been tested extremely thoroughly by the public. I do not want to compromise on security, but AES is still relatively fast anyway.
+
+I will use 128 bit AES mainly, as it is still proven to be secure from attacks, and may include the option to use 256 bit if desired by the user. 
 
 ---
 
@@ -403,6 +440,36 @@ For each round of the encryption, a different key has to be used. To make the ci
 The first 16 bytes are the key, and then from there, the algorithm is started. Here is the algorithm with example:
 <b>Figure 1 (A larger version can be found in the "Large Images" section)</b>![](Diagrams/keyExpansion.png)
 
+The algorithm in psudocode:
+
+```pseudocode
+function expandKey(inputKey)
+	expanded := inputKey
+	bytesGenerated := 16
+	rconIteration  := 1
+	temp := uint8[4]
+	
+	while bytesGenerated < 176
+		temp = expanded[bytesGenerated - 4:bytesGenerated]
+		
+		if bytesGenerated MOD 16 == 0 then
+			temp[0], temp[1], temp[2], temp[3] = temp[1], temp[2], temp[3], temp[0]
+			temp[0], temp[1], temp[2], temp[3] = sBox[temp[0]], sBox[temp[1]], sBox[temp[2]], sBox[temp[3]]
+			
+			temp[0] = temp[0] XOR rcon[rconIteration]
+			rconIteration = rconIteration + 1
+		end if
+		
+		for i := 0 to 4
+			expanded[bytesGenerated] = expanded[bytesGenerated - 16] XOR temp[y]
+			bytesGenerated = bytesGenerated + 1
+		end
+	return expanded
+end
+```
+
+
+
 The array of round keys starts off the exact same as the original key. Then if the length of the round key array is a multiple of 16 (which it is), the last 4 bytes of the previous round key (in this case the last 4 bytes of the original key) is:
 
 1. Rotated (The first element of the 4 bytes is put at the end).
@@ -426,7 +493,9 @@ In total there are 11 rounds (9 regular rounds). For each round, the correspondi
 
 The 16 bytes in the state can be represented in a 4x4 grid, to make it easier to visualise what is happening at each stage:
 
-![default](Diagrams/Grids/default.png)
+<img src="Diagrams/Grids/default.png" width=200px/>
+
+
 
 
 
@@ -434,13 +503,22 @@ The 16 bytes in the state can be represented in a 4x4 grid, to make it easier to
 
 The Add Round Key step is literally just XOR-ing each byte in the current block of 16 bytes, with each byte in the 16 byte round key, and returning the state.
 
+Here is pseudocode for the <b>Add Round Key</b> step:
+
+```pseudocode
+function addRoundKey(state, roundKey)
+	for i := to 16
+		state[i] = state[i] XOR roundKey[i]
+	return state
+```
+
 
 
 ##### Sub Bytes:
 
 Sub bytes substitutes each byte in the state with it's corresponding value in the Rijndael substitution box:
 
-![](Diagrams/aes_sbox.jpg)
+<img src="Diagrams/aes_sbox.jpg" width=350px/>
 
 When using the sub-box, you have to think of each byte as hexadecimal (0xYZ). 
 Each row of the sub box is the value of the Y value (16s) in the hexadecimal representation of the byte.
@@ -448,6 +526,17 @@ Each column of the sub box is the value of the Z value (1s) in the hexadecimal r
 
 For example, if I had the hex `0x1A`, it would be substituted by the value: `0xA2`
 , as it is row "1", column "A".
+
+Here is the pseudocode for the **Sub Bytes** step:
+
+```pseudocode
+function subBytes(state)
+	for i := 0 to 16
+		state[i] = sBox[state[i]]
+	return state
+```
+
+It is pretty much the same as **Add Round Key** but instead of XORing you substitute each byte of the state with the corresponding byte in the sub-box (sBox).
 
 
 
@@ -457,7 +546,38 @@ Shift Rows shifts the rows (really?) left depending on the row number.
 
 For example, the first row is shifted left by 0, second row shifted by 1 and so on:
 
-<img src="Diagrams/Grids/shiftRows.png/" width=350px/>
+<img src="Diagrams/Grids/shiftRows.png/" width=300px/>
+
+Here is the algorithm for **Shift Rows**:
+
+```pseudocode
+function shiftRows(state)
+	temp := []
+	
+	temp[ 0] = state[ 0]
+	temp[ 1] = state[ 5]
+	temp[ 2] = state[10]
+	temp[ 3] = state[15]
+	
+	temp[ 4] = state[ 4]
+	temp[ 5] = state[ 9]
+	temp[ 6] = state[14]
+	temp[ 7] = state[ 3]
+	
+	temp[ 8] = state[ 8]
+	temp[ 9] = state[13]
+	temp[10] = state[ 2]
+	temp[11] = state[ 7]
+	
+	temp[12] = state[12]
+	temp[13] = state[ 1]
+	temp[14] = state[ 6]
+	temp[15] = state[11]
+	
+	return temp
+```
+
+The array is indexed to correspond to the images above.
 
 
 
@@ -627,13 +747,45 @@ On a computer, this would be very demanding on the processor, however since the 
 
 This trades a few kilobytes of memory for a drastic improvement in speed.
 
+This makes the pseudocode for **Mix Columns** very simple:
+
+```pseudocode
+// mul2 and mul3 are the pre-defined tables talked about above.
+function mixColumns(state)
+	temp := []
+	
+	temp[ 0] = mul2[state[0]] XOR mul3[state[1]] XOR state[2] XOR state[3]
+	temp[ 1] = state[0] XOR mul2[state[1]] XOR mul3[state[2]] XOR state[3]
+	temp[ 2] = state[0] XOR state[1] XOR mul2[state[2]] XOR mul3[state[3]]
+	temp[ 3] = mul3[state[0]] XOR state[1] XOR state[2] XOR mul2[state[3]]
+	
+	temp[ 4] =  mul2[state[4]] XOR mul3[state[5]] XOR state[6] XOR state[7]
+    temp[ 5] =  state[4] XOR mul2[state[5]] XOR mul3[state[6]] XOR state[7]
+    temp[ 6] = state[4] XOR state[5] XOR mul2[state[6]] XOR mul3[state[7]]
+    temp[ 7] = mul3[state[4]] XOR state[5] XOR state[6] XOR mul2[state[7]]
+
+    temp[ 8] = mul2[state[8]] XOR mul3[state[9]] XOR state[10] XOR state[11]
+    temp[ 9] = state[8] XOR mul2[state[9]] XOR mul3[state[10]] XOR state[11]
+    temp[10] = state[8] XOR state[9] XOR mul2[state[10]] XOR mul3[state[11]]
+    temp[11] = mul3[state[8]] XOR state[9] XOR state[10] XOR mul2[state[11]]
+
+    temp[12] = mul2[state[12]] XOR mul3[state[13]] XOR state[14] XOR state[15]
+    temp[13] = state[12] XOR mul2[state[13]] XOR mul3[state[14]] XOR state[15]
+    temp[14] = state[12] XOR state[13] XOR mul2[state[14]] XOR mul3[state[15]]
+    temp[15] = mul3[state[12]] XOR state[13] XOR state[14] XOR mul2[state[15]]
+    
+    return temp
+}
+
+```
+
 
 
 #### <u>Decryption</u>
 
 Decryption is just encryption, but in reverse. This uses the inverse functions of each function used to encrypt the data. Here is the algorithm:
 
-<img src="Diagrams/decAbst.png" width=400px/>
+<img src="Diagrams/decAbst.png" width=270px/>
 
 It is literally just the encryption algorithm in reverse.
 
@@ -651,7 +803,7 @@ Add round key is it's own inverse, as XOR is the same forwards as it is backward
 
 Inverse sub bytes is the same as sub bytes, it just has an inverse of the S-Box.
 
-![](Diagrams/invSBox.jpg)
+<img src="Diagrams/invSBox.jpg" width=500px/>
 
 
 
@@ -661,7 +813,7 @@ Inverse shift rows does what shift rows does, but shifts each row right instead 
 
 In the diagram below it takes the shifted data and orders it again.
 
-<img src="Diagrams/Grids/invShiftRows.png/" width=350px/>
+<img src="Diagrams/Grids/invShiftRows.png/" width=300px/>
 
 
 
@@ -734,7 +886,7 @@ What I am doing instead, is taking the output of SHA256, splitting it in half, a
 
 Bear in mind that SHA works on a bitwise level, so while I will be explaining it, I will be talking in terms of bits.
 
-#### <u>How the message is handled:</u>
+#### How the message is handled:
 
 When doing operations on the data, it will be done in 32 bit words. The message is split into 512 bit blocks, containing sixteen 32 bit words.
 
@@ -746,7 +898,7 @@ SHA is operates on every 32 bit word.
 
 Since the maximum key size for my AES will be 16 bytes (128 bits), I don't need to worry about splitting the message into 512 bit chunks, as the input will only ever be 128 bits as SHA will only ever be used for the AES key. So, for the examples below I won't go into detail on how a message bigger than 512 bits will be handled.
 
-#### <u>Before the operation starts:</u>
+#### Before the operation starts:
 
 Before we start, we need to <b>pad the message</b> $M$ so that it is 512 bits in length.
 
@@ -800,7 +952,7 @@ Next, each 32 bit word in the message has to be expanded from 32 bits to 64 bits
 
 Here is the algorithm:
 
-<img src="Diagrams/SHAWordExpansion.png" width=350px/>
+![](Diagrams/SHAWordExpansion.png)
 
 To do this, we need two functions,  sigma 0 $\sigma_0$ and sigma 1 $\sigma_1$.
 
@@ -852,7 +1004,7 @@ $$
 
 
 
-#### <u>The operation:</u>
+#### The operation:
 
 All addition is MOD(2^32).
 
@@ -867,6 +1019,8 @@ In the diagram above, H is the array of initial hash values discussed earlier, w
 The step "Expand wordList[x]" is covered in the section above.
 
 All of the SHA functions operate on 32 bit words, and return a new 32 bit word. I will now explain what the functions Sigma0 ($\Sigma_0$), Sigma1 ($\Sigma_1$), Ch and Maj.
+
+
 
 
 
@@ -974,6 +1128,97 @@ $$
 \end{align*}
 $$
 
+---
+
+## BLAKE 2b:
+
+BLAKE was a finalist in the SHA 3 contest. The SHA 3 contest was announced on November 2nd 2007, as a new hash function was needed, that was very different from the SHA 2 family of hash functions in case a huge issue was found with the SHA 2 family.
+
+BLAKE did not win, as it was too similar to SHA2:
+
+> _“desire for SHA-3 to complement the existing SHA-2 algorithms … BLAKE
+> is rather similar to SHA-2.”_
+
+_https://blake2.net/acns/slides.html_
+
+However, BLAKE was the fastest out of all of the competitors (at 8.4 cycles per byte, cycles being the fetch decode execute cycle of a processor), and was tested to be secure. This meant that even though BLAKE did not win the competition, it is still used in numerous programs. Due to BLAKE's speed, it is ideal for getting the checksum of large data.
+
+No preparations have to be done so lets just jump right into the algorithm.
+
+### The Algorithm:
+
+#### How the data is read:
+
+8 initial hash values of size 64-bits are initialised at the start (using pre-defined values), and these are worked on throughout the program.
+
+The data is read in 128 bytes, where each byte is then converted into a 64-bit word (just shove some 0s on the front). Each chunk is operated on using the 8 hash values, creating 8 new hash values. These new hash values are used in computation using the next block and so on.
+
+Here is a diagram showing how the data is converted into data that can be processed:
+
+<img src="Diagrams/dataBlockBLAKE.png" width=320px/>
+
+
+
+To transform a list of 16 64-bit words into 1 64-bit word, you do this algorithm (where $a$ is the list of words):
+$$
+new = a[0] \oplus (a[1] << 8) \oplus (a[2] << 16) \oplus (a[3] << 24) \oplus (a[4] << 32) \oplus (a[5] << 40) \oplus (a[6] << 48) \oplus (a[7] << 56)
+$$
+What this does is XOR's the bytes in the array with each other in a way that produces a single word at the end.
+
+#### The operation:
+
+<img src="Diagrams/blake.png" style="zoom:75%"/>
+
+Each block has to be compressed and returned as 8 hash values. Above is the compression function. $t$ is the number of bytes in total that have been compressed so far, $h$ is a list of the 8 current hashes, and $k$ is the list of 8 initial hash values set here ***https://tools.ietf.org/pdf/rfc7693.pdf  section 2.6***, the same initial hash values of SHA512.
+
+The operation is quite simple compared to other hash functions like SHA512, as it was built for speed.
+
+The **Mix the data** step looks like this:
+
+```pseudocode
+for i := 0 to 12
+	v = mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
+    v = mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
+    v = mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
+    v = mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
+
+    v = mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])
+    v = mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
+    v = mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
+    v = mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
+```
+
+Sigma ($\sigma$) is a 2-dimensional array containing some constant values, that determine what index of the current working vector $v$ (a 16 length array of 64-bit words) will be mixed with what other index of $v$. Sigma is defined here: ***https://tools.ietf.org/pdf/rfc7693.pdf section 2.7*** as:
+$$
+\sigma[0] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]\\
+\sigma[1] = [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3]\\
+\sigma[2] = [11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4]\\
+\sigma[3] = [7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8]\\
+\sigma[4] = [9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13]\\
+\sigma[5] = [2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9]\\
+\sigma[6] = [12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11]\\
+\sigma[7] = [13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10]\\
+\sigma[8] = [6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5]\\
+\sigma[9] = [10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0]\\
+$$
+$\sigma$ is defined for BLAKE2s, and BLAKE2s only has 10 rounds, while BLAKE2b has 12, so $\sigma_0$ and $\sigma_1$ are repeated again to make the array 12 in length.
+
+Notice that in the first lot of mixing, the vector is mixed row by row normally (with the same indexing as AES), but in the second lot of mixing, the indices change. They shift each column up depending on the column. Column 0 is shifted 0 places, column 1 is shifted 1 place up, column 2 is shifted 2 places up, and column 3 is shifted 3 places up. This is a much better way of shifting each column than doing it before hand.
+
+The main mixing function takes the inputs:
+$$
+mix(v, \space a, \space b, \space c, \space d, \space x, \space y)
+$$
+Where $v$ is the current vector (16 64-bit words), $a$, $b$, $c$, $d$, $x$, and $y$ are the indices of the working vector you want to work with. Here is the main mixing algorithm:
+
+<img src="Diagrams/BLAKEmix.png" width=200px/>
+
+So all together, this is the BLAKE2b checksum algorithm:
+
+<img src="Diagrams/BLAKEchecksum.png" style="zoom:98%"/>
+
+The second step ($h[0] = h[0] \oplus 01010000 \oplus hL$) XORs $h[0]$ with $0101kknn$, where $kk$ is the length of the key (which is optional, so I probably will never use it), and $nn$ is the hash length desired.
+
 
 
 ---
@@ -1025,17 +1270,33 @@ Everything grey is a clickable button. This helps the user distinguish between b
 
 The user can sort by name or size, and can search the entire vault for a search term.
 
+The information button displays more information, such as:
 
+- The time the file (if it is a file) was added to the vault.
+- The full directory path from the vault.
+- The size of the file/folder.
+- The option to delete the file/folder.
+
+The button with the home picture on it takes the user back to the root directory of the vault. The recycling bin button is for the recycling folder, where the files that have been deleted can be either restored or deleted. The cog wheel button is settings, where all the settings are kept. I gave the settings it's separate section to avoid clutter, as most users will probably not need to use it very often.
+
+The user can sort the files by name alphabetically, or they can sort by size.
+
+Space remaining on the current device is shown underneath the search bar.
+
+When the user encrypts or decrypts a file, a pop up should open showing the user the current speed, time remaining and a status bar giving the user a visual representation of how far through the file the program has got, including a percentage reading.
+
+While searching through large folders, the search results should update every so often since it may take a while to search the full file tree.
 
 ### The App:
 
 The app's UI design should be very simple, as I do not need to add much.
 All it needs to be is a number pad with a display, an enter button and a screen to have open while you are connected to the PC.
-Here is a prototype I made in Processing (A java based "software sketchbook"):
+Here is a prototype I made in Processing (A java based "software sketchbook):
 
 <img src="Diagrams/appPrototype.png" width=200px/>
 
-It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum.
+It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum. 
 
+Once the vault is unlocked, the user should be given the option to browse files in the vault from their phone, and select files to download, or instead just minimise the app and continue using their phone. The vault should only close once the user has exited the app, rather than when they minimise the app.
 
-
+Browsing the files should be seamless, and the user should be able to browse the folders independently from the computer program (so both programs can be looking at different folders), and when searching for files, the searching work should be done on the computer so that precious phone battery is not wasted, and also because it is quicker in general to just send the search results to the mobile once they are generated.
