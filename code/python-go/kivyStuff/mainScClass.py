@@ -146,7 +146,6 @@ class MainScreen(Screen):
                     if b"~" in data:    ##End of message
                         append = False
                         tempNums = "".join(numbers)
-                        #tempNums = tempNums[1:len(tempNums-1)] # Remove padding
                         tempNums = tempNums.replace("#", "")
                         tempNums = tempNums.replace("~", "")
                         if self.manager.get_screen("Login").checkKey(tempNums):

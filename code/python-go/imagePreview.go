@@ -68,7 +68,7 @@ func getPreview(f string, scanLen int) { // Scan length is the size of square to
       dc.SetPixel(x/scanLen, y/scanLen)
     }
   }
-  dc.SavePNG("rescale.png")
+  dc.SavePNG("/home/josh/rescale.png")
 }
 
 func main() {
