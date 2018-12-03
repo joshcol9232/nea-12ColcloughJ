@@ -228,15 +228,15 @@ class MainScreen(Screen):
 
 
     def sendFileList(self, fileList):
-        # File list sent like: !FILELIST!--fileName1--filename2~!!END!
-        self.clientSock.send("!FILELIST!")
-        print("Sent !FILELIST!")
+        # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
+        self.clientSock.send("!FILELIST!#!!")
+        print("Sent !FILELIST!#!!")
 
         for i in fileList:
             self.clientSock.send("--{}".format(i))
 
         print("Sent full list, now sent end.")
-        self.clientSock.send("~!!END!")
+        self.clientSock.send("~!!ENDLIST!")
 
 
     def getListForSend(self, path):

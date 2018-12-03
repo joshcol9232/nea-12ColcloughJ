@@ -359,7 +359,7 @@ def generateFile(name, totalSize):
     fo.close()
 ```
 
-First I will test each hash function with encrypting very small data (< 1 KiB). These were the results:
+First I will test each hash function with encrypting very small data (<= 1 KiB). These were the results:
 
 ![](Graphs/hashFunctionDiffBytes.png)
 
@@ -383,9 +383,9 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
 ### Encryption:
 
-For encryption, I will definitely be using AES, because it is the standard and has been tested extremely thoroughly by the public. I do not want to compromise on security, but AES is still relatively fast anyway.
+For encryption, I will definitely be using AES, because it is the standard and has been tested extremely thoroughly by the public. I do not want to compromise on security, but AES is still pretty fast anyway.
 
-I will use 128 bit AES mainly, as it is still proven to be secure from attacks, and may include the option to use 256 bit if desired by the user. 
+I will use 128 bit AES mainly, as it is still proven to be secure from attacks, and may include the option to use 256 bit if desired by the user. The majority of users will not need AES 256 level security, but I will include it for people that may need it.
 
 ---
 
@@ -546,7 +546,7 @@ Shift Rows shifts the rows (really?) left depending on the row number.
 
 For example, the first row is shifted left by 0, second row shifted by 1 and so on:
 
-<img src="Diagrams/Grids/shiftRows.png/" width=300px/>
+<img src="Diagrams/Grids/shiftRows.png/" style="zoom:40%"/>
 
 Here is the algorithm for **Shift Rows**:
 
@@ -624,7 +624,7 @@ For example, if we wanted to represent the decimal number: 25301 as a Galois fie
 $$
 2x^4+5x^3+3x^2+1
 $$
-Note that the 0 in 25301​ is not included, as $0x = 0$ .
+Note that the 0 in 25301​ is not included, as 0x = 0 .
 
 To represent a binary number, the same logic applies. For example, to represent the binary number `10011011` as a Galois field, it would be:
 $$
@@ -700,7 +700,7 @@ To fix this, we replace all of the $x^8$ terms with this pre-determined polynomi
 $$
 x^8 \equiv x^4 + x^3 + x + 1
 $$
-Let's try this with $d4*3$ :
+Let's try this with d4*3 :
 $$
 \begin{align*}
 3d4 &= x^8 + 2x^7 + x^6 + x^5 + x^4 + x^3 + x^2\\
@@ -710,7 +710,7 @@ $$
 &= x^6 + x^5 + x^2 + x + 1
 \end{align*}
 $$
-Again with $d4*2$:
+Again with d4*2:
 $$
 \begin{align*}
 2d4 &= x^8 + x^7 + x^5 + x^3 \\
@@ -720,7 +720,7 @@ $$
 \end{align*}
 $$
 
-Now, with our new values for $a_0$  to $a_3$, we can finally do the equation:
+Now, with our new values for a_0  to a_3, we can finally do the equation:
 $$
 \begin{align*}
 r_0 &= (2\times d4)\oplus(3\times d4)\oplus(1\times d4)\oplus(1\times d5)\\
@@ -739,7 +739,7 @@ r_0 = 213 (decimal)
 $$
 And, thank god, that is the correct answer for the test vector on this page: https://en.wikipedia.org/wiki/Rijndael_MixColumns.
 
-To get $r_1, r_2, r_3$, you repeat the process using the equations for each defined at the top of this section.
+To get r_1, r_2, r_3, you repeat the process using the equations for each defined at the top of this section.
 
 This whole process has to be done on each column.
 
@@ -805,15 +805,13 @@ Inverse sub bytes is the same as sub bytes, it just has an inverse of the S-Box.
 
 <img src="Diagrams/invSBox.jpg" width=500px/>
 
-
-
 ##### Inverse Shift Rows:
 
 Inverse shift rows does what shift rows does, but shifts each row right instead of left.
 
 In the diagram below it takes the shifted data and orders it again.
 
-<img src="Diagrams/Grids/invShiftRows.png/" width=300px/>
+<img src="Diagrams/Grids/invShiftRows.png/" style="zoom:37%"/>
 
 
 
@@ -1215,7 +1213,7 @@ Where $v$ is the current vector (16 64-bit words), $a$, $b$, $c$, $d$, $x$, and 
 
 So all together, this is the BLAKE2b checksum algorithm:
 
-<img src="Diagrams/BLAKEchecksum.png" style="zoom:98%"/>
+<img src="Diagrams/BLAKEchecksum.png" style="zoom:95%"/>
 
 The second step ($h[0] = h[0] \oplus 01010000 \oplus hL$) XORs $h[0]$ with $0101kknn$, where $kk$ is the length of the key (which is optional, so I probably will never use it), and $nn$ is the hash length desired.
 

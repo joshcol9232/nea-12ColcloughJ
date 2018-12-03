@@ -161,8 +161,8 @@ class btTransferPop(encPopup):
         # File name is sent with !NAME!#!!<name here>!!~
         # File data is sent right afterwards, ending with ~!!ENDF!
         # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
-        self.outerScreen.clientSock.send("!NAME!{}~~!~~".format(fileObj.name))
-        print("!NAME!{}~~!~~".format(fileObj.name), "Sent")
+        self.outerScreen.clientSock.send("!NAME!#!!{}!!~".format(fileObj.name))
+        print("!NAME!#!!{}!!~".format(fileObj.name), "Sent")
 
         newLoc = self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
@@ -188,7 +188,7 @@ class btTransferPop(encPopup):
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
             self.spd.text = self._getGoodUnit(buffCount/(time() - start))
 
-        self.outerScreen.clientSock.send("~!!END!")
+        self.outerScreen.clientSock.send("~!!ENDF!")
         self.dismiss()
 
 
