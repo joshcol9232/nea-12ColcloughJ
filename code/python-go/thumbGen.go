@@ -1,13 +1,15 @@
 package main
 
 import (
-  "fmt"
   "github.com/fogleman/gg"
   "os"
+  "io/ioutil"
   "image"
   "math"
   _ "image/jpeg" // add these so that image can be read
   _ "image/png"
+  "strings"
+  "strconv"
 )
 
 func check(e error) {     //Used for checking errors when reading/writing to files.
@@ -23,6 +25,7 @@ func getThumb(f, w string, y int) {
 
   img, _, err := image.Decode(a)  // _ is where the function returns the format name, which I don't really need for this
   check(err)
+  a.Close()
   bounds := img.Bounds() // Get Rectangle object that has size of the image.
 
   oldX, oldY := bounds.Dx(), bounds.Dy()
@@ -34,7 +37,6 @@ func getThumb(f, w string, y int) {
 func genThumb(oldX, oldY, newX, newY, scanLen int, img image.Image, destination string) {
   scanArea := uint32(scanLen*scanLen)
   dc := gg.NewContext(newX, newY) // Make new image object
-  fmt.Println(dc)
 
   var avR uint32
   var avG uint32
@@ -72,9 +74,17 @@ func genThumb(oldX, oldY, newX, newY, scanLen int, img image.Image, destination 
   dc.SavePNG(destination)
 }
 
+func strToInt(str string) (int, error) {    //Used for converting string to integer, as go doesn't have that built in for some reason
+    n := strings.Split(str, ".")    //Splits by decimal point
+    return strconv.Atoi(n[0])       //Returns integer of whole number
+}
 
 func main() {
-  f := "/home/josh/bil.jpg"
-  w := "/home/josh/scoop.jpg"
-  getThumb(f, w, 100)
+  bytes, err := ioutil.ReadAll(os.Stdin)
+  check(err)
+  fields := strings.Split(string(bytes), ", ")
+
+  f3, err := strToInt(string(fields[2]))
+
+  getThumb(string(fields[0]), string(fields[1]), f3)  // Field 3 changed to string first because bytes to int will give me ascii value of "2" (for example), when i want the number 2
 }

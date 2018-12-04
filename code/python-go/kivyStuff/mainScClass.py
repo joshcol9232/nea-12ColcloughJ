@@ -325,7 +325,7 @@ class MainScreen(Screen):
     def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
+            if item.name != ".$recycling":# and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
                 if item.isDir:
                     btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
                     info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
@@ -504,7 +504,7 @@ class MainScreen(Screen):
     def List(self, dir):    #Lists a directory.
         fs = os.listdir(dir)
         # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
-        if self.recycleFolder not in self.currentDir:    # Checks that there is a thumbnail folder in this directory.
+        if (self.recycleFolder not in self.currentDir) and (self.thumbsName not in self.currentDir):    # Checks that there is a thumbnail folder in this directory.
             if self.thumbsName not in fs: # Only check this when not in the recycling folder
                 os.makedirs(self.currentDir+self.thumbsName)
                 print("Made thumbnail directory since it wasn't there")
@@ -609,22 +609,37 @@ class MainScreen(Screen):
 
         return out.decode()
 
+    def getThumbnail(self, f, targetLoc):
+        print("Full input:", f+", "+targetLoc+", 200")
+        goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((f+", "+targetLoc+", 200").encode())  # Here 200 is the desired height of the thumbnail in pixels.
+        if err != None:
+            raise ValueError(err)
+
     def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True):     #Handels passToPipe and UI while encryption/decryption happens.
         fileName = ""
         if type == "y":     #The file name also needs to be encrypted
             tempDir = d.split(self.fileSep)
             fileName = tempDir[len(tempDir)-1]
+            targetLoc = targetLoc.split(self.fileSep)
+            #replace file name with new hex
+            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
+            thumbTarget = self.fileSep.join(targetLoc[:len(targetLoc)-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[len(targetLoc)-1]
+            print(thumbTarget)
+
             popText = "Encrypting..."
+            targetLoc = self.fileSep.join(targetLoc)
             if os.path.exists(targetLoc):
                 if os.path.isdir(targetLoc):
                     rmtree(targetLoc) # Imported from shutil
                 else:
                     os.remove(targetLoc)
 
-                #replace file name with new hex
-            targetLoc = targetLoc.split(self.fileSep)
-            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
-            targetLoc = self.fileSep.join(targetLoc)
+            if fileName.split(".")[len(fileName.split("."))-1] == "jpg" or "png":
+                self.getThumbnail(d, thumbTarget)
+            else:
+                print("Not getting thumbnail of:", d)
+
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)
@@ -791,6 +806,8 @@ class MainScreen(Screen):
     def createFolders(self, targetLoc):
         if not os.path.exists(targetLoc):
             os.makedirs(targetLoc)
+            if self.thumbsName not in targetLoc: # If in the thumbnails folder, don't make a thumbnails folder.
+                os.makedirs(targetLoc+self.thumbsName)
 
 
     def clearUpTempFiles(self):     #Deletes temp files.

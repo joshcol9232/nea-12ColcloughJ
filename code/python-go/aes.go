@@ -172,7 +172,7 @@ func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
   //S-Box the bytes
   inp[0], inp[1], inp[2], inp[3] = sBox[inp[0]], sBox[inp[1]], sBox[inp[2]], sBox[inp[3]]
 
-  //rcon, more galois feilds that lead to lookup tables.
+  //rcon, more galois fields that lead to lookup tables.
   inp[0] ^= rcon[i]
 
   return inp
@@ -253,7 +253,7 @@ func invShiftRows(state []byte) ([]byte) {
 }
 
 func mixColumns(state []byte) ([]byte) {
-  //Dot product galois feilds of each byte in row x, column x.
+  //Dot product galois fields of each byte in row x, column x.
   //Uses lookup tables to make it faster, as you only ever multiply by 1, 2 or 3, as Rijndael uses a pre defined matrix to multiply by. Addition is just XOR
   //to prevent overflow
 
@@ -536,8 +536,8 @@ func strToInt(str string) (int, error) {    //Used for converting string to inte
 func main() {
   bytes, err := ioutil.ReadAll(os.Stdin)
   check(err)
-  feilds := strings.Split(string(bytes), ", ")
-  keyString := strings.Split(string(feilds[3]), " ")
+  fields := strings.Split(string(bytes), ", ")
+  keyString := strings.Split(string(fields[3]), " ")
 
   var key []byte
   for i := 0; i < len(keyString); i++ {
@@ -546,12 +546,12 @@ func main() {
     key = append(key, byte(a))
   }
 
-  if string(feilds[0]) == "y" {
-    encryptFile(key, string(feilds[1]), string(feilds[2]))
-  } else if string(feilds[0]) == "n" {
-    decryptFile(key, string(feilds[1]), string(feilds[2]))
-  } else if string(feilds[0]) == "test" {
-    valid := checkKey(key, string(feilds[1]))
+  if string(fields[0]) == "y" {
+    encryptFile(key, string(fields[1]), string(fields[2]))
+  } else if string(fields[0]) == "n" {
+    decryptFile(key, string(fields[1]), string(fields[2]))
+  } else if string(fields[0]) == "test" {
+    valid := checkKey(key, string(fields[1]))
     if valid {
       fmt.Println("-Valid-")
     } else {
