@@ -51,6 +51,7 @@ class MainScreen(Screen):
         self.lastPathSent = ""
         self.recycleFolder = ""
         self.recycleName = ""
+        self.thumbsName = ""
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.currentDir = self.path
@@ -66,6 +67,7 @@ class MainScreen(Screen):
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
             self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")
+            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
             self.recycleFolder = self.path+self.recycleName+self.fileSep
 
             if not os.path.exists(self.recycleFolder):
@@ -323,7 +325,7 @@ class MainScreen(Screen):
     def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling": # If the folder is the recycling folder, don't draw it.
+            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
                 if item.isDir:
                     btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
                     info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
@@ -342,18 +344,14 @@ class MainScreen(Screen):
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
         if sort:
-            sortedArray = self.getSortedFoldersAndFiles(fileObjects)    #Sort the list of files.
+            fileObjects = self.getSortedFoldersAndFiles(fileObjects)    #Sort the list of files.
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
         self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
 
-        if sort:
-            self.createButtonsCore(sortedArray)
-        else:
-            self.createButtonsCore(fileObjects)
-
+        self.createButtonsCore(fileObjects)
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
 
 
@@ -505,6 +503,12 @@ class MainScreen(Screen):
 
     def List(self, dir):    #Lists a directory.
         fs = os.listdir(dir)
+        # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
+        if self.recycleFolder not in self.currentDir:    # Checks that there is a thumbnail folder in this directory.
+            if self.thumbsName not in fs: # Only check this when not in the recycling folder
+                os.makedirs(self.currentDir+self.thumbsName)
+                print("Made thumbnail directory since it wasn't there")
+
         listOfFolders = []
         listOfFiles = []
         for item in fs:
