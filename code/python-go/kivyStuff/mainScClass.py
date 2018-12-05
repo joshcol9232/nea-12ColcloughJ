@@ -376,9 +376,11 @@ class MainScreen(Screen):
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
-            self.passToPipe("n", fileObj.hexPath, fileObj.hexPath+"_temp")
-            self.makeThumbnail(fileObj.hexPath+"_temp", self.path+self.thumbsName+self.fileSep+fileObj.hexName)
-            os.remove(fileObj.hexPath+"_temp")
+            extension = self.getFileExtension(fileObj.name)
+            if extension == "jpg" or "png":
+                self.passToPipe("n", fileObj.hexPath, fileObj.hexPath+"_temp")
+                self.makeThumbnail(fileObj.hexPath+"_temp", self.path+self.thumbsName+self.fileSep+fileObj.hexName)
+                os.remove(fileObj.hexPath+"_temp")
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 
@@ -630,6 +632,10 @@ class MainScreen(Screen):
 
         return out.decode()
 
+    def getFileExtension(self, fileName):
+        extension = fileName.split(".")
+        return extension[len(extension)-1]
+
     def makeThumbnail(self, f, targetLoc):
         goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 200").encode())  # Here 200 is the desired height of the thumbnail in pixels.
@@ -664,9 +670,7 @@ class MainScreen(Screen):
                 else:
                     os.remove(targetLoc)
 
-            extension = fileName.split(".")
-            extension = extension[len(extension)-1]
-
+            extension = self.getFileExtension(fileName)
             if extension == "jpg" or extension == "png":
                 print("Making a thumbnail of:", fileName, extension)
                 self.makeThumbnail(d, thumbTarget)
