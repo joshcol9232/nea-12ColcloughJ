@@ -6,10 +6,10 @@ import aesFName
 
 class File:
 
-    def __init__(self, screen, hexPath, hexName, fileSep, isDir=False, name=None, path=None):
+    def __init__(self, screen, hexPath, hexName, fileSep, thumbDir="", isDir=False, name=None, path=None):
         self.outerScreen = screen
         self._totalSize = 0
-        self.hexPath, self.hexName, self.isDir, self.fileSep = hexPath, hexName, isDir, fileSep
+        self.hexPath, self.hexName, self.isDir, self.fileSep, self.thumbDir = hexPath, hexName, isDir, fileSep, thumbDir
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir

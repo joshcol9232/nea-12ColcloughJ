@@ -30,8 +30,17 @@ func getThumb(f, w string, y int) {
 
   oldX, oldY := bounds.Dx(), bounds.Dy()
   factor := int(math.Ceil(float64(oldY/y))) // Get the shrink factor
-  newX, newY := oldX/factor, oldY/factor
-  genThumb(oldX, oldY, newX, newY, factor, img, w)
+  if factor == 0 {
+    data, err := ioutil.ReadFile(f)
+    check(err)
+    e, err := os.OpenFile(w, os.O_RDWR|os.O_CREATE, 0755)
+    check(err)
+    e.Write(data)
+    e.Close()
+  } else {
+    newX, newY := oldX/factor, oldY/factor
+    genThumb(oldX, oldY, newX, newY, factor, img, w)
+  }
 }
 
 func genThumb(oldX, oldY, newX, newY, scanLen int, img image.Image, destination string) {

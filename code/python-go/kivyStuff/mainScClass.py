@@ -7,6 +7,7 @@ from time import time, sleep
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy.clock import mainthread
@@ -14,6 +15,7 @@ from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
+from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 
 from fileClass import File
@@ -325,7 +327,7 @@ class MainScreen(Screen):
     def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling":# and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
+            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
                 if item.isDir:
                     btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
                     info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
@@ -375,6 +377,7 @@ class MainScreen(Screen):
         else:
             print("Recovering this file to path:", fileObj.name)
             move(fileObj.hexPath, self.path) # Imported from shutil
+            self.makeThumbnail(fileObj.hexPath, self.path+self.thumbsName+self.fileSep+fileObj.hexName)
             self.refreshFiles()
 
     def openSettingsPop(self):
@@ -389,41 +392,50 @@ class MainScreen(Screen):
         self.smallPop = mainSPops.addNewFolderPop(self)
         self.smallPop.open()
 
+    def onFileInfoClose(self, fileObj, _):  # _ is me discarding the popup object.
+        if fileObj.thumbDir != "":
+            os.remove(fileObj.thumbDir+"_temp")
+
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
         fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
+        if fileObj.thumbDir != "":
+            thumb = self.getThumbnail(fileObj)
+            thumb.allow_stretch = False
 
-        internalView = ScrollView()
-        self.infoPopup = Popup(title="File Information", content=internalView, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.8, .4))
-        internalLayout = GridLayout(cols=2, size_hint_y=None, row_default_height=self.infoPopup.size[1]/4)
+        internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
+        gridView = ScrollView()
+        self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.7, .4))
+        self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
 
-        internalLayout.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
+        infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
+        gridView.add_widget(infoGrid)
+        internalLayout.add_widget(gridView)
 
-        internalLayout.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
+        if fileObj.thumbDir != "":
+            internalLayout.add_widget(thumb)
 
-        internalLayout.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
-        internalLayout.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel())
-        internalLayout.add_widget(self.infoLabel())
+        infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
 
-        internalLayout.add_widget(self.infoLabel())
-        internalLayout.add_widget(self.infoLabel())
-
+        infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
         delText = "Delete"
         if self.recycleFolder in self.currentDir:
            delText = "Delete Permanently"
 
-        internalLayout.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
+        infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
         if fileObj.isDir and fileObj.rawSize > 0:
             decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
             decBtn.bind(on_release=partial(self.decryptDir, fileObj))
-            internalLayout.add_widget(decBtn)
+            infoGrid.add_widget(decBtn)
+        else:
+            infoGrid.add_widget(self.infoLabel())
 
-        internalView.add_widget(internalLayout)
         self.infoPopup.open()
 
     def makeSendFile(self, fileObj, buttonInstance=None):
@@ -460,6 +472,9 @@ class MainScreen(Screen):
                     os.remove(fileObj.hexPath)
             self.refreshFiles()
             self.infoPopup.dismiss()
+
+            if os.path.exists(fileObj.thumbDir):
+                os.remove(fileObj.thumbDir)
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
 
@@ -506,16 +521,20 @@ class MainScreen(Screen):
         # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
         if (self.recycleFolder not in self.currentDir) and (self.thumbsName not in self.currentDir):    # Checks that there is a thumbnail folder in this directory.
             if self.thumbsName not in fs: # Only check this when not in the recycling folder
-                os.makedirs(self.currentDir+self.thumbsName)
+                os.makedirs(dir+self.thumbsName)
                 print("Made thumbnail directory since it wasn't there")
 
         listOfFolders = []
         listOfFiles = []
         for item in fs:
             if os.path.isdir(dir+item):
-                listOfFolders.append(File(self, dir+item, item, self.fileSep, True))
+                listOfFolders.append(File(self, dir+item, item, self.fileSep, isDir=True))
             else:
-                listOfFiles.append(File(self, dir+item, item, self.fileSep))
+                if os.path.exists(self.currentDir+self.thumbsName+self.fileSep+item):
+                    listOfFiles.append(File(self, dir+item, item, self.fileSep, dir+self.thumbsName+self.fileSep+item))
+                else:
+                    listOfFiles.append(File(self, dir+item, item, self.fileSep))
+
         return listOfFolders+listOfFiles
 
     def getPathBack(self, origPath):  #Gets the path above the current folder.
@@ -609,12 +628,20 @@ class MainScreen(Screen):
 
         return out.decode()
 
-    def getThumbnail(self, f, targetLoc):
-        print("Full input:", f+", "+targetLoc+", 200")
+    def makeThumbnail(self, f, targetLoc):
         goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((f+", "+targetLoc+", 200").encode())  # Here 200 is the desired height of the thumbnail in pixels.
+        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 200").encode())  # Here 200 is the desired height of the thumbnail in pixels.
         if err != None:
             raise ValueError(err)
+
+        self.passToPipe("y", targetLoc+"_temp", targetLoc, endOfFolderList=False, op=False)
+        os.remove(targetLoc+"_temp")
+
+    def getThumbnail(self, fileObj, asImageObj=True):
+        self.passToPipe("n", fileObj.thumbDir, fileObj.thumbDir+"_temp")
+        thumb = Image(source=fileObj.thumbDir+"_temp")
+        return thumb
+
 
     def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True):     #Handels passToPipe and UI while encryption/decryption happens.
         fileName = ""
@@ -635,8 +662,12 @@ class MainScreen(Screen):
                 else:
                     os.remove(targetLoc)
 
-            if fileName.split(".")[len(fileName.split("."))-1] == "jpg" or "png":
-                self.getThumbnail(d, thumbTarget)
+            extension = fileName.split(".")
+            extension = extension[len(extension)-1]
+
+            if extension == "jpg" or extension == "png":
+                print("Making a thumbnail of:", fileName, extension)
+                self.makeThumbnail(d, thumbTarget)
             else:
                 print("Not getting thumbnail of:", d)
 
