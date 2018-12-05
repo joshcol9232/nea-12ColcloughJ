@@ -376,8 +376,10 @@ class MainScreen(Screen):
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
+            self.passToPipe("n", fileObj.hexPath, fileObj.hexPath+"_temp")
+            self.makeThumbnail(fileObj.hexPath+"_temp", self.path+self.thumbsName+self.fileSep+fileObj.hexName)
+            os.remove(fileObj.hexPath+"_temp")
             move(fileObj.hexPath, self.path) # Imported from shutil
-            self.makeThumbnail(fileObj.hexPath, self.path+self.thumbsName+self.fileSep+fileObj.hexName)
             self.refreshFiles()
 
     def openSettingsPop(self):
@@ -400,7 +402,7 @@ class MainScreen(Screen):
         fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
         if fileObj.thumbDir != "":
             thumb = self.getThumbnail(fileObj)
-            thumb.allow_stretch = False
+            print(thumb.texture_size)
 
         internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
         gridView = ScrollView()
