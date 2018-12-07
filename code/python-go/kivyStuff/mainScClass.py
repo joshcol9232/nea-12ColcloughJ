@@ -121,7 +121,8 @@ class MainScreen(Screen):
                               profiles = [ SERIAL_PORT_PROFILE ],)
         except BluetoothError as e:
             print(e, "Bluetooth not found.")
-            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on\nand restart the program."), size_hint=(.4, .4), auto_dismiss=False).open()
+            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login."), size_hint=(.4, .4), auto_dismiss=True).open()
+            return
 
         print("[BT]: Waiting for connection on RFCOMM channel", self.serverSock.getsockname()[1])
 
