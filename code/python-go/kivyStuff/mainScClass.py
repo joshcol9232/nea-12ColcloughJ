@@ -560,7 +560,7 @@ class MainScreen(Screen):
             elif loc != -1: # If the search term is a substring of the current word
                 self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
 
-            if (fileObj.isDir and self.searchRecursively) and (fileObj.hexPath != self.recycleFolder):
+            if (fileObj.isDir and self.searchRecursively) and (fileObj.hexPath != self.recycleFolder) and (fileObj.hexName != self.thumbsName):
                 self.findAndSortCore(fileObj.hexPath, item)
 
 
