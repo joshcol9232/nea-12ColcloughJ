@@ -1,5 +1,4 @@
 <LoginScreenBT>:
-
     RelativeLayout:                 #Adds background in case fade transition breaks.
         canvas.before:
             Color:
@@ -7,6 +6,13 @@
             Rectangle:
                 pos: self.pos
                 size: self.size
+
+    Button:
+        size_hint: .18, .16
+        pos_hint: {"x": 0, "bottom": 1}
+        text: "Login without BT"
+        font_size: 22
+        on_release: root.cancel()
 
     Label:
         id: labelLogin

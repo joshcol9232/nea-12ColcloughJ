@@ -14,8 +14,7 @@ from kivy.lang import Builder
 
 ######Import personal classes######
 from mainScClass import MainScreen
-from loginClass import LoginScreen
-from loginBTClass import LoginScreenBT
+from loginClass import LoginScreen, LoginScreenBT
 
 #########Import config functions########
 import configOperations
@@ -60,7 +59,7 @@ class uiApp(App):
             sm.add_widget(LoginScreenBT(fileSep, path, startDir, name="Login"))
         else:
             Builder.load_file(startDir+"kivyStuff/kvFiles/loginSc.kv")
-            sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login")) #fileSep, startDir, sharedPath, 
+            sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login"))
 
         sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="Main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
         sm.current = "Login"

@@ -49,6 +49,7 @@ class MainScreen(Screen):
         self.entered = False
         self.validBTKey = False
         self.useBTTemp = self.useBT
+        print(self.useBTTemp, "BT TEMP")
         self.previousDir = None
         self.lastPathSent = ""
         self.recycleFolder = ""
@@ -57,18 +58,14 @@ class MainScreen(Screen):
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.currentDir = self.path
-        print(self.currentDir, "CURRENT DIR")
         self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
 
 
-    def __repr__(self):
-        return "MainScreen"
-
     def on_enter(self): #When the screen is started.
-        self.key = self.manager.get_screen("Login").key
+        self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")
+            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")    # Prepare recycling and thumbnail folder names for use in the program.
             self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
             self.recycleFolder = self.path+self.recycleName+self.fileSep
 
@@ -83,23 +80,23 @@ class MainScreen(Screen):
         else:
             self.createButtons(self.List(self.currentDir)) # Loads previous directory.
 
-    def on_leave(self):     #Kept separate from lock because i may want to add more screens.
-        try:
-            self.largePop.dismiss()
-            self.remove_widget(self.largePop)
-        except Exception as e:
-            print(e, "Already closed?")
-        try:
-            self.smallPop.dismiss()
-            self.remove_widget(self.smallPop)
-        except Exception as e:
-            print(e, "Already closed?")
-        try:
-            self.encPop.dismiss()
-            self.remove_widget(self.encPop)
-        except Exception as e:
-            print(e, "Already closed?")
-
+    def on_leave(self):     # Kept separate from lock because i may want to add more screens that need the key, and do not log the user out.
+        if self.useBT:      # Popups that are open block the lock button, but if BT is lost, the popups stay open.
+            try:                            # Try to close any popups that may be open.
+                self.largePop.dismiss()
+                self.remove_widget(self.largePop)
+            except Exception as e:
+                print(e, "Already closed?")
+            try:
+                self.smallPop.dismiss()
+                self.remove_widget(self.smallPop)
+            except Exception as e:
+                print(e, "Already closed?")
+            try:
+                self.encPop.dismiss()
+                self.remove_widget(self.encPop)
+            except Exception as e:
+                print(e, "Already closed?")
 
         self.remove_widget(self.scroll)
 
@@ -108,31 +105,31 @@ class MainScreen(Screen):
         if self.useBT:
             self.manager.get_screen("Login").ids.clientLabel.text = ""
             self.validBTKey = False
-        return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in 
-
+        return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in
 
     def runServMain(self):
         self.serverSock = BluetoothSocket( RFCOMM )
         self.serverSock.bind(("",PORT_ANY))
         self.serverSock.listen(1)
 
-        port = self.serverSock.getsockname()[1]
-
         uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
 
-        advertise_service(self.serverSock, "FileMateServer",
-                          service_id = uuid,
-                          service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                          profiles = [ SERIAL_PORT_PROFILE ],)
+        try:
+            advertise_service(self.serverSock, "FileMateServer",
+                              service_id = uuid,
+                              service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                              profiles = [ SERIAL_PORT_PROFILE ],)
+        except BluetoothError as e:
+            print(e, "Bluetooth not found.")
+            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on\nand restart the program."), size_hint=(.4, .4), auto_dismiss=False).open()
 
-        print("[BT]: Waiting for connection on RFCOMM channel", port)
+        print("[BT]: Waiting for connection on RFCOMM channel", self.serverSock.getsockname()[1])
 
         self.clientSock, self.clientInfo = self.serverSock.accept()
         print("[BT]: Accepted connection from ", self.clientInfo)
         self.manager.get_screen("Login").ids.clientLabel.text = "Connected to: "+str(self.clientInfo[0])
 
         numbers = []
-        append = True
 
         try:
             data = ""
@@ -145,8 +142,7 @@ class MainScreen(Screen):
                 data = self.clientSock.recv(1024)
                 print("[BT]: Received data.")
                 if not self.validBTKey:
-                    if append:
-                        numbers.append(str(data, "utf-8"))
+                    numbers.append(str(data, "utf-8"))
                     if b"~" in data:    ##End of message
                         append = False
                         tempNums = "".join(numbers)
@@ -154,7 +150,6 @@ class MainScreen(Screen):
                         tempNums = tempNums.replace("~", "")
                         if self.manager.get_screen("Login").checkKey(tempNums):
                             numbers = []
-                            append = True
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
@@ -162,7 +157,6 @@ class MainScreen(Screen):
                             mainthread(self.changeToMain())
                         else:
                             numbers = []
-                            append = True
                             self.clientSock.send("0")
                             print("[BT]: Send false.")
                             self.validBTKey = False

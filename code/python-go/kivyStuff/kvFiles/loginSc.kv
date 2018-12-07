@@ -32,5 +32,14 @@
         size_hint: .16, .16
         font_size: 22
         text: "Submit"
-        pos_hint: {"center_x": 0.5, "center_y": 0.4}
+        pos_hint: {"center_x": 0.5, "center_y": 0.3}
         on_release: root.manager.current = root.checkKey(keyInput.text)
+
+    Button:
+        size_hint: .18, .16
+        pos_hint: {"x": 0, "bottom": 1}
+        text: "Login with BT"
+        font_size: 22
+        on_release: root.cancel()
+
+

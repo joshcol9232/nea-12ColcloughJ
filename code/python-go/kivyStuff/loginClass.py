@@ -7,14 +7,33 @@ from kivy.lang.builder import Builder
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 
+from kivy.clock import Clock
+from threading import Thread
+
 import SHA
+from configOperations import readConfigFile
+
+useBT = readConfigFile(lineNumToRead=2)  # 2 = third line == bluetooth
+if useBT == "True": # Using bool(useBT) returns True even if it is "False", because it is checking the variable exists.
+    from bluetooth import *
+
 
 class LoginScreen(Screen):
 
     def __init__(self, fileSep, path, startDir, **kwargs):
         self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
         super(Screen, self).__init__(**kwargs)
+        print("IN REGULAR LOGIN")
         self.key = ""
+
+    def cancel(self):
+        self.manager.get_screen("Main").useBT = True
+        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv")
+        self.manager.add_widget(LoginScreenBT(self.fileSep, self.path, self.startDir, name="Login"))
+        self.name = "Dead"  # To prevent clash with new login screen.
+        self.manager.current = "Login"
+        self.manager.remove_widget(self)
+        self = None
 
     def findFile(self, dir):    #For finding a file to decrypt first block and compare it with key given.
         fs = listdir(dir)
@@ -85,3 +104,51 @@ class LoginScreen(Screen):
             return "Input New Key (Write this down if you have to)"
         else:
             return "Input Key"
+
+
+class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScreen, but some overwritten with bluetooth.
+
+    def __init__(self, fileSep, path, startDir, **kwargs):
+        self.fileSep, self.path, self.startDir = fileSep, path, startDir
+        super(Screen, self).__init__(**kwargs)
+        self.key = ""
+
+    def on_enter(self):
+        self.serv = None
+        self.startServ = Clock.schedule_once(self.startSrv, 0.7) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
+
+    def checkKey(self, inputKey):
+        inputKey = inputKey.split(",")
+        inputKey = inputKey[:len(inputKey)-1]
+        key = " ".join(str(i) for i in inputKey)    #Formatting for AES
+        valid = self.getIfValidKey(key)
+        if valid:
+            self.key = key
+            self.manager.get_screen("Main").key = key
+            return True
+        else:
+            return False
+
+    def cancel(self):
+        if self.serv != None:
+            self.manager.get_screen("Main").serverSock.close()
+            self.serv.join()
+            try:
+                self.manager.get_screen("Main").clientSock.close()
+            except AttributeError:  # clientSock will not be initilized if there are no clients.
+                pass
+        else:
+            self.startServ.cancel()   # Cancels scheduled task to start server, as we are switching screens anyway.
+
+        print("Server closed.")
+        self.manager.get_screen("Main").useBT = False
+        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginSc.kv")
+        self.manager.add_widget(LoginScreen(self.fileSep, self.path, self.startDir, name="Login"))
+        self.name = "Dead"      # To prevent name clash with other login screen.
+        self.manager.current = "Login"
+        self.manager.remove_widget(self)
+        self = None
+
+    def startSrv(self, dt=None):
+        self.serv = Thread(target=self.manager.get_screen("Main").startBT, daemon=True)  # Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
+        self.serv.start()
