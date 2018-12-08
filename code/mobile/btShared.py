@@ -1,5 +1,6 @@
 from jnius import autoclass
 from plyer import storagepath
+from os import remove
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 
@@ -34,8 +35,8 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
     buff = buffAlreadyKnown
     data = ""
 
-    startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33, 35, 33, 33] #!FILELIST!#!!
-    endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
+    startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33] #!FILELIST!
+    endList   = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
 
     while buff[len(buff)-11:] != endList:
         try:
@@ -46,7 +47,7 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
         else:
             buff.append(data)
 
-    buff = buff[13:len(buff)-11]
+    buff = buff[11:len(buff)-11]
 
     listOfFiles = []
     for i in range(len(buff)):
@@ -67,6 +68,7 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
     return listOfFiles
 
 def recieveFile(rStream, buffAlreadyKnown=[]):
+    print("Recieve file has been called.")
     # File is sent with    !NAME!#!!<name here>!!~<data>~!!ENDF!   like a data sandwich.
     # To do: make dictionary with each nameInstruction, startHeader etc, so they can be
     # easily identified.
@@ -74,10 +76,9 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
 
     buff = buffAlreadyKnown
     data = ""
-    nameInstruction = [33, 78, 65, 77, 69, 33]
-    endFile = [126, 33, 33, 69, 78, 68, 70, 33]
-    startHeader = [35, 33, 33]
-    endHeader = [33, 33, 126]
+    nameInstruction = [33, 78, 65, 77, 69, 33]                  # !NAME!
+    endFile         = [126, 33, 69, 78, 68, 70, 73, 76, 69, 33] # ~!ENDFILE!
+    separator       = [126, 126, 33, 126, 126]                  # ~~!~~
     nameFound = False
     name = []
     fo, fw = None, None
@@ -92,25 +93,23 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
             print e, u"Failed recieving file."
             if buffCount > 0:
                 fo.close()
-                fo = open(downloadsDir+"/"+fileName, "wb")  # At least empty file if not fully received, as to fully delete the file I would have to use entire os module due to buildozer.
-                fo.close()
+                remove(downloadsDir+"/"+fileName)  # Remove incomplete file. (from os module)
             return False
         else:
             buff.append(data)
 
         if not nameFound:
+            name = []
             for i in range(len(buff)-6):
-                if buff[i:i+6] == nameInstruction and buff[i+6:i+9] == startHeader:
-                    z = i+9
-                    name = buff[z:z+3]
-                    while (buff[z:z+3] != endHeader) and (z+3 < len(buff)):
-                        name.append(buff[z+3])
+                if buff[i:i+6] == nameInstruction:
+                    z = i+6
+                    while (buff[z:z+5] != separator) and (z+5 < len(buff)):
+                        name.append(buff[z])
                         z += 1
 
-                    if name[len(name)-3:] == endHeader and len(name) != 0:
-                        name = name[:len(name)-3]
+                    if buff[z:z+5] == separator:
                         nameFound = True
-                        buff[i:z+len(endHeader)] = []
+                        buff[i:z+5] = [] # Clear name + separator
 
                         for letter in name:
                             fileName += chr(letter)
@@ -120,9 +119,9 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
                         fo = open(downloadsDir+"/"+fileName, "ab")
 
 
-        elif ((len(buff) > bufferSize+8) or (buff[len(buff)-8:] == endFile)):
-            if buff[len(buff)-8:] == endFile:
-                buff[len(buff)-8:] = []
+        elif ((len(buff) > bufferSize+10) or (buff[len(buff)-10:] == endFile)):
+            if buff[len(buff)-10:] == endFile:
+                buff[len(buff)-10:] = []
                 print u"End found"
                 fo.write(bytearray(buff))
                 fo.close()

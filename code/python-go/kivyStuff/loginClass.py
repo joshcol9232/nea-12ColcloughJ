@@ -115,7 +115,7 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
 
     def on_enter(self):
         self.serv = None
-        self.startServ = Clock.schedule_once(self.startSrv, 0.7) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
+        self.startServ = Clock.schedule_once(self.startSrv, 0.5) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
 
     def checkKey(self, inputKey):
         inputKey = inputKey.split(",")

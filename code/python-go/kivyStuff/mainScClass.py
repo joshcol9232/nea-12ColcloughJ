@@ -100,12 +100,16 @@ class MainScreen(Screen):
 
         self.remove_widget(self.scroll)
 
-    def lock(self):         #Procedure for when the program is locked.
+    def lock(self, fromRunServ=False):  # Procedure for when the program is locked. If it has been called from runServMain, then we might still be on login screen, so don't change screen to login, and restart the server.
         self.clearUpTempFiles() #Delete all temporary files (decrypted files ready for use).
         if self.useBT:
             self.manager.get_screen("Login").ids.clientLabel.text = ""
+
+        if fromRunServ and self.validBTKey == False:
+            self.runServMain()
+        else:
             self.validBTKey = False
-        return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in
+            return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in
 
     def runServMain(self):
         self.serverSock = BluetoothSocket( RFCOMM )
@@ -131,14 +135,13 @@ class MainScreen(Screen):
         self.manager.get_screen("Login").ids.clientLabel.text = "Connected to: "+str(self.clientInfo[0])
 
         numbers = []
+        data = ""
+        buff = []
+        backCommand = [33, 66, 65, 67, 75, 33]                                # !BACK!
+        fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33]  # !FILESELECT!
+        endHeader =  [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84]            # ~!ENDSELECT!
 
         try:
-            data = ""
-            buff = []
-            backCommand = [33, 66, 65, 67, 75, 33]                                            # !BACK!
-            fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33, 35, 33, 33]  # !FILESELECT!#!!
-            endHeader = [126, 33 ,33]                                                         # ~!!
-
             while len(data) > -1:
                 data = self.clientSock.recv(1024)
                 print("[BT]: Received data.")
@@ -177,10 +180,14 @@ class MainScreen(Screen):
                             print("Should have sent now.")
                         buff = []
 
-                    elif buff[:15] == fileSelectCommand:
-                        commandParams = buff[15:]
-                        if commandParams[len(commandParams)-3:] == endHeader:
-                            fileWantedList = commandParams[:len(commandParams)-3]
+                    elif buff[:12] == fileSelectCommand:
+                        commandParams = buff[12:]
+                        print(buff, "buffer")
+                        print(fileSelectCommand, "fileSelectCommand")
+                        print(endHeader, "endHeader")
+                        if commandParams[len(commandParams)-11:] == endHeader:
+                            print("End header found.")
+                            fileWantedList = commandParams[:len(commandParams)-11]
                             fileWanted = ""
                             for letter in fileWantedList:
                                 fileWanted += chr(letter)
@@ -208,7 +215,7 @@ class MainScreen(Screen):
                                 self.clientSock.send("!NOTFOUND!")
 
 
-                    elif len(buff) >= 15: # Re-set to wait for next command.
+                    elif len(buff) > 12: # Clear buffer and wait for next command.
                         buff = []
 
 
@@ -220,15 +227,12 @@ class MainScreen(Screen):
 
         self.clientSock.close()
         self.serverSock.close()
-        self.lock()
-        if not self.validBTKey:
-            self.runServMain()
-
+        self.lock(fromRunServ=True)
 
     def sendFileList(self, fileList):
         # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
-        self.clientSock.send("!FILELIST!#!!")
-        print("Sent !FILELIST!#!!")
+        self.clientSock.send("!FILELIST!")
+        print("Sent !FILELIST!")
 
         for i in fileList:
             self.clientSock.send("--{}".format(i))
@@ -518,7 +522,7 @@ class MainScreen(Screen):
     def List(self, dir):    #Lists a directory.
         fs = os.listdir(dir)
         # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
-        if (self.recycleFolder not in self.currentDir) and (self.thumbsName not in self.currentDir):    # Checks that there is a thumbnail folder in this directory.
+        if (self.recycleFolder not in dir) and (self.thumbsName not in dir):    # Checks that there is a thumbnail folder in this directory.
             if self.thumbsName not in fs: # Only check this when not in the recycling folder
                 os.makedirs(dir+self.thumbsName)
                 print("Made thumbnail directory since it wasn't there")
@@ -627,13 +631,13 @@ class MainScreen(Screen):
 
         return out.decode()
 
-    def getFileExtension(self, fileName):
+    def getFileExtension(self, fileName):  # Used to get a file extension from a given file name.
         extension = fileName.split(".")
-        return extension[len(extension)-1]
+        return extension[len(extension)-1].lower()
 
     def makeThumbnail(self, f, targetLoc):
         goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 200").encode())  # Here 200 is the desired height of the thumbnail in pixels.
+        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 100").encode())  # Here 100 is the desired height of the thumbnail in pixels.
         if err != None:
             raise ValueError(err)
 
@@ -641,7 +645,7 @@ class MainScreen(Screen):
         os.remove(targetLoc+"_temp")
 
     def getThumbnail(self, fileObj, asImageObj=True):
-        self.passToPipe("n", fileObj.thumbDir, fileObj.thumbDir+"_temp")
+        self.passToPipe("n", fileObj.thumbDir, fileObj.thumbDir+"_temp") # Decrypts thumnail (abcdef) as abcdef_temp so the thumbnail does not have to be reset
         thumb = Image(source=fileObj.thumbDir+"_temp")
         return thumb
 
@@ -807,30 +811,25 @@ class MainScreen(Screen):
                     self.fileList.append(d+item)
                     self.locList.append(targetLoc+self.fileSep+name)
 
+    def checkCanEncryptCore(self, inp):
+        if self.checkDirExists(inp):
+            if os.path.isdir(inp):
+                if inp[len(inp)-1] != self.fileSep:
+                    inp += self.fileSep
+                inpSplit = inp.split(self.fileSep)
+                self.encDecDir("y", inp, self.currentDir+inpSplit[len(inpSplit)-2])
+            else:
+                inpSplit = inp.split(self.fileSep)
+                self.encDecTerminal("y", inp, self.currentDir+inpSplit[len(inpSplit)-1])
+
+
     def checkCanEncrypt(self, inp):
         if "--" in inp: #Multiple files/folders input.
             inp = inp.split("--")
             for d in inp:
-                if self.checkDirExists(d):
-                    if os.path.isdir(d):
-                        if d[len(d)-1] != self.fileSep:
-                            d += self.fileSep
-                        dSplit = d.split(self.fileSep)
-                        self.encDecDir("y", d, self.currentDir+dSplit[len(dSplit)-2]+self.fileSep)
-                    else:
-                        dSplit = d.split(self.fileSep)
-                        self.encDecTerminal("y", d, self.currentDir+dSplit[len(dSplit)-1])
-
+                self.checkCanEncryptCore(d)
         else:
-            if self.checkDirExists(inp):
-                if os.path.isdir(inp):
-                    if inp[len(inp)-1] != self.fileSep:
-                        inp += self.fileSep
-                    inpSplit = inp.split(self.fileSep)
-                    self.encDecDir("y", inp, self.currentDir+inpSplit[len(inpSplit)-2])
-                else:
-                    inpSplit = inp.split(self.fileSep)
-                    self.encDecTerminal("y", inp, self.currentDir+inpSplit[len(inpSplit)-1])
+            self.checkCanEncryptCore(inp)
 
         self.resetButtons()
 

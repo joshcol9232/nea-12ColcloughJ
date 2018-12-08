@@ -25,10 +25,10 @@ class FileSelectionScreen(Screen, FloatLayout):
 
         # List of possible responses
         self.endOfTreeResponse = [33, 69, 78, 68, 79, 70, 84, 82, 69, 69, 33] # !ENDOFTREE!
-        self.startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33, 35, 33, 33] # !FILELIST!#!!
-        self.endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          # ~!!ENDLIST!
-        self.nameInstruction = [33, 78, 65, 77, 69, 33]                       # !NAME!  --Start of a file
-        self.fileNotFound = [33, 78, 79, 84, 70, 79, 85, 78, 68, 33]          # !NOTFOUND!  --Response to file selection
+        self.startList         = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33] # !FILELIST!
+        self.endList           = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          # ~!!ENDLIST!
+        self.nameInstruction   = [33, 78, 65, 77, 69, 33]                       # !NAME!  --Start of a file
+        self.fileNotFound      = [33, 78, 79, 84, 70, 79, 85, 78, 68, 33]          # !NOTFOUND!  --Response to file selection
 
 
     def on_enter(self):
@@ -66,14 +66,14 @@ class FileSelectionScreen(Screen, FloatLayout):
 
     def selectFile(self, fileName):
         print fileName, "Selected."
-        # File request looks like: !FILESELECT!#!!<name here>~!!
-        msg = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33, 35, 33, 33] # !FILESELECT!#!!
+        # File request looks like: !FILESELECT!<name here>~!ENDSELECT!
+        msg = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33] # !FILESELECT!
 
 
         for letter in fileName:
             msg.append(ord(letter))
 
-        msg += [126, 33, 33] # End header: ~!!
+        msg += [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84] # End header: ~!ENDSELECT!
 
         self.sStream.flush() # Clear write buffer on data stream.
         print msg, "full msg to be sent."
@@ -107,7 +107,7 @@ class FileSelectionScreen(Screen, FloatLayout):
                 responseFound = True
                 buff = []
 
-            elif (buff[:13] == self.startList) and (len(buff) >= 13):
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):
                 print u"Response is a file list."
                 self.fileList = recieveFileList(self.rStream, buff)
                 responseFound = True
@@ -141,13 +141,13 @@ class FileSelectionScreen(Screen, FloatLayout):
                 buff = []
                 responseFound = True
 
-            elif (buff[:13] == self.startList) and (len(buff) >= 13):
+            elif (buff[:11] == self.startList) and (len(buff) >= 13):
                 print "START OF LIST"
                 responseFound = True
                 self.fileList = recieveFileList(self.rStream, buff)
                 print self.fileList, "file list?"
                 self.recreateButtons(self.fileList)
 
-            elif len(buff) >= 13:
+            elif len(buff) >= 11:
                 print "start header not found yet :(", buff
                 buff = []
