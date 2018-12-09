@@ -375,8 +375,7 @@ class MainScreen(Screen):
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
-            extension = self.getFileExtension(fileObj.name)
-            if extension == "jpg" or "png":
+            if self.isImage:
                 self.passToPipe("n", fileObj.hexPath, fileObj.hexPath+"_temp")
                 self.makeThumbnail(fileObj.hexPath+"_temp", self.path+self.thumbsName+self.fileSep+fileObj.hexName)
                 os.remove(fileObj.hexPath+"_temp")
@@ -403,7 +402,6 @@ class MainScreen(Screen):
         fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
         if fileObj.thumbDir != "":
             thumb = self.getThumbnail(fileObj)
-            print(thumb.texture_size)
 
         internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
         gridView = ScrollView()
@@ -566,16 +564,19 @@ class MainScreen(Screen):
     def findAndSort(self, item):    #Main search function.
         self.unsorted = []
 
+        start = time()
+        print("IN SORT.")
         self.findAndSortCore(self.currentDir, item)
 
         if len(self.unsorted) > 0:
             sorted = sortsCy.quickSortTuples(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i[1])
-            self.removeButtons()
-            self.createButtons(self.searchResults, False)
+            print("Sort took:", time()-start, "seconds.")
+            mainthread(self.removeButtons())
+            return mainthread(self.createButtons(self.searchResults, False))
 
-        else:
+        elif len(self.searchResults) == 0:
             pop = Popup(title="No Results", content=Label(text="No results found for:\n"+item, halign="center"), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
             pop.open()
 
@@ -631,13 +632,17 @@ class MainScreen(Screen):
 
         return out.decode()
 
-    def getFileExtension(self, fileName):  # Used to get a file extension from a given file name.
+    def getFileExtension(self, fileName):
         extension = fileName.split(".")
         return extension[len(extension)-1].lower()
 
+    def isImage(self, fileName):  # Used to get a file extension from a given file name.
+        extension = self.getFileExtension(fileName).lower()
+        return bool(extension == "png" or extension == "jpg")
+
     def makeThumbnail(self, f, targetLoc):
         goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 100").encode())  # Here 100 is the desired height of the thumbnail in pixels.
+        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 150").encode())  # Here 100 is the desired height of the thumbnail in pixels.
         if err != None:
             raise ValueError(err)
 
@@ -669,13 +674,8 @@ class MainScreen(Screen):
                 else:
                     os.remove(targetLoc)
 
-            extension = self.getFileExtension(fileName)
-            if extension == "jpg" or extension == "png":
-                print("Making a thumbnail of:", fileName, extension)
+            if self.isImage(fileName):
                 self.makeThumbnail(d, thumbTarget)
-            else:
-                print("Not getting thumbnail of:", d)
-
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)

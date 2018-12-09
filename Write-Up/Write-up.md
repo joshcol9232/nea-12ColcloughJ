@@ -122,6 +122,8 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    i. Allow the user to easily read file names, and easily tell folders and files apart.
 
+   j. Let the user preview images without opening them (using thumbnails or an information screen).
+
 2. App should:
 
    a. Be easy to use.
@@ -383,7 +385,7 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
 ### Encryption:
 
-For encryption, I will definitely be using AES, because it is the standard and has been tested extremely thoroughly by the public. I do not want to compromise on security, but AES is still pretty fast anyway.
+For encryption, I will definitely be using AES, because it is the standard and has been tested extremely thoroughly by the public. I do not want to compromise on security, and AES is still pretty fast anyway.
 
 I will use 128 bit AES mainly, as it is still proven to be secure from attacks, and may include the option to use 256 bit if desired by the user. The majority of users will not need AES 256 level security, but I will include it for people that may need it.
 
@@ -1216,6 +1218,34 @@ So all together, this is the BLAKE2b checksum algorithm:
 <img src="Diagrams/BLAKEchecksum.png" style="zoom:95%"/>
 
 The second step ($h[0] = h[0] \oplus 01010000 \oplus hL$) XORs $h[0]$ with $0101kknn$, where $kk$ is the length of the key (which is optional, so I probably will never use it), and $nn$ is the hash length desired.
+
+---
+
+## Thumbnail Generation:
+
+For thumbnail generation, I have thought up two different methods of generation. One includes getting an average of pixels within an area, the other just extracts one pixel at a regular interval.
+
+### Method 1:
+
+This method takes an image, scans the image using a square area, gets the average colour under the square area and sets a pixel equal to that average colour in the new thumbnail. Here is an example with an image, with a scan area of 2x2:
+
+![](Design/smile/smile.png)
+
+Scan first area, get average of the pixels and write to thumbnail:
+
+![](Design/smile/smileScan1.png)
+
+Move onto the next pixel:
+
+![](Design/smile/smileScan2.png)
+
+Continue this process until you have scanned every pixel:
+
+![](Design/smile/smileScanFinish.png)
+
+
+
+
 
 
 
