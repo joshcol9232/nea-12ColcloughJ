@@ -226,7 +226,7 @@ End header:
 
 For operations that do not have any extra data (arguments), then only the start header is sent.
 
-For sending more complex operations,  I will use objects that hold the data, pickle them (object sterilisation), and send the object data sandwiched between the `!<operation>!` header (start header) and the `~!!` header. For more complex operations that have multiple arguments, a separator is used to separate those arguments:
+For sending more complex operations,  I will use objects that hold the data, pickle them (object sterilisation), and send the object data sandwiched between the `!<operation>!` header (start header) and the `~!END!` header. For more complex operations that have multiple arguments, a separator is used to separate those arguments:
 
 ```
 ~~!~~
@@ -244,17 +244,17 @@ This is especially useful for files, as this way I can send the metadata in one 
 !FILE!<metadata_object>~~!~~<data>~!END!
 ```
 
-For the key however, since it will always be small ( < 16 bytes), I will just send it with a `#` at the start, and a `~` to finish the message. This is acceptable because when the PC program starts, it doesn't expect any requests from the client, so it is just waiting for the key. 
+For the key however, since it will always be small ( < 16 bytes), I will just send it with a `#` at the start, and a `~` to finish the message. This is acceptable because when the PC program starts, it doesn't expect any requests from the client, so it is just waiting for the key. The key should also only be made up of numbers.
 
 ```
 #<key>~
 ```
 
-For items such as file metadata, I will use Python pickle to send an object (more of a struct) containing the metadata, rather than using separators, as then it is much easier for me to add information I want to send.
+For items such as file metadata, I will use Python pickle to send an object (more of a structure) containing the metadata, rather than using separators, as then it is much easier for me to add information I want to send.
 
 ### Sending files over Bluetooth:
 
-To send a file from the vault, first it has to be decrypted to a temporary location. I could instead send the data from within AES, so that when a block is decrypted it is sent, however I don't plan on writing AES in Python since speed is essential for AES (and a new BT socket would have to be set up if using a different language).
+To send a file from the vault, first it has to be decrypted to a temporary location. I could instead send the data from within AES, so that when a block is decrypted it is sent, however I don't plan on writing AES in Python since speed is essential for AES (and a new Bluetooth socket would have to be set up if using a different language).
 
 Metadata will be sent as an object before sending the file contents, as talked about in the above section.
 
@@ -287,11 +287,11 @@ Once the full file is sent, an end header is sent to tell the program that the f
 
 ## File Storage:
 
-For storing the files, I will storing the encrypted files in it’s own directory. 
- The directory will be managed using a tree structure, where the root folder contains folders for each file, with the name of every folder and file being encrypted, as otherwise anyone can see the name of your file.
+For storing the files, I will store the encrypted files in a directory set by the user.
+The directory will be managed using a tree structure, where the root folder contains folders for each file, with the name of every folder and file being encrypted, as otherwise anyone can see the name of your file.
 
 The encryption method I will use AES 128 bit, as it will slightly compromise security over using 256 bit, however it will be faster to decrypt files for use, giving the user a better experience, however I might add an option to use 256 in the settings if the user needs more security over performance.
- For the encryption key, the key will be set up every time a new vault is created (this includes first starting the program). It will tell the user to enter the new key, and then from that moment forwards in that vault, that key will remain the same, and will be used every time a file is encrypted/decrypted in the vault.
+For the encryption key, the key will be set up every time a new vault is created (this includes first starting the program). It will tell the user to enter the new key, and then from that moment forwards in that vault, that key will remain the same, and will be used every time a file is encrypted/decrypted in the vault.
 
 The key will have to be hashed if I send it over Bluetooth, as it may get intercepted, and it is also a good idea to hash it on the computer program as well, as if someone somehow manages to get the key, it will not be the user’s original input, so if the user uses it for something else, their other accounts will be fine.
 
@@ -609,7 +609,7 @@ $$
 $$
 Where $r_0$ to $r_3$ is the result of the operation, and $a_0$ to $a_3$ is the 4 bytes that make up the input column.
 
-This is matrix multiplication, but we need to do dot product multiplication. This is where we multiply each corresponding element in each row of the pre-defined matrix (the one with numbers already in it), with the corresponding element in a_0 to a_3, and then adds them up MOD2, also known as XOR (so that it is still 1 byte).
+This is matrix multiplication, but we need to do dot product multiplication. This is where we multiply each corresponding element in each row of the pre-defined matrix (the one with numbers already in it), with the corresponding element in $a_0$ to $a_3$, and then adds them up MOD2, also known as XOR (so that it is still 1 byte).
 
 One way to represent this is like this:
 $$
@@ -1229,19 +1229,118 @@ For thumbnail generation, I have thought up two different methods of generation.
 
 This method takes an image, scans the image using a square area, gets the average colour under the square area and sets a pixel equal to that average colour in the new thumbnail. Here is an example with an image, with a scan area of 2x2:
 
-![](Design/smile/smile.png)
+<img src="Design/Thumbnail/smile/smile.png" style="zoom:75%"/>
+
+
 
 Scan first area, get average of the pixels and write to thumbnail:
 
-![](Design/smile/smileScan1.png)
+![](Design/Thumbnail/smile/smileScan1.png)
 
 Move onto the next pixel:
 
-![](Design/smile/smileScan2.png)
+![](Design/Thumbnail/smile/smileScan2.png)
 
 Continue this process until you have scanned every pixel:
 
-![](Design/smile/smileScanFinish.png)
+![](Design/Thumbnail/smile/smileScanFinish.png)
+
+This doesn't really work very well on very small images, however if you were to look at this image much smaller, it looks quite a bit like the original image.
+
+Here is the algorithm in pseudocode (Python style):
+
+```pseudocode
+function makeThumbnail(image, scanLength)
+	scanArea = scanLength * scanLength  // Get area of the scan.
+	newImage = Image(image.width/scanLength, image.height/scanLength) // Get thumbnail to write to.
+	
+	for x in range(0, image.width, scanLength):   // Where scanLength is the skip.
+		for y in range(0, image.height, scanLength):
+			avR, avG, avB, avA = 0, 0, 0, 0 // Set averages to 0
+			for i in range(scanLength):
+				for j in range(scanLength):
+					pixel = image.pixel(x+i, x+j)
+					avR += pixel.R
+					avG += pixel.G
+					avB += pixel.B
+					avA += pixel.A
+			
+			avR = avR / scanArea
+			avG = avG / scanArea
+			avB = avB / scanArea
+			avA = avA / scanArea
+			newImage.pixel(x, y).RGBA = avR, avG, avB, avA
+```
+
+
+
+### Method 2:
+
+This method scans the image like the first method, but instead of getting the average colour values of each pixel, it just takes the top left pixel of the scan area and sets the corresponding pixel in the new thumbnail to that colour. This is a much more efficient method, however produces less accurate thumbnails.
+
+Here is the output of this algorithm using the test image used in <b>Method 1</b>, and a scan length of 2:
+
+![](Design/Thumbnail/smile/smileMethod2.png)
+
+
+
+As you can see, this algorithm can be a bit hit or miss as to if the image generated looks like the original. The original smile has been transformed into a smirk. This is because on the far left of the smile, no black pixels are scanned due to luck and due to the scan area:
+
+![](Design/Thumbnail/smile/smileMethod2Scan.png)
+
+Here the red area is the scan area, and the purple pixel is the pixel that is being taken and put into the new thumbnail. In this scan, there is a black pixel in this area, however it is missed by the algorithm, so a white is placed in the thumbnail. For the next scan along, the pixel chosen is also white, so the left side of the smile disappears completely.
+
+This is a big issue for small images, however for large images it does not have as much of an affect. I have written both in Go to test each algorithm.
+
+### Comparison:
+
+For comparison of the two algorithms, I will need a lot of data so that the results are accurate and are not based on external factors, so I will be using this 8K image I found on the internet:
+
+![](Design/Thumbnail/8kSample.jpg)
+
+However, I still need to test the algorithm on some medium-small images, so I will also be using this image:
+
+![](Design/Thumbnail/mediumSample.jpg)
+
+
+
+#### Image quality:
+
+To test image quality, I will run the two algorithms on these images, and compare them with each other:
+
+<u><b>Large image:</b></u>
+
+<b>Large image:</b>>
+
+##### Method 1:
+
+Here is the output with a scan length of 10 (original size = 7680x4320, new size = 768x432):
+
+![](Design/Thumbnail/TestResults/test1.png)
+
+This image scaled quite nicely, and the only noticeable difference between this image and the original is that it looks slightly blurry.
+
+Here is a close-up comparison of the spire in the ocean:
+
+![](Design/Thumbnail/TestResults/test1Close.png)
+
+On the left is the original, the right is the scaled image. The right image is very pixelated compared to the original (as expected), however the colours remain accurate, and key features such as the shadow can still be seen.
+
+##### Method 2:
+
+Here is the output of method 2 using the same image:
+
+![](Design/Thumbnail/TestResults/test2.png)
+
+This image doesn't look nearly as smooth as method 1, however if you were too look at this image small, it would look alright (here it is at 25% size):
+
+<img src="Design/Thumbnail/TestResults/test2.png" style="zoom:25%"/>
+
+Here is a close up comparison between the original and the image generated by <b>Method 2</b>:
+
+![](Design/Thumbnail/TestResults/test2Close.png)
+
+This method is still relatively good because you can still see the important features such as the light levels and the shape of the rock, however it is a bit spotty where the selected pixel chosen has differed from the surrounding pixels.
 
 
 
@@ -1253,7 +1352,7 @@ Continue this process until you have scanned every pixel:
 
 ## UI Research:
 
-For the UI of both apps, I will use Kivy (a Python module) to make both the mobile app and the PC program. I have chosen Kivy as using it on both the app and the main program means that the design will stay consistent, and Kivy does look quite nice "out of the box".
+For the UI of both apps, I will use Kivy (a Python module) to make both the mobile app and the PC program. I have chosen Kivy because using it on both the app and the main program means that the design will stay consistent, and Kivy does look quite nice "out of the box".
 
 ### Main Program (on PC):
 
@@ -1328,3 +1427,18 @@ It is very minimal, as I decided to keep it as minimal as possible so that the u
 Once the vault is unlocked, the user should be given the option to browse files in the vault from their phone, and select files to download, or instead just minimise the app and continue using their phone. The vault should only close once the user has exited the app, rather than when they minimise the app.
 
 Browsing the files should be seamless, and the user should be able to browse the folders independently from the computer program (so both programs can be looking at different folders), and when searching for files, the searching work should be done on the computer so that precious phone battery is not wasted, and also because it is quicker in general to just send the search results to the mobile once they are generated.
+
+
+
+
+
+## Possible ways to use the program:
+
+There are many different use cases for my program. Some people may want to travel with the data, some people may just want to use it on one computer. In this section I will outline different ways I intend my program to be used.
+
+### Using a USB stick:
+
+People who want to take the data with them to other places, a USB stick is a good idea. All the user has to do is download my program, put it on the USB stick and set the vault directory as a directory on the USB stick. No more setup should be needed. The program should be able to run on Windows, MacOS and Linux so using the USB on most devices should not be an issue. Here is a data flow diagram showing how the user may handle the data:
+
+![](Diagrams/usbUseExample.png)
+
