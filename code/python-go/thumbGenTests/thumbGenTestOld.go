@@ -89,8 +89,7 @@ func strToInt(str string) (int, error) {    //Used for converting string to inte
 }
 
 func main() {
-  f := "/home/josh/mandelbrot.png"
-  w := "/home/josh/test.png"
-  getThumb(f, w, 480)
-
+  f := "/home/josh/nea-12ColcloughJ/Write-Up/Design/Thumbnail/mediumSample.jpg"
+  w := "/home/josh/nea-12ColcloughJ/Write-Up/Design/Thumbnail/TestResults/ImageQuality/Apple/test1.png"
+  getThumb(f, w, 63)
 }
