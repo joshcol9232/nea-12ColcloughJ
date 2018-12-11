@@ -6,10 +6,11 @@ import aesFName
 
 class File:
 
-    def __init__(self, screen, hexPath, hexName, fileSep, thumbDir="", isDir=False, name=None, path=None):
+    def __init__(self, screen, hexPath, hexName, fileSep, extension=None, isDir=False, name=None, path=None):
         self.outerScreen = screen
         self._totalSize = 0
-        self.hexPath, self.hexName, self.isDir, self.fileSep, self.thumbDir = hexPath, hexName, isDir, fileSep, thumbDir
+        self.hexPath, self.hexName, self.isDir, self.fileSep, self.extension = hexPath, hexName, isDir, fileSep, extension
+        self.thumbDir = ""
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
@@ -21,6 +22,10 @@ class File:
             self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
         else:
             self.name = name
+
+        if extension == None:
+            extension = self.path.split(".")
+            self.extension = extension[len(extension)-1].lower()
 
         if self.isDir:
             self.hexPath += self.fileSep

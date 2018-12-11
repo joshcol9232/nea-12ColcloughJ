@@ -395,24 +395,27 @@ class MainScreen(Screen):
         self.smallPop.open()
 
     def onFileInfoClose(self, fileObj, _):  # _ is me discarding the popup object.
-        if fileObj.thumbDir != "":
-            os.remove(fileObj.thumbDir+"_temp")
+        if os.path.exists(fileObj.thumbDir):
+            os.remove(fileObj.thumbDir)
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
         fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
-        if fileObj.thumbDir != "":
+
+        size = (.7, .4)  # Size of popup
+        if fileObj.extension == "png" or fileObj.extension == "jpg":
             thumb = self.getThumbnail(fileObj)
+            size = (.8, .5)
 
         internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
         gridView = ScrollView()
-        self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.7, .4))
+        self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
         self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
 
         infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
         gridView.add_widget(infoGrid)
         internalLayout.add_widget(gridView)
 
-        if fileObj.thumbDir != "":
+        if fileObj.extension == "png" or fileObj.extension == "jpg":
             internalLayout.add_widget(thumb)
 
         infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
@@ -474,8 +477,6 @@ class MainScreen(Screen):
             self.refreshFiles()
             self.infoPopup.dismiss()
 
-            if os.path.exists(fileObj.thumbDir):
-                os.remove(fileObj.thumbDir)
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
 
@@ -520,11 +521,6 @@ class MainScreen(Screen):
     def List(self, dir):    #Lists a directory.
         fs = os.listdir(dir)
         # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
-        if (self.recycleFolder not in dir) and (self.thumbsName not in dir):    # Checks that there is a thumbnail folder in this directory.
-            if self.thumbsName not in fs: # Only check this when not in the recycling folder
-                os.makedirs(dir+self.thumbsName)
-                print("Made thumbnail directory since it wasn't there")
-
         listOfFolders = []
         listOfFiles = []
         for item in fs:
@@ -640,18 +636,15 @@ class MainScreen(Screen):
         extension = self.getFileExtension(fileName).lower()
         return bool(extension == "png" or extension == "jpg")
 
-    def makeThumbnail(self, f, targetLoc):
-        goproc = Popen(self.startDir+"thumbGen", stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((f+", "+targetLoc+"_temp"+", 150").encode())  # Here 100 is the desired height of the thumbnail in pixels.
-        if err != None:
-            raise ValueError(err)
-
-        self.passToPipe("y", targetLoc+"_temp", targetLoc, endOfFolderList=False, op=False)
-        os.remove(targetLoc+"_temp")
-
     def getThumbnail(self, fileObj, asImageObj=True):
-        self.passToPipe("n", fileObj.thumbDir, fileObj.thumbDir+"_temp") # Decrypts thumnail (abcdef) as abcdef_temp so the thumbnail does not have to be reset
-        thumb = Image(source=fileObj.thumbDir+"_temp")
+        if (self.recycleFolder not in self.currentDir) and (self.thumbsName not in self.currentDir):    # Checks that there is a thumbnail folder in this directory.
+            if self.thumbsName not in os.listdir(self.currentDir): # Only check this when not in the recycling folder
+                os.makedirs(self.currentDir+self.thumbsName)
+                print("Made thumbnail directory since it wasn't there")
+
+        fileObj.thumbDir = self.currentDir+self.thumbsName+self.fileSep+fileObj.hexName
+        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail (abcdef) as abcdef_temp so the thumbnail does not have to be reset
+        thumb = Image(source=fileObj.thumbDir)
         return thumb
 
 
@@ -674,8 +667,8 @@ class MainScreen(Screen):
                 else:
                     os.remove(targetLoc)
 
-            if self.isImage(fileName):
-                self.makeThumbnail(d, thumbTarget)
+            #if self.isImage(fileName):
+            #    self.makeThumbnail(d, thumbTarget)
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)
