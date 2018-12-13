@@ -1,5 +1,5 @@
 from os import path as osPath
-from os import listdir
+from os import listdir, makedirs
 from sys import platform
 from tempfile import gettempdir
 
@@ -77,6 +77,45 @@ def getStartDir(fileSep=None):
     for i in range(2):
         del tempDir[len(tempDir)-2]
     return startDir, fileSep.join(tempDir)+fileSep+"assets"+fileSep+"exports"+fileSep
+
+
+def editConfTerm(term, newContent, config):  # Edits a given term in the config.cfg file.
+    with open(config, "r") as conf:
+        confContent = conf.readlines()
+
+    for i in range(len(confContent)):
+        a = confContent[i].split("--")
+        if term == a[0]:
+            a[1] = newContent+"\n"
+            confContent[i] = "--".join(a)
+
+    with open(config, "w") as confW:
+        confW.writelines(confContent)
+
+def dirInputValid(inp, fileSep):
+    valid = bool((inp[0] == fileSep) and ("\n" not in inp))       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+    inp = inp.split(fileSep)
+    focusIsSlash = False
+    for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
+        if item == "":
+            if focusIsSlash:
+                valid = False
+            focusIsSlash = True
+        else:
+            focusIsSlash = False
+    return valid
+
+def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault location is changed.
+    if inp != "":
+        if dirInputValid(inp, fileSep):
+            if osPath.exists(inp) and osPath.isdir(inp):
+                editConfTerm("vaultDir", inp, config)
+            else:
+                makedirs(inp)
+                if inp[len(inp)-1] != fileSep:
+                    inp += fileSep
+                editConfTerm("vaultDir", inp, config)
+
 
 def runConfigOperations():
     fileSep = getFileSep()

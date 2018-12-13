@@ -15,6 +15,7 @@ from kivy.uix.popup import Popup
 
 import aesFName
 from mainLargePops import SettingsPop
+from configOperations import dirInputValid
 
 class encPopup(Popup): #For single files
 
@@ -162,7 +163,7 @@ class btTransferPop(encPopup):
         # File data is sent right afterwards, ending with ~!!ENDF!
         # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
         self.outerScreen.clientSock.send("!NAME!{}~~!~~".format(fileObj.name))
-        print("!NAME!{}~~!~~".format(fileObj.name), "Sent")
+        #print("!NAME!{}~~!~~".format(fileObj.name), "Sent")
 
         newLoc = self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
@@ -200,7 +201,7 @@ class decryptDirPop(Popup): # Input box for location of where directory is to be
         self.fileObj = fileObj
 
     def checkCanDec(self, inp):
-        if SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+        if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
             if not os.path.exists(inp):
                 os.makedirs(inp)
             if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
@@ -212,21 +213,8 @@ class addNewFolderPop(Popup):
         super(Popup, self).__init__(**kwargs)
         self.outerScreen = mainScreen
 
-    def dirInputValid(self, inp):
-        valid = (inp[0] == self.outerScreen.fileSep) and ("\n" not in inp)       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
-        inp = inp.split(self.outerScreen.fileSep)
-        focusIsSlash = False
-        for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
-            if item == "":
-                if focusIsSlash:
-                    valid = False
-                focusIsSlash = True
-            else:
-                focusIsSlash = False
-        return valid
-
     def makeFolder(self, text):
-        if self.dirInputValid(self.outerScreen.currentDir+text):
+        if dirInputValid(self.outerScreen.currentDir+text, self.outerScreen.fileSep):
             try:
                 os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
             except OSError as e:

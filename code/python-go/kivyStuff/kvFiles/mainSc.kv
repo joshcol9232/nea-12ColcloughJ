@@ -142,11 +142,12 @@
                 id: newLoc
                 size_hint_x: .85
                 font_size: 22
+                multiline: False
                 hint_text: "Location"
             Button:
                 size_hint_x: .15
                 text: "Submit"
-                on_release: root.changeVaultLoc(newLoc.text)
+                on_release: root.changeVault(newLoc.text)
 
 
         Label:

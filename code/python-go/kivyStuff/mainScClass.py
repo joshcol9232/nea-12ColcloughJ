@@ -49,7 +49,6 @@ class MainScreen(Screen):
         self.entered = False
         self.validBTKey = False
         self.useBTTemp = self.useBT
-        print(self.useBTTemp, "BT TEMP")
         self.previousDir = None
         self.lastPathSent = ""
         self.recycleFolder = ""
@@ -124,7 +123,6 @@ class MainScreen(Screen):
                               service_classes = [ uuid, SERIAL_PORT_CLASS ],
                               profiles = [ SERIAL_PORT_PROFILE ],)
         except BluetoothError as e:
-            print(e, "Bluetooth not found.")
             Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login."), size_hint=(.4, .4), auto_dismiss=True).open()
             return
 
@@ -171,28 +169,22 @@ class MainScreen(Screen):
 
                     if buff[:6] == backCommand:   # Buffer is reset every time a header is found
                         pathBack = self.getPathBack(self.lastPathSent)
-                        print(pathBack, "pathBack")
                         if (not pathBack) or (pathBack.replace(self.path, "") == pathBack):    # If you can't go further back (if pathBack has less than path, then remove returns the original string).
-                            print("Can't go further back.")
+                            print("[BT]: Can't go further back.")
                             self.clientSock.send("!ENDOFTREE!")
                         else:
                             self.sendFileList(self.getListForSend(pathBack))
-                            print("Should have sent now.")
                         buff = []
 
                     elif buff[:12] == fileSelectCommand:
                         commandParams = buff[12:]
-                        print(buff, "buffer")
-                        print(fileSelectCommand, "fileSelectCommand")
-                        print(endHeader, "endHeader")
                         if commandParams[len(commandParams)-11:] == endHeader:
-                            print("End header found.")
                             fileWantedList = commandParams[:len(commandParams)-11]
                             fileWanted = ""
                             for letter in fileWantedList:
                                 fileWanted += chr(letter)
 
-                            print(fileWanted, "fileWanted")
+                            print("[BT]:", fileWanted, "fileWanted")
                             buff = []
                             filesInPath = self.List(self.lastPathSent)
 
@@ -211,7 +203,7 @@ class MainScreen(Screen):
                                     self.makeSendFile(fileObj)
 
                             else:
-                                print("Couldn't find that file :/")
+                                print("[BT]: Couldn't find that file :/")
                                 self.clientSock.send("!NOTFOUND!")
 
 
@@ -223,7 +215,7 @@ class MainScreen(Screen):
         except IOError as e:
             print(e)
 
-        print("Closed.")
+        print("[BT]: Closed.")
 
         self.clientSock.close()
         self.serverSock.close()
@@ -232,12 +224,12 @@ class MainScreen(Screen):
     def sendFileList(self, fileList):
         # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
         self.clientSock.send("!FILELIST!")
-        print("Sent !FILELIST!")
+        print("[BT]: Sent !FILELIST!")
 
         for i in fileList:
             self.clientSock.send("--{}".format(i))
 
-        print("Sent full list, now sent end.")
+        print("[BT]: Sent full list, now sent end.")
         self.clientSock.send("~!!ENDLIST!")
 
 
@@ -375,10 +367,6 @@ class MainScreen(Screen):
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
-            if self.isImage:
-                self.passToPipe("n", fileObj.hexPath, fileObj.hexPath+"_temp")
-                self.makeThumbnail(fileObj.hexPath+"_temp", self.path+self.thumbsName+self.fileSep+fileObj.hexName)
-                os.remove(fileObj.hexPath+"_temp")
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 

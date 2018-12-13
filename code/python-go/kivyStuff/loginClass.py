@@ -23,7 +23,6 @@ class LoginScreen(Screen):
     def __init__(self, fileSep, path, startDir, **kwargs):
         self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
         super(Screen, self).__init__(**kwargs)
-        print("IN REGULAR LOGIN")
         self.key = ""
 
     def cancel(self):
