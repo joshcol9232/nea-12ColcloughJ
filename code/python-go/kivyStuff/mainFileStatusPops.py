@@ -8,6 +8,8 @@ from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
+from configOperations import dirInputValid
+
 class encPopup(Popup): #For single files
 
     def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
@@ -177,7 +179,7 @@ class decryptDirPop(Popup):
 
     def checkCanDec(self, inp):
         print("FileObj", self.fileObj)
-        if self.outerScreen.SettingsPop.dirInputValid(None, inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+        if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
             if not os.path.exists(inp):
                 os.makedirs(inp)
             if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
