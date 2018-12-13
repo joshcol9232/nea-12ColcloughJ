@@ -1219,6 +1219,61 @@ So all together, this is the BLAKE2b checksum algorithm:
 
 The second step ($h[0] = h[0] \oplus 01010000 \oplus hL$) XORs $h[0]$ with $0101kknn$, where $kk$ is the length of the key (which is optional, so I probably will never use it), and $nn$ is the hash length desired.
 
+---
+
+## Quick Sort
+
+My program will need a quick sort for sorting the files by:
+
+- Size
+- Name
+
+I have chosen quick sort because it is quicker than most sorts (it's in the name!) with a big-O notation of $O(n \log n)$ on average, with the worst case being $O(n^2)$. Merge sort has a big-O notation of $O(n \log n)$, and worst case of $O(n \log n)$, so why am I not using merge sort? Merge sort is supposed to be quicker mathematically, however merge sort has to access the array of items more often, usually resulting in putting more strain on the hardware, and also slows the overall process down because getting items from memory takes a fair amount of time. Here is a good video comparing merge sort and quick sort (along with a few other algorithms): https://youtu.be/ZZuD6iUe3Pc
+
+The algorithm goes like this (using a list of items to be sorted):
+
+1. Take the item in the middle of the list. Call this the "pivot".
+2. Compare each item either side of the pivot. If the item is bigger than the pivot, add it to a new list called "right", if the item is smaller than the pivot, add the item to a new list called "left".
+3. Then repeat this process with the left and right lists.
+4. Once the current left and right lists have been sorted, append the left list and right list with the pivot in the middle.
+
+Here is the pseudocode of the algorithm:
+
+```pseudocode
+function quickSort(list)
+	if length(list) <= 1 then
+		return list
+	else
+		left   = []
+		middle = []
+		right  = []
+		pivot  = list[int(length(list)/2)]
+		for i = 0 to length(list) do
+			if list[i] < pivot then
+				left.append(list[i])
+			else if list[i] > pivot then
+				right.append(list[i])
+			else
+				middle.append(list[i])
+			end
+		end
+		return quickSort(left)+middle+quickSort(right)
+	end
+end
+```
+
+Here is a flow diagram to represent this:
+
+<img src="Diagrams/quickSort.png" style="zoom: 75%">
+
+
+
+
+
+
+
+
+
 
 
 ---
@@ -1305,7 +1360,7 @@ Browsing the files should be seamless, and the user should be able to browse the
 
 
 
-## Possible ways to use the program:
+## The program as a whole:
 
 There are many different use cases for my program. Some people may want to travel with the data, some people may just want to use it on one computer. In this section I will outline different ways I intend my program to be used.
 
@@ -1314,4 +1369,12 @@ There are many different use cases for my program. Some people may want to trave
 People who want to take the data with them to other places, a USB stick is a good idea. All the user has to do is download my program, put it on the USB stick and set the vault directory as a directory on the USB stick. No more setup should be needed. The program should be able to run on Windows, MacOS and Linux so using the USB on most devices should not be an issue. Here is a data flow diagram showing how the user may handle the data:
 
 ![](Diagrams/usbUseExample.png)
+
+
+
+### Storing the files at home:
+
+People who may not need to travel as much with their data may just want to store their files at home, however if they want to take files to work/other places I will try to make it as easy as possible to do so.
+
+The user should be able to decrypt the files they need to a folder (possibly on a USB stick), or download files from the Vault to their mobile device. This is worse than just using the whole app on the USB stick as mentioned in the last section, as the files will not be encrypted once they are in the folder or downloaded onto the mobile device.
 
