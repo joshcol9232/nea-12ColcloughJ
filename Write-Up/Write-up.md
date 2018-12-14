@@ -1234,7 +1234,7 @@ The algorithm goes like this (using a list of items to be sorted):
 
 1. Take the item in the middle of the list. Call this the "pivot".
 2. Compare each item either side of the pivot. If the item is bigger than the pivot, add it to a new list called "right", if the item is smaller than the pivot, add the item to a new list called "left".
-3. Then repeat this process with the left and right lists.
+3. Then repeat this process with the left and right lists (making this algorithm recursive).
 4. Once the current left and right lists have been sorted, append the left list and right list with the pivot in the middle.
 
 Here is the pseudocode of the algorithm:
@@ -1265,8 +1265,6 @@ end
 Here is a flow diagram to represent this:
 
 <img src="Diagrams/quickSort.png" style="zoom: 75%">
-
-
 
 
 
@@ -1376,5 +1374,15 @@ People who want to take the data with them to other places, a USB stick is a goo
 
 People who may not need to travel as much with their data may just want to store their files at home, however if they want to take files to work/other places I will try to make it as easy as possible to do so.
 
-The user should be able to decrypt the files they need to a folder (possibly on a USB stick), or download files from the Vault to their mobile device. This is worse than just using the whole app on the USB stick as mentioned in the last section, as the files will not be encrypted once they are in the folder or downloaded onto the mobile device.
+The user should be able to decrypt the files they need to a folder (possibly on a USB stick), or download files from the Vault to their mobile device. This is worse than just using the whole app on the USB stick as mentioned in the last section, as the files will not be encrypted once they are in the folder or downloaded onto the mobile device. It is not recommended to do this if you want to edit the files while away from home, unless you can edit it on your device, however if not you may as well just put the files onto a USB stick.
+
+A data flow diagram for this use case would look something like this:
+
+![](Diagrams/filesAtHome.png)
+
+For the overall user experience the flow of the program should look like this:
+
+
+
+
 
