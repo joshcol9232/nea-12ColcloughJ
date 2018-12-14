@@ -23,7 +23,7 @@ import aesFName
 import sortsCy
 # Own kivy classes
 import mainBtns
-import mainLargePops as mainLPops
+from settingsScreen import SettingsScreen
 import mainSmallPops as mainSPops
 
 
@@ -305,6 +305,10 @@ class MainScreen(Screen):
         return foldersSort+filesSort
 
     def openRecycling(self):
+        if not os.path.exists(self.recycleFolder):
+            print("Recycling folder doesn't exist, making one now.")
+            makedirs(self.recycleFolder)
+
         warnPop = Popup(title="Changed Mode", content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
         warnPop.open()
         self.currentDir = self.recycleFolder
@@ -370,13 +374,9 @@ class MainScreen(Screen):
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 
-    def openSettingsPop(self):
-        self.largePop = mainLPops.SettingsPop(self, self.configLoc)
-        self.largePop.open()
-
     def openAddFilePop(self):
-        self.largePop = mainLPops.addFilePop(self)
-        self.largePop.open()
+        self.smallPop = mainSPops.addFilePop(self)
+        self.smallPop.open()
 
     def openAddFolderPop(self):
         self.smallPop = mainSPops.addNewFolderPop(self)

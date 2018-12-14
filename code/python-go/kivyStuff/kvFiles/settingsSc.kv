@@ -1,0 +1,78 @@
+<SettingsScreen>:
+    auto_dismiss: False
+    newLoc: newLoc
+    title: "Settings"
+    GridLayout:
+        cols: 2
+        Label:
+            canvas.before:
+                Color:
+                    rgba: 0.33, 0.33, 0.33, 1  # Aproximately the same as kivy's default button colour.
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            text: "Settings Menu"
+            font_size: 40
+        Label:
+            canvas.before:
+                Color:
+                    rgba: 0.33, 0.33, 0.33, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+
+        Label:
+            text: "Vault Location:"
+            font_size: 20
+        Label:
+            text: root.outerScreen.path
+            font_size: 14
+
+        Label:
+            text: "Change Vault Location:"
+            font_size: 16
+        GridLayout:
+            cols: 2
+            TextInput:
+                id: newLoc
+                size_hint_x: .85
+                font_size: 22
+                multiline: False
+                hint_text: "Location"
+            Button:
+                size_hint_x: .15
+                text: "Submit"
+                on_release: root.changeVault(newLoc.text)
+
+
+        Label:
+            text: "Search folders recursively\n(takes longer but searches through folders)"
+        Switch:
+            id: searchSwitch
+            active: root.outerScreen.searchRecursively
+
+        Label:
+            text: "Bluetooth login (as default)"
+        Switch:
+            id: btSwitch
+            active: root.outerScreen.useBTTemp
+
+        Label:
+        Label:
+
+        Label:
+        Label:
+
+        Label:
+            text: "Note: Changes that you make that affect the login method only take effect once the program is restarted."
+            text_size: self.size
+        Label:
+
+        Button:
+            text: "Exit"
+            font_size: 20
+
+            on_release: root.manager.current = "Main"
+

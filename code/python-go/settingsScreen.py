@@ -1,35 +1,16 @@
 from os import path, makedirs
 from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import Screen
 
 from configOperations import changeVaultLoc, editConfTerm
 
 # Large popups are popups that fill the entire screen.
-
-class addFilePop(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
-
-    def __init__(self, mainScreen, **kwargs):
-        super(Popup, self).__init__(**kwargs)
-        self.outerScreen = mainScreen
-
-    class ConfirmationPopup(Popup):     #Popup for confirming encryption.
-
-        def __init__(self, fileScreen, input, **kwargs):
-            super(Popup, self).__init__(**kwargs)
-            self.fileScreen = fileScreen
-            self.inputText = input
-
-
-    def checkIfSure(self, input):
-        sure = self.ConfirmationPopup(self, input)
-        sure.open()
-
-
-class SettingsPop(Popup):
+class SettingsScreen(Screen):
 
     def __init__(self, mainScreen, configLoc, **kwargs):
         self.outerScreen = mainScreen
         self.config = configLoc
-        super(Popup, self).__init__(**kwargs)
+        super(Screen, self).__init__(**kwargs)
 
         self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
         self.ids.btSwitch.bind(active=self.btSwitchCallback)

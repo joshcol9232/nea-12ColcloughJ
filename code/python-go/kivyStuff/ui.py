@@ -15,6 +15,7 @@ from kivy.lang import Builder
 ######Import personal classes######
 from mainScClass import MainScreen
 from loginClass import LoginScreen, LoginScreenBT
+from settingsScreen import SettingsScreen
 
 #########Import config functions########
 import configOperations
@@ -51,7 +52,9 @@ class uiApp(App):
         fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc = configOperations.runConfigOperations()
         print("Screen manager starting.")
         # Load kv files for each screen.
-        Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")
+        Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")     # MainScreen styling.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/mainScClasses.kv") # MainScreen sub-classes styling.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/settingsSc.kv") # SettingsScreen styling.
 
         if useBT:
             print("Using BT")
@@ -62,6 +65,7 @@ class uiApp(App):
             sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login"))
 
         sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="Main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
+        sm.add_widget(SettingsScreen(sm.get_screen("Main"), configLoc, name="Settings"))
         sm.current = "Login"
 
         return sm
