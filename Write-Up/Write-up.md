@@ -293,6 +293,8 @@ The directory will be managed using a tree structure, where the root folder cont
 The encryption method I will use AES 128 bit, as it will slightly compromise security over using 256 bit, however it will be faster to decrypt files for use, giving the user a better experience, however I might add an option to use 256 in the settings if the user needs more security over performance.
 For the encryption key, the key will be set up every time a new vault is created (this includes first starting the program). It will tell the user to enter the new key, and then from that moment forwards in that vault, that key will remain the same, and will be used every time a file is encrypted/decrypted in the vault.
 
+When a file is encrypted, the key is appended to the start of the data, and is then encrypted. This is so that when the data is decrypted, only the first block has to be decrypted and compared with the key entered to check if the key entered was correct, rather than decrypting the whole file just to find out that the key was incorrect. This will also be used to check the key entered at login, where the login will try to find the first file it can within the vault, decrypt the first block of that file and compare it with the input.
+
 The key will have to be hashed if I send it over Bluetooth, as it may get intercepted, and it is also a good idea to hash it on the computer program as well, as if someone somehow manages to get the key, it will not be the user’s original input, so if the user uses it for something else, their other accounts will be fine.
 
 Here is a data flow diagram showing how the data is handled once logged into the program:
@@ -626,7 +628,7 @@ For example, if we wanted to represent the decimal number: 25301 as a Galois fie
 $$
 2x^4+5x^3+3x^2+1
 $$
-Note that the 0 in 25301​ is not included, as 0x = 0 .
+Note that the 0 in 25301​ is not included, as $0x = 0$.
 
 To represent a binary number, the same logic applies. For example, to represent the binary number `10011011` as a Galois field, it would be:
 $$
@@ -741,7 +743,7 @@ r_0 = 213 (decimal)
 $$
 And, thank god, that is the correct answer for the test vector on this page: https://en.wikipedia.org/wiki/Rijndael_MixColumns.
 
-To get r_1, r_2, r_3, you repeat the process using the equations for each defined at the top of this section.
+To get $r_1$, $r_2$ and $r_3$, you repeat the process using the equations for each defined at the top of this section.
 
 This whole process has to be done on each column.
 
@@ -1268,12 +1270,6 @@ Here is a flow diagram to represent this:
 
 
 
-
-
-
-
-
-
 ---
 
 ## UI Research:
@@ -1282,9 +1278,7 @@ For the UI of both apps, I will use Kivy (a Python module) to make both the mobi
 
 ### Main Program (on PC):
 
-The main program has to be designed to be easy to use, and actions that are used a lot should be easily accessible.
-
-I think I will go for a similar layout to a program that already exists, SanDisk Secure Access:
+The main program has to be designed to be easy to use, and actions that are used a lot should be easily accessible. I think I will go for a similar layout to a program that already exists, SanDisk Secure Access:
 
 ![](Diagrams/sanDisk.png)
 
@@ -1319,9 +1313,7 @@ Taking all of these points into consideration, here is a possible design for the
 
 ![](Design/mainProgramDesign.png)
 
-Everything grey is a clickable button. This helps the user distinguish between buttons and information. The most important buttons are large, as they will be used the most.
-
-The user can sort by name or size, and can search the entire vault for a search term.
+Everything grey is a clickable button. This helps the user distinguish between buttons and information. The most important buttons are large, as they will be used the most. The user can sort by name or size, and can search the entire vault for a search term.
 
 The information button displays more information, such as:
 
@@ -1332,18 +1324,51 @@ The information button displays more information, such as:
 
 The button with the home picture on it takes the user back to the root directory of the vault. The recycling bin button is for the recycling folder, where the files that have been deleted can be either restored or deleted. The cog wheel button is settings, where all the settings are kept. I gave the settings it's separate section to avoid clutter, as most users will probably not need to use it very often.
 
-The user can sort the files by name alphabetically, or they can sort by size.
-
-Space remaining on the current device is shown underneath the search bar.
-
-When the user encrypts or decrypts a file, a pop up should open showing the user the current speed, time remaining and a status bar giving the user a visual representation of how far through the file the program has got, including a percentage reading.
+The user can sort the files by name alphabetically, or they can sort by size. Space remaining on the current device is shown underneath the search bar.
 
 While searching through large folders, the search results should update every so often since it may take a while to search the full file tree.
+
+When using the recycling bin, the program will look exactly the same, but warn the user that they are in the recycling bin "mode", so when they click files, instead of decrypting the file and opening it the file is instead moved back into the vault, recovering it to where it originally came from.
+
+The login screen will have 2 modes:
+
+1. Login without Bluetooth (can't use any Bluetooth functions while logged in).
+2. Login with Bluetooth.
+
+I will also make it so that you can easily switch between Bluetooth and non-Bluetooth login, whether that be a button on the login screen, or in the configuration file. Also, when in non-Bluetooth mode, the user will not need to have PyBluez installed, neither will they need Bluetooth on their PC.
+
+When navigating the app, the navigation should be easy and simple so that the user does not get lost. I will have 2 main screens, a login screen and a main screen (to view files and open other functions once logged in), and within the main screen I will have a screen for settings, and a few other popups.
+
+Here is a class diagram to show the relationship between screens and popups:
+
+![](/home/josh/nea-12ColcloughJ/Write-Up/Diagrams/guiClasses.png)
+
+These are only the custom classes, so regular buttons and labels and such will be left out of this diagram.
+
+The Encryption/Decryption popup should be opened when the user encrypts/decrypts a file, and should display information including how fast the file is being enc/decrypted (in kb or mb per second), the percentage of the file that has been enc/decrypted so far, and how many items have been done out of the total files to be enc/decrypted. There should also be a progress bar at the bottom, showing the percentage visually.
+
+The Bluetooth sending popup should show the exact same information, but for the current status of the file being sent over Bluetooth.
+
+The add file and add folder popups should both be similar in design, however the add file popup will let the user encrypt a file or folder to the vault, while the add folder popup will allow the user to create a new folder within the vault.
+
+Popups are designed for one purpose only, and are usually used briefly before they are closed again. Screens will be used throughout the program, acting as the base of the GUI, where child widgets can be added to the screen, such as buttons, text inputs and views (such as scroll views). The screens will inherit from Kivy's Screen class, and the popups will inherit from Kivy's Popup class. The screens get managed by a ScreenManager, also a Kivy widget. The ScreenManager is then added to the app's root widget (the base widget of an app).
+
+A hierarchy diagram for the entire GUI would look something like this (since Popups can be added and removed to any widget when needed, I will not include them in this diagram):
+
+<img src="/home/josh/nea-12ColcloughJ/Write-Up/Diagrams/hierachyOfWidgets.png" style="zoom:65%">
+
+Each layer has it's own colour, since I couldn't think of a better way of making this clear without making the image extremely wide. "0..*" means 0 to many of this widget can exist at any time. This shows all of the widgets that will be on each screen at all times (unless obstructed by a popup) as default.
+
+Here is a top-down view of how the GUI will flow while the user is using the program:
+
+![](Diagrams/userExFlow.png)
+
+
 
 ### The App:
 
 The app's UI design should be very simple, as I do not need to add much.
-All it needs to be is a number pad with a display, an enter button and a screen to have open while you are connected to the PC.
+All it needs to be is a number pad with a display, an enter button and a screen to have open while you are connected to the PC, and a file browser similar to the one on the PC app.
 Here is a prototype I made in Processing (A java based "software sketchbook):
 
 <img src="Diagrams/appPrototype.png" width=200px/>
@@ -1352,15 +1377,25 @@ It is very minimal, as I decided to keep it as minimal as possible so that the u
 
 Once the vault is unlocked, the user should be given the option to browse files in the vault from their phone, and select files to download, or instead just minimise the app and continue using their phone. The vault should only close once the user has exited the app, rather than when they minimise the app.
 
-Browsing the files should be seamless, and the user should be able to browse the folders independently from the computer program (so both programs can be looking at different folders), and when searching for files, the searching work should be done on the computer so that precious phone battery is not wasted, and also because it is quicker in general to just send the search results to the mobile once they are generated.
+The user should be able to browse the folders independently from the computer program (so both programs can be looking at different folders), browsing the files should be a seamless experience, and when searching for files, the searching work should be done on the computer so that precious phone battery is not wasted, and also because it is quicker in general to just send the search results to the mobile once they are generated.
 
+The app should have a pin-code screen and a file browsing screen. The pin-code screen should only be used when the PC program is logged out.
 
+Here is a top-down diagram of how the GUI will flow while the user is using the program:
 
-
+![](Diagrams/userExFlowApp.png)
 
 ## The program as a whole:
 
+My program will handle a fair amount of data, so here is a IPSO (Input, Processing, Storage, Output) chart to simplify it a little:
+
+![](IPSO_1.png)
+
+![](IPSO_2.png)
+
 There are many different use cases for my program. Some people may want to travel with the data, some people may just want to use it on one computer. In this section I will outline different ways I intend my program to be used.
+
+
 
 ### Using a USB stick:
 
@@ -1380,7 +1415,7 @@ A data flow diagram for this use case would look something like this:
 
 ![](Diagrams/filesAtHome.png)
 
-For the overall user experience the flow of the program should look like this:
+If you wanted to edit the files at work without putting the entire program on a USB, you could instead decrypt the file and put it on a USB, take it to work, edit the file, go home and then encrypt it back into the vault, however the file is not encrypted.
 
 
 
