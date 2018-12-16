@@ -5,7 +5,6 @@ import (
   "os"
   "io"
   "io/ioutil"
-  "runtime"
   "strings"
   "strconv"
 )
@@ -342,16 +341,6 @@ func check(e error) {     //Used for checking errors when reading/writing to fil
   }
 }
 
-
-func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
-  maxProcs := runtime.GOMAXPROCS(0)
-  numCPU := runtime.NumCPU()
-  if maxProcs < numCPU {
-    return maxProcs
-  }
-  return numCPU
-}
-
 func compareSlices(slice1, slice2 []byte) bool {    //Function used for checking first block of a file with the key when decrypting.
   if len(slice1) != len(slice2) {
     return false
@@ -380,7 +369,7 @@ func encryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 65536*getNumOfCores()  //Get the buffer size
+  var bufferSize int = 32768  //Get the buffer size
 
   if fileSize < bufferSize {    //If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
@@ -447,7 +436,7 @@ func decryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 65536*getNumOfCores()//16384
+  var bufferSize int = 32768
 
   if fileSize < bufferSize {
     bufferSize = fileSize

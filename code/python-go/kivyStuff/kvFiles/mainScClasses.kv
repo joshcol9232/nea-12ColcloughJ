@@ -1,4 +1,5 @@
 #: import Clock kivy.clock.Clock
+#: import Window kivy.core.window.Window
 
 <listButton@Button>:
     font_size: 14
@@ -6,7 +7,16 @@
     valign: "middle"
     height: 30
     size_hint: 1, None
-    on_release: root.outerScreen.traverseButton(self.fileObj)
+    #drag_rectangle: self.x, self.y, self.width, self.height
+    #drag_timeout: 10000000
+    #drag_distance: 0
+
+<listButtonBubble@Bubble>:
+    size_hint: .1, .1
+    pos_hint: {"x_center": self.touch.opos[0]/Window.width, "y_center": self.touch.opos[1]/Window.height}
+    BubbleButton:
+        text: "Scoop"
+
 
 <nameSortButton@Button>:
     font_size: 14

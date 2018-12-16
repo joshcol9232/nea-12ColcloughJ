@@ -118,7 +118,7 @@ class encPopup(Popup): #For single files
                 if self.pb.value >= self.pb.max:
                     self.done = True
 
-                if self.done and self.pb.value_normalized != 0: # Don't bother sleeping if the file is finished...
+                if self.done and self.pb.value_normalized != 0 and self.pb.max > 10000: # Don't bother sleeping if the file is finished, or if the file is really small.
                     sleep(randUniform(0.08, 0.1)) # Sleep imported from time module
                 # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
                 # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two

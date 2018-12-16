@@ -50,6 +50,7 @@ class MainScreen(Screen):
         self.validBTKey = False
         self.useBTTemp = self.useBT
         self.previousDir = None
+        self.bubb = None                # Bubble of options given when you right click a listButton. There can only be 1 at any time so it is defined here.
         self.lastPathSent = ""
         self.recycleFolder = ""
         self.recycleName = ""
@@ -434,9 +435,6 @@ class MainScreen(Screen):
         self.sendFile = mainSPops.btTransferPop(self, fileObj)
         self.sendFile.open()
 
-    def makeFolder(self, folderName):
-        print(folderName, "folderName")
-
     def moveFileToRecycling(self, fileObj):
         print("Moving", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath):
@@ -645,7 +643,6 @@ class MainScreen(Screen):
             #replace file name with new hex
             targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
             thumbTarget = self.fileSep.join(targetLoc[:len(targetLoc)-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[len(targetLoc)-1]
-            print(thumbTarget)
 
             popText = "Encrypting..."
             targetLoc = self.fileSep.join(targetLoc)

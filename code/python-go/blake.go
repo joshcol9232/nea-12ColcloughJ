@@ -7,7 +7,6 @@ import (
   "os"
   "io"
   "io/ioutil"
-  //"strings"
 )
 
 
@@ -67,7 +66,7 @@ func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64
 }
 
 
-func blakeCompress(h [8]uint64, block [128]uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
+func blakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
   var v = [16]uint64{} // Current vector
   for i := 0; i < 8; i++ {
     v[i] = h[i]
@@ -119,14 +118,14 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
-  a, err := os.Open(f)    // Open original file to get statistics
+  a, err := os.Open(f)    // Open file
   check(err)
-  aInfo, err := a.Stat()  // Get statistics
+  aInfo, err := a.Stat()  // Get statistics of file
   check(err)
 
   fileSize := int(aInfo.Size()) // Get size of original file
 
-  var bufferSize int = 128  // Has to be a multiple of 128
+  var bufferSize int = 65536
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
@@ -140,22 +139,28 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
     if bufferSize > (fileSize - buffCount) {
       bufferSize = fileSize - buffCount
     }
-    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
-    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+    buff := make([]uint64, bufferSize)
+    tempBuff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+    _, err := io.ReadFull(a, tempBuff) // Read the contents of the original file, but only enough to fill the buff array.
                                    // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
-    currBuff := [128]uint64{}
-    for i := range buff {
-      currBuff[i] = uint64(buff[i])
+    for i := range tempBuff {
+      buff[i] = uint64(tempBuff[i])
+    }
+    tempBuff = nil // Delete array
+
+    for len(buff) % 128 != 0 {
+      buff = append(buff, 0)  // Append 0s when buffer is not long enough
     }
 
-    if bytesLeft <= 128 {
-      bytesFed += bytesLeft
-      h = blakeCompress(h, currBuff, bytesFed, true)
-    } else {
-      bytesFed += 128
+    for i := 0; i < bufferSize; i += 128 {
+      if bytesLeft <= 128 {
+        h = blakeCompress(h, buff[i:i+128], bytesFed+bytesLeft, true)
+      } else {
+        bytesFed += 128
+        h = blakeCompress(h, buff[i:i+128], bytesFed, false)
+      }
       bytesLeft -= 128
-      h = blakeCompress(h, currBuff, bytesFed, false)
     }
 
     buffCount += bufferSize
@@ -166,18 +171,9 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
 }
 
 func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)
+  bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
   check(err)
   f := string(bytes)
 
   fmt.Printf("%x", BLAKEchecksum(f, 64))
 }
-//  data := []byte("")
-//  h := BLAKE2b(data, 64)
-//  fmt.Println(h)
-//  for i := range h {
-//    fmt.Printf("%x\n", h[i])
-//  }
-
-  //f := "/home/josh/GentooMin.iso"
-  //fmt.Printf("%x", BLAKEchecksum(f, 64))k
