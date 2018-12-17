@@ -1,15 +1,15 @@
 package main
 
 import (
-  "fmt"
-  "os"
-  "io"
-  "io/ioutil"
-  "strings"
-  "strconv"
+  "fmt"       // For sending output on stout
+  "os"        // For opening files
+  "io"        // For reading files
+  "io/ioutil" // ^
+  "strings"   // For converting string key to an array of bytes
+  "strconv"   // ^
 )
 
-//Global lookup tables.
+// Global lookup tables.
 var sBox = [256]byte {0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
                       0xCA,0x82,0xC9,0x7D,0xFA,0x59,0x47,0xF0,0xAD,0xD4,0xA2,0xAF,0x9C,0xA4,0x72,0xC0,
                       0xB7,0xFD,0x93,0x26,0x36,0x3F,0xF7,0xCC,0x34,0xA5,0xE5,0xF1,0x71,0xD8,0x31,0x15,
@@ -44,7 +44,7 @@ var invSBox = [256]byte {0x52,0x09,0x6A,0xD5,0x30,0x36,0xA5,0x38,0xBF,0x40,0xA3,
                          0xA0,0xE0,0x3B,0x4D,0xAE,0x2A,0xF5,0xB0,0xC8,0xEB,0xBB,0x3C,0x83,0x53,0x99,0x61,
                          0x17,0x2B,0x04,0x7E,0xBA,0x77,0xD6,0x26,0xE1,0x69,0x14,0x63,0x55,0x21,0x0C,0x7D}
 
-var rcon = [256]byte {0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,0xab,0x4d,0x9a,    //https://en.wikipedia.org/wiki/Rijndael_key_schedule
+var rcon = [256]byte {0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,0xab,0x4d,0x9a,    // https:// en.wikipedia.org/wiki/Rijndael_key_schedule
                       0x2f,0x5e,0xbc,0x63,0xc6,0x97,0x35,0x6a,0xd4,0xb3,0x7d,0xfa,0xef,0xc5,0x91,0x39,
                       0x72,0xe4,0xd3,0xbd,0x61,0xc2,0x9f,0x25,0x4a,0x94,0x33,0x66,0xcc,0x83,0x1d,0x3a,
                       0x74,0xe8,0xcb,0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,
@@ -165,13 +165,13 @@ var mul14 = [256]byte {0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x
 
 
 func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
-  //Shift the inp left by moving the first byte to the end (rotate).
+  // Shift the inp left by moving the first byte to the end (rotate).
   inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], inp[0]
 
-  //S-Box the bytes
+  // S-Box the bytes
   inp[0], inp[1], inp[2], inp[3] = sBox[inp[0]], sBox[inp[1]], sBox[inp[2]], sBox[inp[3]]
 
-  //rcon, more galois fields that lead to lookup tables.
+  // rcon, the round constant
   inp[0] ^= rcon[i]
 
   return inp
@@ -179,25 +179,25 @@ func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
 
 func expandKey(inputKey []byte) ([176]byte) {
   var expandedKeys [176]byte
-  //first 16 bytes of the expandedkeys should be the same 16 as the original key
+  // first 16 bytes of the expandedkeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
     expandedKeys[i] = inputKey[i]
   }
-  var bytesGenerated int = 16 //needs to get to 176 to fill expandedKeys with 11 keys, one for every round.
+  var bytesGenerated int = 16 // needs to get to 176 to fill expandedKeys with 11 keys, one for every round.
   var rconIteration int = 1
   var temp [4]byte
 
   for bytesGenerated < 176{
-    //Read 4 bytes for use in keyExpansionCore
+    // Read 4 bytes for use in keyExpansionCore
     copy(temp[:], expandedKeys[bytesGenerated-4:bytesGenerated])
 
-    if bytesGenerated % 16 == 0 {    //Keys are length 16 bytes so every 16 bytes generated, expand.
+    if bytesGenerated % 16 == 0 {    // Keys are length 16 bytes so every 16 bytes generated, expand.
       temp = keyExpansionCore(temp, rconIteration)
       rconIteration += 1
     }
 
     for y := 0; y < 4; y++ {
-      expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]  //XOR first 4 bytes of previous key with the temporary list.
+      expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]  // XOR first 4 bytes of previous key with the temporary list.
       bytesGenerated += 1
     }
   }
@@ -205,9 +205,9 @@ func expandKey(inputKey []byte) ([176]byte) {
   return expandedKeys
 }
 
-func addRoundKey(state []byte, roundKey []byte) ([]byte) {       //Add round key is also it's own inverse
+func addRoundKey(state []byte, roundKey []byte) ([]byte) {       // Add round key is also it's own inverse
   for i := 0; i < 16; i++ {
-    state[i] ^= roundKey[i] //XOR each byte of the key with each byte of the state.
+    state[i] ^= roundKey[i] // XOR each byte of the key with each byte of the state.
   }
   return state
 }
@@ -231,12 +231,12 @@ func shiftRows(state []byte) ([]byte) {
                 state[ 4], state[ 9], state[14], state[ 3],
                 state[ 8], state[13], state[ 2], state[ 7],
                 state[12], state[ 1], state[ 6], state[11]}
-  // Shifts it like this:
-  //
-  // 0  4  8 12         0  4  8 12   Shifted left by 0
-  // 1  5  9 13  ---->  5  9 13  1   Shifted left by 1
-  // 2  6 10 14  ----> 10 14  2  6   Shifted left by 2
-  // 3  7 11 15        15  3  7 11   Shifted left by 3
+  //  Shifts it like this:
+  // 
+  //  0  4  8 12         0  4  8 12   Shifted left by 0
+  //  1  5  9 13  ---->  5  9 13  1   Shifted left by 1
+  //  2  6 10 14  ----> 10 14  2  6   Shifted left by 2
+  //  3  7 11 15        15  3  7 11   Shifted left by 3
 }
 
 func invShiftRows(state []byte) ([]byte) {
@@ -245,17 +245,13 @@ func invShiftRows(state []byte) ([]byte) {
                 state[ 8], state[ 5], state[ 2], state[15],
                 state[12], state[ 9], state[ 6], state[ 3]}
 
-  //  0  4  8 12         0  4  8 12   Shifted right by 0
-  //  5  9 13  1  ---->  1  5  9 13   Shifted right by 1
-  // 10 14  2  6  ---->  2  6 10 14   Shifted right by 2
-  // 15  3  7 11         3  7 11 15   Shifted right by 3
+  //   0  4  8 12         0  4  8 12   Shifted right by 0
+  //   5  9 13  1  ---->  1  5  9 13   Shifted right by 1
+  //  10 14  2  6  ---->  2  6 10 14   Shifted right by 2
+  //  15  3  7 11         3  7 11 15   Shifted right by 3
 }
 
 func mixColumns(state []byte) ([]byte) {
-  //Dot product galois fields of each byte in row x, column x.
-  //Uses lookup tables to make it faster, as you only ever multiply by 1, 2 or 3, as Rijndael uses a pre defined matrix to multiply by. Addition is just XOR
-  //to prevent overflow
-
   return []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
                 state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
                 state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
@@ -278,7 +274,7 @@ func mixColumns(state []byte) ([]byte) {
 }
 
 func invMixColumns(state []byte) ([]byte) {
-  return []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],  //Note how the operation shifts right one each time
+  return []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],
                 mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
                 mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
                 mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
@@ -309,7 +305,7 @@ func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
     state = mixColumns(state)
     state = addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
   }
-  //Last round
+  // Last round
   state = subBytes(state)
   state = shiftRows(state)
   state = addRoundKey(state, expandedKeys[160:])
@@ -328,20 +324,20 @@ func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
     state = invShiftRows(state)
     state = invSubBytes(state)
   }
-  //Last round
+  // Last round
   state = addRoundKey(state, expandedKeys[:16])
 
   return state
 }
 
 
-func check(e error) {     //Used for checking errors when reading/writing to files.
+func check(e error) {     // Used for checking errors when reading/writing to files.
   if e != nil {
     panic(e)
   }
 }
 
-func compareSlices(slice1, slice2 []byte) bool {    //Function used for checking first block of a file with the key when decrypting.
+func compareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
   if len(slice1) != len(slice2) {
     return false
   } else {
@@ -355,67 +351,67 @@ func compareSlices(slice1, slice2 []byte) bool {    //Function used for checking
 }
 
 func encryptFile(key []byte, f, w string) {
-  a, err := os.Open(f)    //Open original file to get statistics
+  a, err := os.Open(f)    // Open original file to get statistics
   check(err)
-  aInfo, err := a.Stat()  //Get statistics
+  aInfo, err := a.Stat()  // Get statistics
   check(err)
 
-  fileSize := int(aInfo.Size()) //Get size of original file
+  fileSize := int(aInfo.Size()) // Get size of original file
 
   var expandedKeys [176]byte
-  expandedKeys = expandKey(key) //Expand the key for each round
+  expandedKeys = expandKey(key) // Expand the key for each round
 
-  if _, err := os.Stat(w); err == nil { //If file already exists, delete it
+  if _, err := os.Stat(w); err == nil { // If file already exists, delete it
     os.Remove(w)
   }
 
-  var bufferSize int = 32768  //Get the buffer size
+  var bufferSize int = 32768  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
 
-  if fileSize < bufferSize {    //If the buffer size is larger than the file size, just read the whole file.
+  if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
   }
 
-  var buffCount int = 0   //Keeps track of how far through the file we are
+  var buffCount int = 0   // Keeps track of how far through the file we are
 
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) //Open file for appending.
-  check(err)  //Check it opened correctly
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) // Open file for appending.
+  check(err)  // Check it opened correctly
 
-  //Append key so that when decrypting, the key can be checked before decrypting the whole file.
+  // Append key so that when decrypting, the key can be checked before decrypting the whole file.
   e.Write(encrypt(key, expandedKeys, 9))
-  e.Seek(16, 0) //Move where we are writing to past the key.
+  e.Seek(16, 0) // Move where we are writing to past the key.
 
-  for buffCount < fileSize {                                         //Same as a while buffCount < fileSize: in python3
+  for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
     if bufferSize > (fileSize - buffCount) {
-      bufferSize = fileSize - buffCount
+      bufferSize = fileSize - buffCount    // If this is the last block, read the amount of data left in the file.
     }
 
-    buff := make([]byte, bufferSize)  //Make a slice the size of the buffer
-    _, err := io.ReadFull(a, buff) //Read the contents of the original file, but only enough to fill the buff array.
-                                   //The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
     check(err)
 
-    if len(buff) % 16 != 0 {  //If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
+    if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
       var extraNeeded int
       var l int = len(buff)
-      for l % 16 != 0 {       //extraNeeded holds the value for how much padding the block needs.
+      for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
         l++
         extraNeeded++
       }
 
-      for i := 0; i < extraNeeded; i++{                  //Add the number of extra bytes needed to the end of the block, if the block is not long enough.
-        buff = append(buff, byte(extraNeeded))  //For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
-      } //This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
+      for i := 0; i < extraNeeded; i++{                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
+        buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
+      } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
     }
 
-    var encBuff []byte
+    var encBuff []byte    // Make a buffer to hold encrypted data.
     for i := 0; i < bufferSize; i += 16 {
       encBuff = append(encBuff, encrypt(buff[i:i+16], expandedKeys, 9)...)
     }
-    e.Write(encBuff)
+    e.Write(encBuff)  // Buffer is used because accessing the file every 16 bytes slows down the process a lot.
 
     buffCount += bufferSize
   }
-  a.Close()
+  a.Close()  // Close the files used.
   e.Close()
 }
 
@@ -426,13 +422,13 @@ func decryptFile(key []byte, f, w string) {
   aInfo, err := a.Stat()
   check(err)
 
-  fileSize := int(aInfo.Size())-16 //Take away length of added key for checksum
+  fileSize := int(aInfo.Size())-16 // Take away length of added key for checksum
 
   var expandedKeys [176]byte
 
   expandedKeys = expandKey(key)
 
-  if _, err := os.Stat(w); err == nil { //If file exists, delete it
+  if _, err := os.Stat(w); err == nil { // If file exists, delete it
     os.Remove(w)
   }
 
@@ -444,41 +440,40 @@ func decryptFile(key []byte, f, w string) {
 
   var buffCount int = 0
 
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) //Open file for appending.
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) // Open file for appending.
   check(err)
 
-  //Check first block is key
+  // Check first block is key
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
   decFirst := decrypt(firstBlock, expandedKeys, 9)
-  validKey := compareSlices(key, decFirst)
-  a.Seek(16, 0)
 
-  if validKey {
-    for buffCount < fileSize{
+  if compareSlices(key, decFirst) {
+    a.Seek(16, 0)               // Move read head 16 bytes into the file
+    for buffCount < fileSize{   // While the data done is less than the fileSize
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
       }
 
       buff := make([]byte, bufferSize)
-      _, err := io.ReadFull(a, buff)  //Ignore the number of bytes read (_)
+      _, err := io.ReadFull(a, buff)  // Ignore the number of bytes read (_)
       check(err)
 
       var decBuff []byte
       for i := 0; i < bufferSize; i += 16 {
-        if fileSize - i == 16 {     //If on the last block of whole file
-          var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)   //Decrypt 128 bit chunk of buffer
-          //Store in variable as we are going to change it.
+        if fileSize - i == 16 {     // If on the last block of whole file
+          var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
+          // Store in variable as we are going to change it.
           var focus int = int(decrypted[len(decrypted)-1])
           var focusCount int = 0
 
-          if focus < 16 {     //If the last number is less than 16 (the maximum amount of padding to add is 15)
+          if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
             for j := 15; int(decrypted[j]) == focus; j-- {
               if int(decrypted[j]) == focus {focusCount++}
             }
             if focus == focusCount {
-              decrypted = decrypted[:(16-focus)]  //If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+              decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
             }
           }
           decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
@@ -491,7 +486,7 @@ func decryptFile(key []byte, f, w string) {
       buffCount += bufferSize
     }
   } else {
-    panic("Invalid Key")  //If first block is not equal to the key, then do not bother trying to decrypt the file.
+    panic("Invalid Key")  // If first block is not equal to the key, then do not bother trying to decrypt the file.
   }
   a.Close()
   e.Close()
@@ -499,26 +494,26 @@ func decryptFile(key []byte, f, w string) {
 
 
 func checkKey(key []byte, f string)  bool{
-  a, err := os.Open(f)    //Open an encrypted file to check first block against key
+  a, err := os.Open(f)    // Open an encrypted file to check first block against key
   check(err)
 
   var expandedKeys [176]byte
 
-  expandedKeys = expandKey(key) //Expand the key
+  expandedKeys = expandKey(key) // Expand the key
 
-  //Check first block is key
+  // Check first block is key
   firstBlock := make([]byte, 16)
-  _, er := io.ReadFull(a, firstBlock)   //Fill a slice of length 16 with the first block of 16 bytes in the file.
+  _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
   check(er)
-  firstDecrypted := decrypt(firstBlock, expandedKeys, 9)    //Decrypt first block
+  firstDecrypted := decrypt(firstBlock, expandedKeys, 9)    // Decrypt first block
 
   a.Close()
-  return compareSlices(key, firstDecrypted) //Compare decrypted first block with the key.
+  return compareSlices(key, firstDecrypted) // Compare decrypted first block with the key.
 }
 
-func strToInt(str string) (int, error) {    //Used for converting string to integer, as go doesn't have that built in for some reason
-    n := strings.Split(str, ".")    //Splits by decimal point
-    return strconv.Atoi(n[0])       //Returns integer of whole number
+func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
+    n := strings.Split(str, ".")    // Splits by decimal point
+    return strconv.Atoi(n[0])       // Returns integer of whole number
 }
 
 

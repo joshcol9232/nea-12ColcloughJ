@@ -89,12 +89,6 @@ def andBitArrays(array1, array2):
         temp[i] = array1[i] & array2[i]
     return temp
 
-def RotL(word, amount):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #32Bits
-    for i in range(32):
-        temp[i] = word[checkLessThan32(i+amount)]
-    return temp
-
 def RotR(word, amount):
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #32Bits
 
@@ -112,13 +106,6 @@ def ShR(x, n):
 
     for i in range(32):
         temp[i] = checkShiftInBounds(x, i-n)
-    return temp
-
-def ShL(x, n):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    for i in range(32):
-        temp[i] = checkShiftInBounds(x, i+n)
     return temp
 
 def SigExpansion0(x):
@@ -194,35 +181,3 @@ def sha256(inp):
 def getSHA128of16(data):
     out = sha256(data)
     return [out[i]^out[i+16] for i in range(16)]
-
-
-def test(single=False):
-
-    if single:
-        print(sha256([0]))
-
-        #bits = makeBitArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ,12])
-        #print(pad(bits))
-    else:
-        from random import randint
-        from time import time
-
-        def makeList(wordNum):
-            out = []
-            for y in range(wordNum*32):
-                out.append(randint(0, 255))
-            return out
-
-        roundNum = 100
-        inp = makeList(roundNum) # Do it 1000 times
-        print("Made inp list")
-        start = time()
-        for i in range(roundNum):
-            sha256(inp[roundNum:roundNum+32])
-
-        print(((roundNum*32)/(time()-start))/1000, "KB/s")
-
-
-
-if __name__ == "__main__":
-    test()
