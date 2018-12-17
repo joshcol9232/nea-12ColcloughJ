@@ -404,7 +404,7 @@ def test(singleInput=False):
         print(((roundNum*16)/(time()-start))/1000, "KB/s")
 
 
-def convHexDigestToBytes(hexIn):
+def convHexDigestToBytes(hexIn):        # Used when decrypting the file name
     hexList = []
     for i in range(len(hexIn)):
         if i % 2 == 0:

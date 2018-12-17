@@ -53,13 +53,13 @@ def pad(inpBits):   #https://csrc.nist.gov/csrc/media/publications/fips/180/4/ar
         return inpBits
 
 
-def checkLessThan32(num):
+def checkLessThan32(num):  # Used for getting the index to move the element in an array in RotR
     if num < 32:
         return num
     else:
         return num - 32
 
-def checkShiftInBounds(word, num):
+def checkShiftInBounds(word, num): # Similar to checkLessThan32, however it is for shifting.
     if (num < 0) or (num >= 32):
         return 0
     else:
@@ -77,13 +77,13 @@ def notArray(array, l=32):
             temp[i] = 1
     return temp
 
-def xorArrays(array1, array2):
+def xorArrays(array1, array2):  # XORs two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] ^ array2[i]
     return temp
 
-def andBitArrays(array1, array2):
+def andBitArrays(array1, array2):  # Does AND on two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] & array2[i]
@@ -96,7 +96,7 @@ def RotR(word, amount):
         temp[i] = word[checkLessThan32(i-amount)]
     return temp
 
-def addMod2W(array1, array2, W=32):
+def addMod2W(array1, array2, W=32):    # Adds % 2^W two arrays, so that the word does not overflow it's word length
     if len(array1) != len(array2):
         raise IndexError("Arrays not same size - ", array1, array2)
     return intToBits((bitsToInt(array1) + bitsToInt(array2)) % 2**W, 32)

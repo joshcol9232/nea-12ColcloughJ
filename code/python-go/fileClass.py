@@ -11,6 +11,7 @@ class File:
         self._totalSize = 0
         self.hexPath, self.hexName, self.isDir, self.fileSep, self.extension = hexPath, hexName, isDir, fileSep, extension
         self.thumbDir = ""
+        self.checkSum = None
         self.rawSize = self._getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
@@ -56,13 +57,16 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
-    def getCheckSum(self):
-        goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((self.hexPath).encode())
-        if err != None:
-            raise ValueError(err)
+    def getCheckSum(self, new=True):
+        if self.checkSum == None or new:
+            goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+            out, err = goproc.communicate((self.hexPath).encode())
+            if err != None:
+                raise ValueError(err)
 
-        return out.decode()
+            self.checkSum = out.decode()
+
+        return self.checkSum
 
     def recursiveSize(self, f, encrypt=False):  #Get size of folders.
         fs = listdir(f)
@@ -77,7 +81,7 @@ class File:
             else:
                 try:
                     self._totalSize += osPath.getsize(f+self.fileSep+item)
-                except PermissionError: #Thrown when the file is owned by another user/administrator or root.
+                except PermissionError: #Thrown when the file is owned by another user/administrator.
                     pass
 
 

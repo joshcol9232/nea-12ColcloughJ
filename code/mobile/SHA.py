@@ -53,13 +53,13 @@ def pad(inpBits):   #https://csrc.nist.gov/csrc/media/publications/fips/180/4/ar
         return inpBits
 
 
-def checkLessThan32(num):
+def checkLessThan32(num):  # Used for getting the index to move the element in an array in RotR
     if num < 32:
         return num
     else:
         return num - 32
 
-def checkShiftInBounds(word, num):
+def checkShiftInBounds(word, num): # Similar to checkLessThan32, however it is for shifting.
     if (num < 0) or (num >= 32):
         return 0
     else:
@@ -77,22 +77,16 @@ def notArray(array, l=32):
             temp[i] = 1
     return temp
 
-def xorArrays(array1, array2):
+def xorArrays(array1, array2):  # XORs two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] ^ array2[i]
     return temp
 
-def andBitArrays(array1, array2):
+def andBitArrays(array1, array2):  # Does AND on two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] & array2[i]
-    return temp
-
-def RotL(word, amount):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #32Bits
-    for i in range(32):
-        temp[i] = word[checkLessThan32(i+amount)]
     return temp
 
 def RotR(word, amount):
@@ -102,7 +96,7 @@ def RotR(word, amount):
         temp[i] = word[checkLessThan32(i-amount)]
     return temp
 
-def addMod2W(array1, array2, W=32):
+def addMod2W(array1, array2, W=32):    # Adds % 2^W two arrays, so that the word does not overflow it's word length
     if len(array1) != len(array2):
         raise IndexError("Arrays not same size - ", array1, array2)
     return intToBits((bitsToInt(array1) + bitsToInt(array2)) % 2**W, 32)
@@ -112,13 +106,6 @@ def ShR(x, n):
 
     for i in range(32):
         temp[i] = checkShiftInBounds(x, i-n)
-    return temp
-
-def ShL(x, n):
-    temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    for i in range(32):
-        temp[i] = checkShiftInBounds(x, i+n)
     return temp
 
 def SigExpansion0(x):
@@ -194,35 +181,3 @@ def sha256(inp):
 def getSHA128of16(data):
     out = sha256(data)
     return [out[i]^out[i+16] for i in range(16)]
-
-
-def test(single=False):
-
-    if single:
-        print(sha256([0]))
-
-        #bits = makeBitArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ,12])
-        #print(pad(bits))
-    else:
-        from random import randint
-        from time import time
-
-        def makeList(wordNum):
-            out = []
-            for y in range(wordNum*32):
-                out.append(randint(0, 255))
-            return out
-
-        roundNum = 100
-        inp = makeList(roundNum) # Do it 1000 times
-        print("Made inp list")
-        start = time()
-        for i in range(roundNum):
-            sha256(inp[roundNum:roundNum+32])
-
-        print(((roundNum*32)/(time()-start))/1000, "KB/s")
-
-
-
-if __name__ == "__main__":
-    test()

@@ -305,10 +305,24 @@ Here is a data flow diagram showing how the data is handled once logged into the
 
 The key is also passed to any stages that encrypt or decrypt, as at this point the user should already be logged in.
 
-When a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault.
+When a file is edited, the file should be checked to see if any changes have been made, and if there has been changes, remove the version of the file currently in the vault, and encrypt the latest version into the vault. Also, if there are any new files in the temporary folder (for example if the user renames the file), then encrypt them to the vault as well.
 
 To do this, I need a way of getting a checksum of the file before and after it has been opened. I need a fast algorithm so that the user is not waiting too long for the file to open and close, but it also needs to be unlikely that there will be a collision (where if they change the file and the checksum gives an answer that is the same as before the file was changed, that would be a collision).
 I will discuss which checksum I will be using in the next section.
+
+
+
+When viewing the files in my program, I will use an object that holds all of the information I need about the file, and any methods that I need to get that information.
+
+Here is what I expect the class to be like:
+
+![](Diagrams/fileClass.png)
+
+Where `getCheckSum` will get the BLAKE2b checksum of the file. The hexPath and the hexName will hold the encrypted path and encrypted name of the file, so that I don't keep encrypting and decrypting the file name.
+
+
+
+
 
 ---
 
@@ -1483,7 +1497,7 @@ I have taken out all of the `__pycache__` folders that Python generates.
 
 This is the output of `tree code` in my projects' `code` directory. You can find my project at https://github.com/Lytchett-Minster/nea-12ColcloughJ.
 
-The `code` directory, surprisingly, holds the code for my project. Inside is one folder for the mobile app (`mobile`), and one folder for the PC app (`python-go`). The PC app is started by running `start.py` . `start.py` imports `kivyStuff/ui.py` and runs it. This means that any Python files in `kivyStuff` can import any of the files that are in the same directory as `start.py` (`python-go`), and any Python files in `kivyStuff`. It also makes it easier to find the start script, as it isn't as buried.
+The `code` directory, surprisingly, holds the code for my project. Inside is one folder for the mobile app (`mobile`), and one folder for the PC app (`python-go`). The PC app is started by running `start.py` . `start.py` imports `kivyStuff/ui.py` and runs it. This means that any Python files in `kivyStuff` can import any of the files that are in the same directory as `start.py` (`python-go`), and any Python files in `kivyStuff`. It also makes it easier to find the start script, as it isn't as buried. 
 
 The `assets` directory holds all the images needed for the GUI of the PC program (the images on the buttons). Here is a `tree` of the `assets` folder:
 
@@ -1518,7 +1532,7 @@ Some images are taken from the internet, so they do not have `.psd` files (photo
 
 ## AES:
 
-Here is the code for AES:
+Here is the code for AES (`code/python-go/aes.go`):
 
 ```go
 package main
@@ -2076,12 +2090,399 @@ The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, wh
 
 
 
-## SHA:
+## AES for file names:
 
-Here is the code for SHA256:
+AES for file names is written in Python, as it needs to be accessed a lot, and does work on small volumes of data. Here is the code (`code/python-go/aesFName.py`):
 
 ```python
-k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    # Round constants
+# For more information on each function, look at aes.go since most of this is the same.
+
+#Lookup tables
+#       0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f         - first digit of input
+sBox = [0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76, #00
+        0xCA,0x82,0xC9,0x7D,0xFA,0x59,0x47,0xF0,0xAD,0xD4,0xA2,0xAF,0x9C,0xA4,0x72,0xC0, #10
+        0xB7,0xFD,0x93,0x26,0x36,0x3F,0xF7,0xCC,0x34,0xA5,0xE5,0xF1,0x71,0xD8,0x31,0x15, #20
+        0x04,0xC7,0x23,0xC3,0x18,0x96,0x05,0x9A,0x07,0x12,0x80,0xE2,0xEB,0x27,0xB2,0x75, #30
+        0x09,0x83,0x2C,0x1A,0x1B,0x6E,0x5A,0xA0,0x52,0x3B,0xD6,0xB3,0x29,0xE3,0x2F,0x84, #40
+        0x53,0xD1,0x00,0xED,0x20,0xFC,0xB1,0x5B,0x6A,0xCB,0xBE,0x39,0x4A,0x4C,0x58,0xCF, #50
+        0xD0,0xEF,0xAA,0xFB,0x43,0x4D,0x33,0x85,0x45,0xF9,0x02,0x7F,0x50,0x3C,0x9F,0xA8, #60
+        0x51,0xA3,0x40,0x8F,0x92,0x9D,0x38,0xF5,0xBC,0xB6,0xDA,0x21,0x10,0xFF,0xF3,0xD2, #70
+        0xCD,0x0C,0x13,0xEC,0x5F,0x97,0x44,0x17,0xC4,0xA7,0x7E,0x3D,0x64,0x5D,0x19,0x73, #80
+        0x60,0x81,0x4F,0xDC,0x22,0x2A,0x90,0x88,0x46,0xEE,0xB8,0x14,0xDE,0x5E,0x0B,0xDB, #90
+        0xE0,0x32,0x3A,0x0A,0x49,0x06,0x24,0x5C,0xC2,0xD3,0xAC,0x62,0x91,0x95,0xE4,0x79, #a0
+        0xE7,0xC8,0x37,0x6D,0x8D,0xD5,0x4E,0xA9,0x6C,0x56,0xF4,0xEA,0x65,0x7A,0xAE,0x08, #b0
+        0xBA,0x78,0x25,0x2E,0x1C,0xA6,0xB4,0xC6,0xE8,0xDD,0x74,0x1F,0x4B,0xBD,0x8B,0x8A, #c0
+        0x70,0x3E,0xB5,0x66,0x48,0x03,0xF6,0x0E,0x61,0x35,0x57,0xB9,0x86,0xC1,0x1D,0x9E, #d0
+        0xE1,0xF8,0x98,0x11,0x69,0xD9,0x8E,0x94,0x9B,0x1E,0x87,0xE9,0xCE,0x55,0x28,0xDF, #e0
+        0x8C,0xA1,0x89,0x0D,0xBF,0xE6,0x42,0x68,0x41,0x99,0x2D,0x0F,0xB0,0x54,0xBB,0x16] #f0
+
+invSBox = [0x52,0x09,0x6A,0xD5,0x30,0x36,0xA5,0x38,0xBF,0x40,0xA3,0x9E,0x81,0xF3,0xD7,0xFB,
+           0x7C,0xE3,0x39,0x82,0x9B,0x2F,0xFF,0x87,0x34,0x8E,0x43,0x44,0xC4,0xDE,0xE9,0xCB,
+           0x54,0x7B,0x94,0x32,0xA6,0xC2,0x23,0x3D,0xEE,0x4C,0x95,0x0B,0x42,0xFA,0xC3,0x4E,
+           0x08,0x2E,0xA1,0x66,0x28,0xD9,0x24,0xB2,0x76,0x5B,0xA2,0x49,0x6D,0x8B,0xD1,0x25,
+           0x72,0xF8,0xF6,0x64,0x86,0x68,0x98,0x16,0xD4,0xA4,0x5C,0xCC,0x5D,0x65,0xB6,0x92,
+           0x6C,0x70,0x48,0x50,0xFD,0xED,0xB9,0xDA,0x5E,0x15,0x46,0x57,0xA7,0x8D,0x9D,0x84,
+           0x90,0xD8,0xAB,0x00,0x8C,0xBC,0xD3,0x0A,0xF7,0xE4,0x58,0x05,0xB8,0xB3,0x45,0x06,
+           0xD0,0x2C,0x1E,0x8F,0xCA,0x3F,0x0F,0x02,0xC1,0xAF,0xBD,0x03,0x01,0x13,0x8A,0x6B,
+           0x3A,0x91,0x11,0x41,0x4F,0x67,0xDC,0xEA,0x97,0xF2,0xCF,0xCE,0xF0,0xB4,0xE6,0x73,
+           0x96,0xAC,0x74,0x22,0xE7,0xAD,0x35,0x85,0xE2,0xF9,0x37,0xE8,0x1C,0x75,0xDF,0x6E,
+           0x47,0xF1,0x1A,0x71,0x1D,0x29,0xC5,0x89,0x6F,0xB7,0x62,0x0E,0xAA,0x18,0xBE,0x1B,
+           0xFC,0x56,0x3E,0x4B,0xC6,0xD2,0x79,0x20,0x9A,0xDB,0xC0,0xFE,0x78,0xCD,0x5A,0xF4,
+           0x1F,0xDD,0xA8,0x33,0x88,0x07,0xC7,0x31,0xB1,0x12,0x10,0x59,0x27,0x80,0xEC,0x5F,
+           0x60,0x51,0x7F,0xA9,0x19,0xB5,0x4A,0x0D,0x2D,0xE5,0x7A,0x9F,0x93,0xC9,0x9C,0xEF,
+           0xA0,0xE0,0x3B,0x4D,0xAE,0x2A,0xF5,0xB0,0xC8,0xEB,0xBB,0x3C,0x83,0x53,0x99,0x61,
+           0x17,0x2B,0x04,0x7E,0xBA,0x77,0xD6,0x26,0xE1,0x69,0x14,0x63,0x55,0x21,0x0C,0x7D]
+
+rcon = [0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,0xab,0x4d,0x9a,     #https://en.wikipedia.org/wiki/Rijndael_key_schedule
+        0x2f,0x5e,0xbc,0x63,0xc6,0x97,0x35,0x6a,0xd4,0xb3,0x7d,0xfa,0xef,0xc5,0x91,0x39,
+        0x72,0xe4,0xd3,0xbd,0x61,0xc2,0x9f,0x25,0x4a,0x94,0x33,0x66,0xcc,0x83,0x1d,0x3a,
+        0x74,0xe8,0xcb,0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,
+        0xab,0x4d,0x9a,0x2f,0x5e,0xbc,0x63,0xc6,0x97,0x35,0x6a,0xd4,0xb3,0x7d,0xfa,0xef,
+        0xc5,0x91,0x39,0x72,0xe4,0xd3,0xbd,0x61,0xc2,0x9f,0x25,0x4a,0x94,0x33,0x66,0xcc,
+        0x83,0x1d,0x3a,0x74,0xe8,0xcb,0x8d,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,
+        0x36,0x6c,0xd8,0xab,0x4d,0x9a,0x2f,0x5e,0xbc,0x63,0xc6,0x97,0x35,0x6a,0xd4,0xb3,
+        0x7d,0xfa,0xef,0xc5,0x91,0x39,0x72,0xe4,0xd3,0xbd,0x61,0xc2,0x9f,0x25,0x4a,0x94,
+        0x33,0x66,0xcc,0x83,0x1d,0x3a,0x74,0xe8,0xcb,0x8d,0x01,0x02,0x04,0x08,0x10,0x20,
+        0x40,0x80,0x1b,0x36,0x6c,0xd8,0xab,0x4d,0x9a,0x2f,0x5e,0xbc,0x63,0xc6,0x97,0x35,
+        0x6a,0xd4,0xb3,0x7d,0xfa,0xef,0xc5,0x91,0x39,0x72,0xe4,0xd3,0xbd,0x61,0xc2,0x9f,
+        0x25,0x4a,0x94,0x33,0x66,0xcc,0x83,0x1d,0x3a,0x74,0xe8,0xcb,0x8d,0x01,0x02,0x04,
+        0x08,0x10,0x20,0x40,0x80,0x1b,0x36,0x6c,0xd8,0xab,0x4d,0x9a,0x2f,0x5e,0xbc,0x63,
+        0xc6,0x97,0x35,0x6a,0xd4,0xb3,0x7d,0xfa,0xef,0xc5,0x91,0x39,0x72,0xe4,0xd3,0xbd,
+        0x61,0xc2,0x9f,0x25,0x4a,0x94,0x33,0x66,0xcc,0x83,0x1d,0x3a,0x74,0xe8,0xcb,0x8d]
+
+mul2 = [0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x10,0x12,0x14,0x16,0x18,0x1a,0x1c,0x1e,
+        0x20,0x22,0x24,0x26,0x28,0x2a,0x2c,0x2e,0x30,0x32,0x34,0x36,0x38,0x3a,0x3c,0x3e,
+        0x40,0x42,0x44,0x46,0x48,0x4a,0x4c,0x4e,0x50,0x52,0x54,0x56,0x58,0x5a,0x5c,0x5e,
+        0x60,0x62,0x64,0x66,0x68,0x6a,0x6c,0x6e,0x70,0x72,0x74,0x76,0x78,0x7a,0x7c,0x7e,
+        0x80,0x82,0x84,0x86,0x88,0x8a,0x8c,0x8e,0x90,0x92,0x94,0x96,0x98,0x9a,0x9c,0x9e,
+        0xa0,0xa2,0xa4,0xa6,0xa8,0xaa,0xac,0xae,0xb0,0xb2,0xb4,0xb6,0xb8,0xba,0xbc,0xbe,
+        0xc0,0xc2,0xc4,0xc6,0xc8,0xca,0xcc,0xce,0xd0,0xd2,0xd4,0xd6,0xd8,0xda,0xdc,0xde,
+        0xe0,0xe2,0xe4,0xe6,0xe8,0xea,0xec,0xee,0xf0,0xf2,0xf4,0xf6,0xf8,0xfa,0xfc,0xfe,
+        0x1b,0x19,0x1f,0x1d,0x13,0x11,0x17,0x15,0x0b,0x09,0x0f,0x0d,0x03,0x01,0x07,0x05,
+        0x3b,0x39,0x3f,0x3d,0x33,0x31,0x37,0x35,0x2b,0x29,0x2f,0x2d,0x23,0x21,0x27,0x25,
+        0x5b,0x59,0x5f,0x5d,0x53,0x51,0x57,0x55,0x4b,0x49,0x4f,0x4d,0x43,0x41,0x47,0x45,
+        0x7b,0x79,0x7f,0x7d,0x73,0x71,0x77,0x75,0x6b,0x69,0x6f,0x6d,0x63,0x61,0x67,0x65,
+        0x9b,0x99,0x9f,0x9d,0x93,0x91,0x97,0x95,0x8b,0x89,0x8f,0x8d,0x83,0x81,0x87,0x85,
+        0xbb,0xb9,0xbf,0xbd,0xb3,0xb1,0xb7,0xb5,0xab,0xa9,0xaf,0xad,0xa3,0xa1,0xa7,0xa5,
+        0xdb,0xd9,0xdf,0xdd,0xd3,0xd1,0xd7,0xd5,0xcb,0xc9,0xcf,0xcd,0xc3,0xc1,0xc7,0xc5,
+        0xfb,0xf9,0xff,0xfd,0xf3,0xf1,0xf7,0xf5,0xeb,0xe9,0xef,0xed,0xe3,0xe1,0xe7,0xe5]
+
+mul3 = [0x00,0x03,0x06,0x05,0x0c,0x0f,0x0a,0x09,0x18,0x1b,0x1e,0x1d,0x14,0x17,0x12,0x11,
+        0x30,0x33,0x36,0x35,0x3c,0x3f,0x3a,0x39,0x28,0x2b,0x2e,0x2d,0x24,0x27,0x22,0x21,
+        0x60,0x63,0x66,0x65,0x6c,0x6f,0x6a,0x69,0x78,0x7b,0x7e,0x7d,0x74,0x77,0x72,0x71,
+        0x50,0x53,0x56,0x55,0x5c,0x5f,0x5a,0x59,0x48,0x4b,0x4e,0x4d,0x44,0x47,0x42,0x41,
+        0xc0,0xc3,0xc6,0xc5,0xcc,0xcf,0xca,0xc9,0xd8,0xdb,0xde,0xdd,0xd4,0xd7,0xd2,0xd1,
+        0xf0,0xf3,0xf6,0xf5,0xfc,0xff,0xfa,0xf9,0xe8,0xeb,0xee,0xed,0xe4,0xe7,0xe2,0xe1,
+        0xa0,0xa3,0xa6,0xa5,0xac,0xaf,0xaa,0xa9,0xb8,0xbb,0xbe,0xbd,0xb4,0xb7,0xb2,0xb1,
+        0x90,0x93,0x96,0x95,0x9c,0x9f,0x9a,0x99,0x88,0x8b,0x8e,0x8d,0x84,0x87,0x82,0x81,
+        0x9b,0x98,0x9d,0x9e,0x97,0x94,0x91,0x92,0x83,0x80,0x85,0x86,0x8f,0x8c,0x89,0x8a,
+        0xab,0xa8,0xad,0xae,0xa7,0xa4,0xa1,0xa2,0xb3,0xb0,0xb5,0xb6,0xbf,0xbc,0xb9,0xba,
+        0xfb,0xf8,0xfd,0xfe,0xf7,0xf4,0xf1,0xf2,0xe3,0xe0,0xe5,0xe6,0xef,0xec,0xe9,0xea,
+        0xcb,0xc8,0xcd,0xce,0xc7,0xc4,0xc1,0xc2,0xd3,0xd0,0xd5,0xd6,0xdf,0xdc,0xd9,0xda,
+        0x5b,0x58,0x5d,0x5e,0x57,0x54,0x51,0x52,0x43,0x40,0x45,0x46,0x4f,0x4c,0x49,0x4a,
+        0x6b,0x68,0x6d,0x6e,0x67,0x64,0x61,0x62,0x73,0x70,0x75,0x76,0x7f,0x7c,0x79,0x7a,
+        0x3b,0x38,0x3d,0x3e,0x37,0x34,0x31,0x32,0x23,0x20,0x25,0x26,0x2f,0x2c,0x29,0x2a,
+        0x0b,0x08,0x0d,0x0e,0x07,0x04,0x01,0x02,0x13,0x10,0x15,0x16,0x1f,0x1c,0x19,0x1a]
+
+mul9 = [0x00,0x09,0x12,0x1b,0x24,0x2d,0x36,0x3f,0x48,0x41,0x5a,0x53,0x6c,0x65,0x7e,0x77,
+        0x90,0x99,0x82,0x8b,0xb4,0xbd,0xa6,0xaf,0xd8,0xd1,0xca,0xc3,0xfc,0xf5,0xee,0xe7,
+        0x3b,0x32,0x29,0x20,0x1f,0x16,0x0d,0x04,0x73,0x7a,0x61,0x68,0x57,0x5e,0x45,0x4c,
+        0xab,0xa2,0xb9,0xb0,0x8f,0x86,0x9d,0x94,0xe3,0xea,0xf1,0xf8,0xc7,0xce,0xd5,0xdc,
+        0x76,0x7f,0x64,0x6d,0x52,0x5b,0x40,0x49,0x3e,0x37,0x2c,0x25,0x1a,0x13,0x08,0x01,
+        0xe6,0xef,0xf4,0xfd,0xc2,0xcb,0xd0,0xd9,0xae,0xa7,0xbc,0xb5,0x8a,0x83,0x98,0x91,
+        0x4d,0x44,0x5f,0x56,0x69,0x60,0x7b,0x72,0x05,0x0c,0x17,0x1e,0x21,0x28,0x33,0x3a,
+        0xdd,0xd4,0xcf,0xc6,0xf9,0xf0,0xeb,0xe2,0x95,0x9c,0x87,0x8e,0xb1,0xb8,0xa3,0xaa,
+        0xec,0xe5,0xfe,0xf7,0xc8,0xc1,0xda,0xd3,0xa4,0xad,0xb6,0xbf,0x80,0x89,0x92,0x9b,
+        0x7c,0x75,0x6e,0x67,0x58,0x51,0x4a,0x43,0x34,0x3d,0x26,0x2f,0x10,0x19,0x02,0x0b,
+        0xd7,0xde,0xc5,0xcc,0xf3,0xfa,0xe1,0xe8,0x9f,0x96,0x8d,0x84,0xbb,0xb2,0xa9,0xa0,
+        0x47,0x4e,0x55,0x5c,0x63,0x6a,0x71,0x78,0x0f,0x06,0x1d,0x14,0x2b,0x22,0x39,0x30,
+        0x9a,0x93,0x88,0x81,0xbe,0xb7,0xac,0xa5,0xd2,0xdb,0xc0,0xc9,0xf6,0xff,0xe4,0xed,
+        0x0a,0x03,0x18,0x11,0x2e,0x27,0x3c,0x35,0x42,0x4b,0x50,0x59,0x66,0x6f,0x74,0x7d,
+        0xa1,0xa8,0xb3,0xba,0x85,0x8c,0x97,0x9e,0xe9,0xe0,0xfb,0xf2,0xcd,0xc4,0xdf,0xd6,
+        0x31,0x38,0x23,0x2a,0x15,0x1c,0x07,0x0e,0x79,0x70,0x6b,0x62,0x5d,0x54,0x4f,0x46]
+
+mul11 = [0x00,0x0b,0x16,0x1d,0x2c,0x27,0x3a,0x31,0x58,0x53,0x4e,0x45,0x74,0x7f,0x62,0x69,
+         0xb0,0xbb,0xa6,0xad,0x9c,0x97,0x8a,0x81,0xe8,0xe3,0xfe,0xf5,0xc4,0xcf,0xd2,0xd9,
+         0x7b,0x70,0x6d,0x66,0x57,0x5c,0x41,0x4a,0x23,0x28,0x35,0x3e,0x0f,0x04,0x19,0x12,
+         0xcb,0xc0,0xdd,0xd6,0xe7,0xec,0xf1,0xfa,0x93,0x98,0x85,0x8e,0xbf,0xb4,0xa9,0xa2,
+         0xf6,0xfd,0xe0,0xeb,0xda,0xd1,0xcc,0xc7,0xae,0xa5,0xb8,0xb3,0x82,0x89,0x94,0x9f,
+         0x46,0x4d,0x50,0x5b,0x6a,0x61,0x7c,0x77,0x1e,0x15,0x08,0x03,0x32,0x39,0x24,0x2f,
+         0x8d,0x86,0x9b,0x90,0xa1,0xaa,0xb7,0xbc,0xd5,0xde,0xc3,0xc8,0xf9,0xf2,0xef,0xe4,
+         0x3d,0x36,0x2b,0x20,0x11,0x1a,0x07,0x0c,0x65,0x6e,0x73,0x78,0x49,0x42,0x5f,0x54,
+         0xf7,0xfc,0xe1,0xea,0xdb,0xd0,0xcd,0xc6,0xaf,0xa4,0xb9,0xb2,0x83,0x88,0x95,0x9e,
+         0x47,0x4c,0x51,0x5a,0x6b,0x60,0x7d,0x76,0x1f,0x14,0x09,0x02,0x33,0x38,0x25,0x2e,
+         0x8c,0x87,0x9a,0x91,0xa0,0xab,0xb6,0xbd,0xd4,0xdf,0xc2,0xc9,0xf8,0xf3,0xee,0xe5,
+         0x3c,0x37,0x2a,0x21,0x10,0x1b,0x06,0x0d,0x64,0x6f,0x72,0x79,0x48,0x43,0x5e,0x55,
+         0x01,0x0a,0x17,0x1c,0x2d,0x26,0x3b,0x30,0x59,0x52,0x4f,0x44,0x75,0x7e,0x63,0x68,
+         0xb1,0xba,0xa7,0xac,0x9d,0x96,0x8b,0x80,0xe9,0xe2,0xff,0xf4,0xc5,0xce,0xd3,0xd8,
+         0x7a,0x71,0x6c,0x67,0x56,0x5d,0x40,0x4b,0x22,0x29,0x34,0x3f,0x0e,0x05,0x18,0x13,
+         0xca,0xc1,0xdc,0xd7,0xe6,0xed,0xf0,0xfb,0x92,0x99,0x84,0x8f,0xbe,0xb5,0xa8,0xa3]
+
+mul13 = [0x00,0x0d,0x1a,0x17,0x34,0x39,0x2e,0x23,0x68,0x65,0x72,0x7f,0x5c,0x51,0x46,0x4b,
+         0xd0,0xdd,0xca,0xc7,0xe4,0xe9,0xfe,0xf3,0xb8,0xb5,0xa2,0xaf,0x8c,0x81,0x96,0x9b,
+         0xbb,0xb6,0xa1,0xac,0x8f,0x82,0x95,0x98,0xd3,0xde,0xc9,0xc4,0xe7,0xea,0xfd,0xf0,
+         0x6b,0x66,0x71,0x7c,0x5f,0x52,0x45,0x48,0x03,0x0e,0x19,0x14,0x37,0x3a,0x2d,0x20,
+         0x6d,0x60,0x77,0x7a,0x59,0x54,0x43,0x4e,0x05,0x08,0x1f,0x12,0x31,0x3c,0x2b,0x26,
+         0xbd,0xb0,0xa7,0xaa,0x89,0x84,0x93,0x9e,0xd5,0xd8,0xcf,0xc2,0xe1,0xec,0xfb,0xf6,
+         0xd6,0xdb,0xcc,0xc1,0xe2,0xef,0xf8,0xf5,0xbe,0xb3,0xa4,0xa9,0x8a,0x87,0x90,0x9d,
+         0x06,0x0b,0x1c,0x11,0x32,0x3f,0x28,0x25,0x6e,0x63,0x74,0x79,0x5a,0x57,0x40,0x4d,
+         0xda,0xd7,0xc0,0xcd,0xee,0xe3,0xf4,0xf9,0xb2,0xbf,0xa8,0xa5,0x86,0x8b,0x9c,0x91,
+         0x0a,0x07,0x10,0x1d,0x3e,0x33,0x24,0x29,0x62,0x6f,0x78,0x75,0x56,0x5b,0x4c,0x41,
+         0x61,0x6c,0x7b,0x76,0x55,0x58,0x4f,0x42,0x09,0x04,0x13,0x1e,0x3d,0x30,0x27,0x2a,
+         0xb1,0xbc,0xab,0xa6,0x85,0x88,0x9f,0x92,0xd9,0xd4,0xc3,0xce,0xed,0xe0,0xf7,0xfa,
+         0xb7,0xba,0xad,0xa0,0x83,0x8e,0x99,0x94,0xdf,0xd2,0xc5,0xc8,0xeb,0xe6,0xf1,0xfc,
+         0x67,0x6a,0x7d,0x70,0x53,0x5e,0x49,0x44,0x0f,0x02,0x15,0x18,0x3b,0x36,0x21,0x2c,
+         0x0c,0x01,0x16,0x1b,0x38,0x35,0x22,0x2f,0x64,0x69,0x7e,0x73,0x50,0x5d,0x4a,0x47,
+         0xdc,0xd1,0xc6,0xcb,0xe8,0xe5,0xf2,0xff,0xb4,0xb9,0xae,0xa3,0x80,0x8d,0x9a,0x97]
+
+mul14 = [0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x62,0x48,0x46,0x54,0x5a,
+         0xe0,0xee,0xfc,0xf2,0xd8,0xd6,0xc4,0xca,0x90,0x9e,0x8c,0x82,0xa8,0xa6,0xb4,0xba,
+         0xdb,0xd5,0xc7,0xc9,0xe3,0xed,0xff,0xf1,0xab,0xa5,0xb7,0xb9,0x93,0x9d,0x8f,0x81,
+         0x3b,0x35,0x27,0x29,0x03,0x0d,0x1f,0x11,0x4b,0x45,0x57,0x59,0x73,0x7d,0x6f,0x61,
+         0xad,0xa3,0xb1,0xbf,0x95,0x9b,0x89,0x87,0xdd,0xd3,0xc1,0xcf,0xe5,0xeb,0xf9,0xf7,
+         0x4d,0x43,0x51,0x5f,0x75,0x7b,0x69,0x67,0x3d,0x33,0x21,0x2f,0x05,0x0b,0x19,0x17,
+         0x76,0x78,0x6a,0x64,0x4e,0x40,0x52,0x5c,0x06,0x08,0x1a,0x14,0x3e,0x30,0x22,0x2c,
+         0x96,0x98,0x8a,0x84,0xae,0xa0,0xb2,0xbc,0xe6,0xe8,0xfa,0xf4,0xde,0xd0,0xc2,0xcc,
+         0x41,0x4f,0x5d,0x53,0x79,0x77,0x65,0x6b,0x31,0x3f,0x2d,0x23,0x09,0x07,0x15,0x1b,
+         0xa1,0xaf,0xbd,0xb3,0x99,0x97,0x85,0x8b,0xd1,0xdf,0xcd,0xc3,0xe9,0xe7,0xf5,0xfb,
+         0x9a,0x94,0x86,0x88,0xa2,0xac,0xbe,0xb0,0xea,0xe4,0xf6,0xf8,0xd2,0xdc,0xce,0xc0,
+         0x7a,0x74,0x66,0x68,0x42,0x4c,0x5e,0x50,0x0a,0x04,0x16,0x18,0x32,0x3c,0x2e,0x20,
+         0xec,0xe2,0xf0,0xfe,0xd4,0xda,0xc8,0xc6,0x9c,0x92,0x80,0x8e,0xa4,0xaa,0xb8,0xb6,
+         0x0c,0x02,0x10,0x1e,0x34,0x3a,0x28,0x26,0x7c,0x72,0x60,0x6e,0x44,0x4a,0x58,0x56,
+         0x37,0x39,0x2b,0x25,0x0f,0x01,0x13,0x1d,0x47,0x49,0x5b,0x55,0x7f,0x71,0x63,0x6d,
+         0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d]
+
+
+def keyExpansionCore(inp, i):
+    #Shift the inp left by moving the first byte to the end (rotate).
+    inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], inp[0]
+    #S-Box the bytes
+    inp[0], inp[1], inp[2], inp[3] = sBox[inp[0]], sBox[inp[1]], sBox[inp[2]], sBox[inp[3]]
+    #rcon, more galois feilds that lead to lookup tables.
+    inp[0] ^= rcon[i]
+
+    return inp
+
+def expandKey(inputKey, expandedKeys):
+    #first 16 bytes of the expandedkeys should be the same 16 as the original key
+    for i in range(16):
+        expandedKeys[i] = inputKey[i]
+
+    bytesGenerated = 16 #needs to get to 176
+    rconIteration = 1
+    temp = [0, 0, 0, 0]
+
+    while bytesGenerated < 176:
+        #Read 4 bytes for use in keyExpansionCore
+        temp = expandedKeys[bytesGenerated-4:bytesGenerated]
+
+        if bytesGenerated % 16 == 0:    #keys are length 16 bytes so every 16 bytes generated, expand.
+            temp = keyExpansionCore(temp, rconIteration)
+            rconIteration += 1
+
+        for y in range(4):
+            expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]
+            bytesGenerated += 1
+
+    return expandedKeys
+
+
+def addRoundKey(state, roundKey):       #is also it's own inverse
+    return [state[ 0]^roundKey[ 0], state[ 1]^roundKey[ 1], state[ 2]^roundKey[ 2], state[ 3]^roundKey[ 3],
+            state[ 4]^roundKey[ 4], state[ 5]^roundKey[ 5], state[ 6]^roundKey[ 6], state[ 7]^roundKey[ 7],
+            state[ 8]^roundKey[ 8], state[ 9]^roundKey[ 9], state[10]^roundKey[10], state[11]^roundKey[11],
+            state[12]^roundKey[12], state[13]^roundKey[13], state[14]^roundKey[14], state[15]^roundKey[15]]
+
+def subBytes(state):  # For loops in python are quite bad, so this gives you about 6 KB/s more speed. In my Go implementation a for loop is faster.
+    return [sBox[state[ 0]], sBox[state[ 1]], sBox[state[ 2]], sBox[state[ 3]],
+            sBox[state[ 4]], sBox[state[ 5]], sBox[state[ 6]], sBox[state[ 7]],
+            sBox[state[ 8]], sBox[state[ 9]], sBox[state[10]], sBox[state[11]],
+            sBox[state[12]], sBox[state[13]], sBox[state[14]], sBox[state[15]]]
+
+def invSubBytes(state):
+    for i in range(16):
+        state[i] = invSBox[state[i]]
+
+    return state
+
+def shiftRows(state):
+    return [state[ 0], state[ 5], state[10], state[15],
+            state[ 4], state[ 9], state[14], state[ 3],
+            state[ 8], state[13], state[ 2], state[ 7],
+            state[12], state[ 1], state[ 6], state[11]]
+
+def invShiftRows(state):
+    return [state[ 0], state[13], state[10], state[ 7],
+            state[ 4], state[ 1], state[14], state[11],
+            state[ 8], state[ 5], state[ 2], state[15],
+            state[12], state[ 9], state[ 6], state[ 3]]
+
+def mixColumns(state):
+    return [mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],  # Col 1
+            state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
+            state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
+            mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]],
+
+            mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7],  # Col 2
+            state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7],
+            state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]],
+            mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]],
+
+          mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11],  # Col 3
+          state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11],
+          state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]],
+          mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]],
+
+        mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],  # Col 4
+        state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+        state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+        mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]]
+
+def invMixColumns(state):
+    return [mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],  #Note how the operation shifts right one each time
+            mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
+            mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
+            mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
+
+            mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]],
+            mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]],
+            mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]],
+            mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]],
+
+          mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]],
+          mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]],
+          mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]],
+          mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]],
+
+        mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+        mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+        mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+        mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]]
+
+def padKey(key):
+    while len(key) != 16:
+        key.append(0)
+
+    return key
+
+def checkForPadding(inp):
+    while inp[len(inp)-1] == 0: # 0 is not a letter and is not punctuation.
+        inp = inp[:len(inp)-2]
+
+    return inp
+
+def encrypt(state, expandedKeys, regularRounds):
+    state = addRoundKey(state, expandedKeys[:16])
+
+    for i in range(regularRounds):
+        state = subBytes(state)
+        state = shiftRows(state)
+        state = mixColumns(state)
+        state = addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
+    #Last round
+    state = subBytes(state)
+    state = shiftRows(state)
+    state = addRoundKey(state, expandedKeys[160:])
+
+    return state
+
+
+def decrypt(state, expandedKeys, regularRounds):
+    state = addRoundKey(state, expandedKeys[160:])
+    state = invShiftRows(state)
+    state = invSubBytes(state)
+
+    while regularRounds >= 1:
+        state = addRoundKey(state, expandedKeys[(16 * (regularRounds)):(16 * (regularRounds+1))])
+        state = invMixColumns(state)
+        state = invShiftRows(state)
+        state = invSubBytes(state)
+        regularRounds += -1
+
+    #Last round
+    state = addRoundKey(state, expandedKeys[:16])
+
+    return state
+
+def padArray(array, factor):
+    while (len(array) % 16) != 0:
+        array.append(0)
+    return array
+
+def encryptFileName(key, name):
+    key = key.split(" ")
+    for j in range(len(key)):
+        key[j] = int(key[j])
+    key = padKey(key)
+    byteName = bytearray(name.encode())
+    expandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Define empty list
+    expandedKeys = expandKey(key, expandedKeys)
+
+    byteName = padArray(byteName, 16)
+    encName = []
+
+    for i in range(len(byteName)//16):
+        encBlock = encrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
+        for element in encBlock:
+            encName.append(element)
+
+    outString = ""
+    for number in encName:
+        if number < 10:
+            outString += "0"+str(number)
+        elif 10 <= number <= 15:
+            outString += "0"+hex(number).replace("0x", "")
+        else:
+            outString += hex(number).replace("0x", "")
+
+    return outString
+
+
+def decryptFileName(key, hexIn):
+    key = key.split(" ")
+    for j in range(len(key)):
+        key[j] = int(key[j])
+    key = padKey(key)
+    byteName = convHexDigestToBytes(hexIn)
+    expandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Define empty list
+    expandedKeys = expandKey(key, expandedKeys)
+
+    byteName = padArray(byteName, 16)
+    encName = []
+    for i in range(len(byteName)//16):
+        encBlock = decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
+        # print(encBlock, "encBlock")
+        for element in encBlock:
+            if (element < 127) and (element > 31):  #Removes padding by only adding if character.
+                encName.append(chr(element))
+
+    return "".join(encName)
+
+def convHexDigestToBytes(hexIn):        # Used when decrypting the file name
+    hexList = []
+    for i in range(len(hexIn)):
+        if i % 2 == 0:
+            hexList.append(hexIn[i]+hexIn[i+1])
+    for j in range(len(hexList)):
+        hexList[j] = int("0x"+hexList[j], 16)
+
+    return bytearray(hexList)
+
+
+```
+
+
+
+
+
+
+
+## SHA256:
+
+Here is the code for SHA256 (`code/python-go/SHA.py`, `code/mobile/SHA.py`):
+
+```python
+k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,    #Round constants
      0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
      0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -2136,13 +2537,13 @@ def pad(inpBits):   #https://csrc.nist.gov/csrc/media/publications/fips/180/4/ar
         return inpBits
 
 
-def checkLessThan32(num):
+def checkLessThan32(num):  # Used for getting the index to move the element in an array in RotR
     if num < 32:
         return num
     else:
         return num - 32
 
-def checkShiftInBounds(word, num):
+def checkShiftInBounds(word, num): # Similar to checkLessThan32, however it is for shifting.
     if (num < 0) or (num >= 32):
         return 0
     else:
@@ -2160,13 +2561,13 @@ def notArray(array, l=32):
             temp[i] = 1
     return temp
 
-def xorArrays(array1, array2):
+def xorArrays(array1, array2):  # XORs two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] ^ array2[i]
     return temp
 
-def andBitArrays(array1, array2):
+def andBitArrays(array1, array2):  # Does AND on two arrays
     temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(32):
         temp[i] = array1[i] & array2[i]
@@ -2179,7 +2580,7 @@ def RotR(word, amount):
         temp[i] = word[checkLessThan32(i-amount)]
     return temp
 
-def addMod2W(array1, array2, W=32):
+def addMod2W(array1, array2, W=32):    # Adds % 2^W two arrays, so that the word does not overflow it's word length
     if len(array1) != len(array2):
         raise IndexError("Arrays not same size - ", array1, array2)
     return intToBits((bitsToInt(array1) + bitsToInt(array2)) % 2**W, 32)
@@ -2223,7 +2624,7 @@ def sha256(inp):
     bits = makeBitArray(inp)
     bits = pad(bits)
     bits = [bits[x:x+32] for x in range(0, len(bits), 32)]  #Split padded message into 32 bit words
-    bits = bits+[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] for y in range(48)] # Add 48 empty words, as the data input will always be less than 16 (48+16 = 64) to make data block 256 bytes (64 * 32 = 2048, 2048 / 8 = 256).
+    bits = bits+[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] for y in range(48)]
     #Main part
 
     for x in range(16, 64): #Expand current bits to be 64 words
@@ -2253,28 +2654,427 @@ def sha256(inp):
         a = addMod2W(temp1, addMod2W(S0, maj))
 
     resultBits = addMod2W(intToBits(hList[0], 32), a)+addMod2W(intToBits(hList[1], 32), b)+addMod2W(intToBits(hList[2], 32), c)+addMod2W(intToBits(hList[3], 32), d)+addMod2W(intToBits(hList[4], 32), e)+addMod2W(intToBits(hList[5], 32), f)+addMod2W(intToBits(hList[6], 32), g)+addMod2W(intToBits(hList[7], 32), h)
-    # Looks really ugly but works better
+    # Looks really ugly but works better (otherwise I would have to store each in variables)
 
-    resultBytes = [resultBits[x:x+8] for x in range(0, len(resultBits), 8)]
+    resultBytes = [resultBits[x:x+8] for x in range(0, len(resultBits), 8)] # Makes 2D array of bytes
     result = []
     for byte in resultBytes:
-        result.append(bitsToInt(byte))
+        result.append(bitsToInt(byte))  # Converts each byte into an integer
     return result
 
 def getSHA128of16(data):
     out = sha256(data)
-    return [out[i]^out[i+16] for i in range(16)] # XOR each half together
+    return [out[i]^out[i+16] for i in range(16)]
 ```
 
 Each byte is made into an array of bits. Doing it this way made it easier to debug, however probably made the algorithm much slower than it needed to be. However, I don't really care too much about how fast SHA is, as it is only used a few times in the program, and only ever works on very small amounts of data, so it will probably be unnoticeable for the user.
 
-The file is called SHA.py, and is imported by LoginScreen (default login without Bluetooth), which is in `code/kivyStuff/loginClass.py`.
+The file is called SHA.py, and is imported by LoginScreen (default login without Bluetooth), which is in `code/kivyStuff/loginClass.py`, for use when the key is entered. 
 
 
 
+## BLAKE2b:
+
+Here is the code for BLAKE2b (`code/python-go/blake.go`):
+
+```go
+package main
+
+import (
+  "fmt"
+  "math"
+  "os"
+  "io"
+  "io/ioutil"
+)
+
+
+// Inital constants.
+var k = [8]uint64 {0x6A09E667F3BCC908,
+                   0xBB67AE8584CAA73B,
+                   0x3C6EF372FE94F82B,
+                   0xA54FF53A5F1D36F1,
+                   0x510E527FADE682D1,
+                   0x9B05688C2B3E6C1F,
+                   0x1F83D9ABFB41BD6B,
+                   0x5BE0CD19137E2179}
+
+var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3},
+                            {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4},
+                            {7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8},
+                            {9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13},
+                            {2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9},
+                            {12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11},
+                            {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10},
+                            {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5},
+                            {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
+                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}}
+
+// Research: https://tools.ietf.org/pdf/rfc7693.pdf
+
+func check(e error) {     //Used for checking errors when reading/writing to files.
+  if e != nil {
+    panic(e)
+  }
+}
+
+func rotR64(in uint64, n int) uint64 {  // Rotates 64 bit words right by n amount.
+  return (in >> uint(n)) ^ (in << (64 - uint(n)))
+}
+
+func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
+  v[a] = v[a] + v[b] + x
+  v[d] = rotR64((v[d] ^ v[a]), 32)
+
+  v[c] = v[c] + v[d]
+  v[b] = rotR64((v[b] ^ v[c]), 24)
+
+  v[a] = v[a] + v[b] + y
+  v[d] = rotR64((v[d] ^ v[a]), 16)
+
+  v[c] = v[c] + v[d]
+  v[b] = rotR64((v[b] ^ v[c]), 63)
+
+  return v
+}
+
+func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64-bit bytes.
+  return uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
+}
+
+
+func blakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
+  var v = [16]uint64{} // Current vector
+  for i := 0; i < 8; i++ {
+    v[i] = h[i]
+    v[i+8] = k[i]
+  }
+  v[12] = v[12] ^ uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
+  v[13] = v[13] ^ (uint64(t) >> 64)
+
+  if lastBlock {
+    v[14] = ^v[14] // NOT v[14]
+  }
+
+  var m [16] uint64
+  for i := 0; i < 16; i++ {
+    m[i] = get64(block[i*8:(i*8)+8])
+  }
+  for i := 0; i < 12; i++ {
+    // Mix
+    v = mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
+    v = mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
+    v = mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
+    v = mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
+
+    v = mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
+    v = mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
+    v = mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
+    v = mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
+  }
+
+  for i := 0; i < 8; i++ {
+    h[i] ^= v[i]
+    h[i] ^= v[i+8]
+  }
+
+  return h
+}
+
+func getNiceOutput(h [8]uint64) [64]byte {
+  var out [64]byte
+  for i := 0; i < 8; i++ {
+    for j := 8; j != 0; j-- {
+      out[i*8+(j-1)] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    }
+  }
+  return out
+}
+
+func BLAKEchecksum(f string, hashL int) [64]byte {
+  h := k  // Initialize h0-7 with initial values.
+  h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
+
+  a, err := os.Open(f)    // Open file
+  check(err)
+  aInfo, err := a.Stat()  // Get statistics of file
+  check(err)
+
+  fileSize := int(aInfo.Size()) // Get size of original file
+
+  var bufferSize int = 65536
+
+  if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
+    bufferSize = fileSize
+  }
+
+  var buffCount int = 0   // Keeps track of how far through the file we are
+  var bytesFed int = 0
+  var bytesLeft int = fileSize
+
+  for buffCount < fileSize {
+    if bufferSize > (fileSize - buffCount) {
+      bufferSize = fileSize - buffCount
+    }
+    buff := make([]uint64, bufferSize)
+    tempBuff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+    _, err := io.ReadFull(a, tempBuff) // Read the contents of the original file, but only enough to fill the buff array.
+                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+    check(err)
+    for i := range tempBuff {
+      buff[i] = uint64(tempBuff[i])
+    }
+    tempBuff = nil // Delete array
+
+    for len(buff) % 128 != 0 {
+      buff = append(buff, 0)  // Append 0s when buffer is not long enough
+    }
+
+    for i := 0; i < bufferSize; i += 128 {
+      if bytesLeft <= 128 {
+        h = blakeCompress(h, buff[i:i+128], bytesFed+bytesLeft, true)
+      } else {
+        bytesFed += 128
+        h = blakeCompress(h, buff[i:i+128], bytesFed, false)
+      }
+      bytesLeft -= 128
+    }
+
+    buffCount += bufferSize
+  }
+  a.Close()
+
+  return getNiceOutput(h)
+}
+
+func main() {
+  bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
+  check(err)
+  f := string(bytes)
+
+  fmt.Printf("%x", BLAKEchecksum(f, 64))  // Returns the hex digest in hex form over stdout
+}
+```
+
+The way that BLAKE2b goes through the file is very similar to AES, so I stole some of the code from my AES and adapted it slightly.
+
+The `main()` function is much simpler than AES's `main()` function, as I am only receiving one input: the path of the file that needs to be hashed.
+
+`getNiceOutput` turns the array `h`, which contains 8 64-bit words, into an array of 64 bytes, that can then be turned into a hex output that is a bit more readable. The way it works is it generates a little-endian interpretation of the 64-bit words as bytes. So if I had the word $0D4D1C983FA580BA$ , the output of the function would return $BA 80 A5 3F 98 1C 4D 0D$. The function `getNiceOutput` uses bit masking (shifting the bits in the word around to leave the bits you want to change exposed) to get each byte of the 64-bit word, then appends the byte to the list in reverse order (since it is little-endian). Little-endian is just a way to store a number larger than a byte. Little-endian and big-endian are needed in computer systems because in memory, each address can only store a single byte, so if a number is bigger than that then the number needs to be split into separate bytes. For example, if I had the number `354`, then I would first convert that into binary: $2+32+64+256 = 354$, = $101100010$, however this is larger than 8 bits, so split it into two:
+
+ $00000001$  and $01100010$, where the first byte starts at $2^8$. Little-endian arranges these bytes in memory like this:
+
+Address1: $01100010$, Address2: $0000001$
+
+It is called little-endian because the smaller (little) number is stored in the first address (the end). Big-endian is just the opposite way around.
 
 
 
+## The Sorts:
+
+Here is the code for the sorts (`code/python-go/sortsCythonSource/sortsCy.pyx`):
+
+```python
+cpdef int compareStrings(fileObj, string2, fileObjects=True):  # Returns 0 if str1 < str2, 1 if str1 > str2, and 2 if str1 == str2
+    cdef int count = 0
+
+    if fileObjects:
+        string1 = fileObj.name
+    else:
+        string1 = fileObj
+
+    while not (count >= len(string1) or count >= len(string2)):
+        if ord(string2[count].lower()) < ord(string1[count].lower()):
+            return 1
+        elif ord(string2[count].lower()) > ord(string1[count].lower()):
+            return 0
+        else:
+            if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
+                return 1
+            elif ord(string2[count]) > ord(string1[count]):
+                return 0
+            else:
+                if string2 == string1:
+                    return 2
+                else:
+                    count += 1
+    if len(string1) > len(string2):
+        return 1
+    elif len(string1) < len(string2):
+        return 0
+    else:
+        raise ValueError("Two strings are the same in compareStrings.")
 
 
+
+cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically
+    cdef list left = []
+    cdef list right = []  #Make seperate l+r lists, and add on at the end.
+    cdef list middle = []
+    if len(myList) > 1:
+        pivot = myList[int(len(myList)/2)]
+        for item in myList:
+            if fileObjects:
+                leftSide = compareStrings(pivot, item.name)
+            else:
+                leftSide = compareStrings(pivot, item, False)
+            if leftSide == 2:
+                middle.append(item)
+            elif leftSide == 1:
+                left.append(item)
+            elif leftSide == 0:
+                right.append(item)
+
+        return quickSortAlph(left, fileObjects)+middle+quickSortAlph(right, fileObjects)
+    else:
+        return myList
+
+
+cpdef list quickSortSize(list fileObjects):
+    cdef list left = []
+    cdef list right = []  #Make seperate l+r lists, and add on at the end.
+    cdef list middle = []
+    cdef int pivotSize
+    if len(fileObjects) > 1:
+        pivot = fileObjects[int(len(fileObjects)/2)]
+        if pivot.rawSize == " -":
+            pivotSize = 0
+        else:
+            pivotSize = pivot.rawSize
+
+        for i in fileObjects:
+            if i.rawSize == " -":
+                left.append(i)
+            elif i.rawSize < pivotSize:
+                left.append(i)
+            elif i.rawSize > pivotSize:
+                right.append(i)
+            else:
+                middle.append(i)
+        return quickSortSize(left)+middle+quickSortSize(right)
+    else:
+        return fileObjects
+
+cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
+    cdef list left = []
+    cdef list right = []  #Make seperate l+r lists, and add on at the end.
+    cdef list middle = []
+    cdef int pivot
+    if len(tuples) > 1:
+        pivot = tuples[int(len(tuples)/2)][0]
+        for i in tuples:
+            if i[0] < pivot:
+                left.append(i)
+            elif i[0] > pivot:
+                right.append(i)
+            else:
+                middle.append(i)
+        return quickSortTuples(left)+middle+quickSortTuples(right)
+    else:
+        return tuples
+```
+
+The way Cython works, is that functions defined using `cpdef` are accessible by both Cython and Python, while variables can be defined using `cdef` internally, as they only need to be accessible via Cython.
+
+Cython speeds Python code up significantly, depending on how many variables have a declared variable type. If variables / functions are used a lot, then it is a good idea to declare their type. Variables that are not used so often do not need to be defined with their data type, as they may only be used a couple of times during the program.
+
+When you build the Cython program, you get a shared object file (.so), and a C file. You can import the name of the .c file in Python to use the module.
+
+`quickSortTuples` is used for sorting search results, as search results are collected along with the position that the search item was found in the word. For example, if I searched for "b" in a folder, and there was a file called "brian.png", then the search result would be (0, "brian.png"). `quickSortTuples` then sorts these results by the number. I need to use a tuple so that I know what string belongs to which number.
+
+
+
+## The File class:
+
+Here is the code for the File class (`code/python-go/fileClass.py`):
+
+```python
+from os import path as osPath
+from os import listdir
+from subprocess import Popen, PIPE
+
+import aesFName
+
+class File:
+
+    def __init__(self, screen, hexPath, hexName, fileSep, extension=None, isDir=False, name=None, path=None):
+        self.outerScreen = screen
+        self._totalSize = 0
+        self.hexPath, self.hexName, self.isDir, self.fileSep, self.extension = hexPath, hexName, isDir, fileSep, extension
+        self.thumbDir = ""
+        self.checkSum = None
+        self.rawSize = self._getFileSize()
+        self.size = self.outerScreen.getGoodUnit(self.rawSize)
+        self.isDir = isDir
+        if path == None:
+            self.path = self._getNormDir(self.hexPath)
+        else:
+            self.path = path
+        if name == None:
+            self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
+        else:
+            self.name = name
+
+        if extension == None:
+            extension = self.path.split(".")
+            self.extension = extension[len(extension)-1].lower()
+
+        if self.isDir:
+            self.hexPath += self.fileSep
+            self.path += self.fileSep
+
+
+    def _getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
+        hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
+        for i in range(len(hexDir)):
+            hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
+
+        return self.fileSep.join(hexDir)
+
+    def _getFileSize(self, recurse=True):
+        if self.isDir:
+            if recurse:
+                self._totalSize = 0
+                self.recursiveSize(self.hexPath)
+                size = self._totalSize
+                return size
+            else:
+                return " -"
+        else:
+            try:
+                size = osPath.getsize(self.hexPath) # Imported from os module
+                return size
+            except Exception as e:
+                print(e, "couldn't get size.")
+                return " -"
+
+    def getCheckSum(self, new=True):
+        if self.checkSum == None or new:
+            goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+            out, err = goproc.communicate((self.hexPath).encode())
+            if err != None:
+                raise ValueError(err)
+
+            self.checkSum = out.decode()
+
+        return self.checkSum
+
+    def recursiveSize(self, f, encrypt=False):  #Get size of folders.
+        fs = listdir(f)
+        for item in fs:
+            if encrypt:
+                item = aesFName.encryptFileName(self.key, item)
+            if osPath.isdir(f+self.fileSep+item):
+                try:
+                    self.recursiveSize(f+self.fileSep+item)
+                except OSError:
+                    pass
+            else:
+                try:
+                    self._totalSize += osPath.getsize(f+self.fileSep+item)
+                except PermissionError: #Thrown when the file is owned by another user/administrator.
+                    pass
+```
 
