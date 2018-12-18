@@ -69,11 +69,31 @@ class encPopup(Popup): #For single files
 
         return ("%.2f" % bps) + divisions[divCount]
 
+    def _getGoodUnitTime(self, time):
+        divCount = 0
+        times = [(0.001, "Miliseconds"), (1, "Seconds"), (60, "Minutes"), (3600, "Hours"), (86400, "Days"), (604800, "Weeks"), (2419200, "Months"), (31557600, "Years")]   # 1 second, 1 minute, 1 hour, 1 day, 1 week, 1 month, 1 year in seconds
+        i = 0
+        while i < len(times):  # Is broken when return is found
+            if time > times[i][0]:
+                i += 1
+            else:
+                return ("%.2f" % float(time/times[i-1][0])) + " " + times[i-1][1] + " left"
+
+        return "A lot of time left."
+
+
     def enc(self, encType, op):
         total = 0
         totalPer = 0
+        factor = 0.5
+        timeLast = 0
+        lastSize = 0
+        timeDelta = 0
+        perDelta = 0
+        per = 0
+        prevPer = 0
         for i in range(len(self.fileList)):
-            self.done = False
+            done = False
             self.pb.value = 0
             self.pb.max = os.path.getsize(self.fileList[i])
             if i == len(self.fileList)-1:
@@ -81,11 +101,6 @@ class encPopup(Popup): #For single files
             else:
                 self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
 
-            prevInt = 0
-            timeFor1per = 0
-            timeAtLastP = time()
-            lastSize = 0
-            per = 0
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
                 fileName = self.fileList[i].split(self.outerScreen.fileSep)
@@ -93,36 +108,35 @@ class encPopup(Popup): #For single files
             else:
                 self.currFile.text = self.fileList[i]
 
-            while not self.done: # Padding can cause issues as original size is not known.
-                try:
+            while not done: # Padding can cause issues as original size is not known.
+                if os.path.exists(self.locList[i]):
                     self.pb.value = os.path.getsize(self.locList[i])
                     self.wholePb.value = total + self.pb.value
-                except:
-                    pass
-                else:
                     per = self.wholePb.value_normalized*100
 
-                    if per-prevInt > 0.5:
-                        timeFor1per = time()- timeAtLastP
-                        timeAtLastP = time()
+                    a = time()   # Temporary variable to hold the time
+                    timeDelta = a - timeLast     # Get time difference
+                    if timeDelta >= 0.5:  # Update every 0.5 seconds
+                        perDelta = per - prevPer   # Change in percentage in that time.
+                        timeLast = a
+                        sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
+                        speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
 
-                        self.tim.text = "{0:.1f}\nSeconds left.".format(timeFor1per*(((self.wholePb.max - self.wholePb.value)/self.wholePb.max)*100))
-                        sizeDelta = self.wholePb.value - lastSize
-                        self.spd.text = self._getGoodUnit(sizeDelta/timeFor1per)
+                        if speed != 0:
+                            self.tim.text = self._getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.spd.text = self._getGoodUnit(speed)
 
-                        prevInt = per
                         lastSize = self.wholePb.value
+                        prevPer = per
 
                     self.per.text = "{0:.2f}%".format(per)
 
-                if self.pb.value >= self.pb.max:
-                    self.done = True
+                if self.pb.value >= self.pb.max-16:
+                    done = True
+                else:
+                    sleep(0.005) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 
-                if self.done and self.pb.value_normalized != 0 and self.pb.max > 10000: # Don't bother sleeping if the file is finished, or if the file is really small.
-                    sleep(randUniform(0.08, 0.1)) # Sleep imported from time module
-                # I added randomness to how long the program sleeps on each iteration, so that the value for the speed didn't just
-                # flick between two values, as AES writes to the file every block the amount done is usually increments by one of two
-                # values, so this randomness in measuring it makes the speed reading a bit more interesting.
+            self.pb.value = self.pb.max
             totalPer += 100
             total += self.pb.max
 
