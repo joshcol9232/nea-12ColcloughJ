@@ -30,10 +30,10 @@ import mainSmallPops as mainSPops
 
 import configOperations
 
-useBT = configOperations.readConfigFile(lineNumToRead=2)  # 2 = third line == bluetooth
-if useBT == "True": # Using bool(useBT) returns True even if it is "False", because it is checking the variable exists.
+try:
     from bluetooth import *
-
+except:
+    pass
 
 class MainScreen(Screen):
 

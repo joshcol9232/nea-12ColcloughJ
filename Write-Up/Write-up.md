@@ -1526,7 +1526,219 @@ assets/
 
 Some images are taken from the internet, so they do not have `.psd` files (photoshop files).
 
+## Configuration of the program:
 
+The program can be configured via the configuration file `config.cfg` located at `code/python-go/config.cfg`, or instead if the user is on Linux, then they can copy the configuration file into `~/.config/FileMate/config`, which is the standard area in Linux where configuration files are stored (and by the way, I called the program "File Mate" because it was the first thing that popped into my head).
+
+The configuration file is edited by the settings menu in the main screen of the app, however if something goes horribly wrong, the user can edit it themselves easily.
+
+The layout of the configuration file looks something like this:
+```
+vaultDir--<file path here>
+searchRecursively--<True / False>
+bluetooth--<True / False>
+```
+`vaultDir` is the path to the Vault that you would like to use to store all encrypted files and folders.
+`searchRecursively` determines if the program should search for items recursively, as this may take a long time if you have a lot of files, and some people may just want to search within the current folder.
+`bluetooth` determines the default Login Screen to start when the program starts.
+
+I have used `--` to separate the setting name from it's set value, as it does not appear at the start of file paths, and should not be needed much in any settings that could possibly be added in the future.
+
+
+To change the configuration of the program from within the program, `configOperations.py` located at `code/python-go/configOperations.py` has a few functions that can get the configured settings, and write new ones.
+
+Here is the content of `configOperations.py`:
+
+```python
+from os import path as osPath
+from os import listdir, makedirs
+from sys import platform
+from tempfile import gettempdir
+
+
+def findConfigFile(startDir, fileSep):
+    config = None
+    if fileSep == "/":
+        try:
+            home = listdir(osPath.expanduser("~/.config/FileMate/"))
+        except:
+            print("No config file in .config")
+        else:
+            if "config" in home:
+                config = osPath.expanduser("~/.config/FileMate/config")
+
+    if config == None:
+        try:
+            configFile = open(startDir+"config.cfg", "r")
+        except Exception as e:
+            raise FildNotFoundError("No config file found. Refer to the README if you need help.")
+        else:
+            configFile.close()
+            config = startDir+"config.cfg"
+
+    return config
+
+
+def readConfigFile(configLocation=None, lineNumToRead=None):
+    if configLocation == None:
+        fSep = getFileSep()
+        configLocation = findConfigFile(getStartDir(fSep)[0], fSep)
+
+    configFile = open(configLocation, "r")
+    if lineNumToRead == None:
+        for line in configFile:
+            lineSplit = line.split("--")
+            lineSplit[1] = lineSplit[1].replace("\n", "")
+            if lineSplit[0] == "vaultDir":
+                path = lineSplit[1]
+            elif lineSplit[0] == "searchRecursively":
+                if lineSplit[1] == "True":
+                    recurse = True
+                elif lineSplit[1] == "False":
+                    recurse = False
+                else:
+                    raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
+            elif lineSplit[0] == "bluetooth":
+                if lineSplit[1] == "True":
+                    bt = True
+                elif lineSplit[1] == "False":
+                    bt = False
+                else:
+                    raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
+
+        configFile.close()
+
+        return path, recurse, bt
+
+    else:
+        lineSplit = configFile.readlines()[lineNumToRead].split("--")
+        lineSplit[1] = lineSplit[1].replace("\n", "")
+        return lineSplit[1]
+
+def getFileSep():
+    if platform.startswith("win32"): # Find out what operating system is running.
+        return "\\"
+    else:          #windows bad
+        return "/"
+
+def getStartDir(fileSep=None):
+    if fileSep == None:
+        fileSep = getFileSep()
+    startDir = osPath.dirname(osPath.realpath(__file__))+fileSep
+    tempDir = startDir.split(fileSep)
+    for i in range(2):
+        del tempDir[len(tempDir)-2]
+    return startDir, fileSep.join(tempDir)+fileSep+"assets"+fileSep+"exports"+fileSep
+
+
+def editConfTerm(term, newContent, config):  # Edits a given term in the config.cfg file.
+    with open(config, "r") as conf:
+        confContent = conf.readlines()
+
+    for i in range(len(confContent)):
+        a = confContent[i].split("--")
+        if term == a[0]:
+            a[1] = newContent+"\n"
+            confContent[i] = "--".join(a)
+
+    with open(config, "w") as confW:
+        confW.writelines(confContent)
+
+def dirInputValid(inp, fileSep):
+    valid = bool((inp[0] == fileSep) and ("\n" not in inp))       #If it starts with the file separator and doesn't contain any new lines, then it is valid for now.
+    inp = inp.split(fileSep)
+    focusIsSlash = False
+    for item in inp:            #Checks for multiple file separators next to each other, as that would be an invalid folder name.
+        if item == "":
+            if focusIsSlash:
+                valid = False
+            focusIsSlash = True
+        else:
+            focusIsSlash = False
+    return valid
+
+def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault location is changed.
+    if inp != "":
+        if dirInputValid(inp, fileSep):
+            if osPath.exists(inp) and osPath.isdir(inp):
+                editConfTerm("vaultDir", inp, config)
+            else:
+                makedirs(inp)
+                if inp[len(inp)-1] != fileSep:
+                    inp += fileSep
+                editConfTerm("vaultDir", inp, config)
+
+
+def runConfigOperations():
+    fileSep = getFileSep()
+    osTemp = gettempdir()+fileSep #From tempfile module
+    # Get config settings.
+    startDir, sharedAssets = getStartDir(fileSep)
+
+    configLoc = findConfigFile(startDir, fileSep)
+    path, recurse, bt = readConfigFile(configLoc)
+    return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt, configLoc  # 8 Outputs in total.
+
+```
+
+`findConfigFile` checks for the configuration file in `~/.config/FileMate/`, and if it does not exist, checks for it in `code/python-go/config.cfg`. Once the configuration file has been found, it returns the path to the file.
+
+`readConfigFile` reads the configuration file, and gets each configured option and returns their value. It can also return the value of a specific line in the config file.
+
+`getFileSep` just gets the file separator of the current system. For Windows this is `\\`, but for MacOS and Linux this is `/`.
+
+`getStartDir` gets the path of the current file (located in `code/python-go/`), and the path to the `assets` directory, which is used for the images on the buttons.
+
+`editConfTerm` edits a term in the configuration file. If the term was "bluetooth" then it would find the line that starts with "bluetooth", and change the data after the `--` with the new data specified.
+
+`dirInputValid` checks that a given input is a valid file path (e.g no "/" in a row). This is in here because it is used all over the program, and is used for changing the directory of the Vault.
+
+`changeVaultLoc` changes the location of the Vault using `dirInputValid` to check the input, and `editConfTerm` to update the configuration file.
+
+`runConfigOperations` runs all of the operations required for when the program is started, and returns the variables needed by the rest of the program. This is done in `ui.py`, which loads the configuration file, and starts the program.
+
+
+
+## The GUI:
+
+I will go through the visuals first, and then move onto the code.
+
+### Login Screen:
+
+Here is an image of the Login Screen:
+
+![](TechSolution/GUI/loginNorm.png)
+
+It consists of a key entry text input, a "Submit" button and a button to switch between logging in with Bluetooth and without Bluetooth.
+
+When you enter an incorrect key, a popup tells the user the key is invalid:
+
+![](TechSolution/GUI/loginInvKey.png)
+
+The Bluetooth login screen can be accessed by clicking the "Login with BT" button, changing the configuration file, or changing the settings once logged in.
+Here is an image of the Login Screen with Bluetooth:
+
+![](TechSolution/GUI/loginBT.png)
+
+I have tried to keep it as simple and as clutter-free as possible. When a user connects to the BT server, the address of the device connected appears in the middle of the screen, to let the user know that they have connected. The user then proceeds to enter the pin code on the app.
+
+If Bluetooth is not available, or can't start, then a popup appears warning the user that they cannot use the Bluetooth login until Bluetooth becomes available, or they can instead login with regular login:
+
+![](TechSolution/GUI/loginBTNotAvailable.png)
+
+They can then click away from the popup to dismiss it, and do what they want from there.
+
+
+Once the key has been entered correctly, the screen changes to the Main Screen.
+
+
+### Main Screen:
+
+Here is an image of the Main Screen:
+
+![](TechSolution/GUI/mainScreen.png)
+
+The layout has changed slightly from the design, as I moved the recycling bin to the bottom right because it felt a bit empty, but then that bar felt too empty so I moved
 
 
 
@@ -2365,7 +2577,7 @@ def padKey(key):
 
     return key
 
-def checkForPadding(inp):
+def checkForPadding(inp):       # Padding for file names can be any number that is not in the ascii table.
     while inp[len(inp)-1] == 0: # 0 is not a letter and is not punctuation.
         inp = inp[:len(inp)-2]
 
@@ -2410,7 +2622,7 @@ def padArray(array, factor):
     return array
 
 def encryptFileName(key, name):
-    key = key.split(" ")
+    key = key.split(" ")     # Key in program is stored as "0 1 2 3 4 5 ..."
     for j in range(len(key)):
         key[j] = int(key[j])
     key = padKey(key)
@@ -2428,10 +2640,8 @@ def encryptFileName(key, name):
 
     outString = ""
     for number in encName:
-        if number < 10:
-            outString += "0"+str(number)
-        elif 10 <= number <= 15:
-            outString += "0"+hex(number).replace("0x", "")
+        if number <= 15:
+            outString += "0"+hex(number).replace("0x", "") # If less than 16, a 0 needs to be added at the start so that the string can be changed back into numbers.
         else:
             outString += hex(number).replace("0x", "")
 
@@ -2460,18 +2670,17 @@ def decryptFileName(key, hexIn):
 
 def convHexDigestToBytes(hexIn):        # Used when decrypting the file name
     hexList = []
-    for i in range(len(hexIn)):
-        if i % 2 == 0:
-            hexList.append(hexIn[i]+hexIn[i+1])
+    for i in range(0, len(hexIn), 2):
+        hexList.append(hexIn[i]+hexIn[i+1])   # Append each 2 digits to the list
     for j in range(len(hexList)):
-        hexList[j] = int("0x"+hexList[j], 16)
+        hexList[j] = int("0x"+hexList[j], 16) # Convert each 2 digits back to hex.
 
     return bytearray(hexList)
 
 
 ```
 
-
+When a file name in encrypted, the original name is encoded into bytes, it is encrypted, then each byte is converted to it's hex representation. The `0x` is removed, and if the hex doesn't have 2 digits, then a `0` is added at the front, as Python's `hex` function returns `0x9` if the number was `9`, for example. This means that when you go to change this hex string back into numbers, you can't tell the numbers apart, so you have to make each 2 digits in length.
 
 
 
@@ -3037,7 +3246,7 @@ class File:
         if self.isDir:
             if recurse:
                 self._totalSize = 0
-                self.recursiveSize(self.hexPath)
+                self._recursiveSize(self.hexPath)
                 size = self._totalSize
                 return size
             else:
@@ -3050,6 +3259,22 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
+    def _recursiveSize(self, f, encrypt=False):  #Get size of folders.
+        fs = listdir(f)
+        for item in fs:
+            if encrypt:
+                item = aesFName.encryptFileName(self.key, item)
+            if osPath.isdir(f+self.fileSep+item):
+                try:
+                    self._recursiveSize(f+self.fileSep+item)
+                except OSError:
+                    pass
+            else:
+                try:
+                    self._totalSize += osPath.getsize(f+self.fileSep+item)
+                except PermissionError: #Thrown when the file is owned by another user/administrator.
+                    pass
+
     def getCheckSum(self, new=True):
         if self.checkSum == None or new:
             goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
@@ -3060,21 +3285,12 @@ class File:
             self.checkSum = out.decode()
 
         return self.checkSum
-
-    def recursiveSize(self, f, encrypt=False):  #Get size of folders.
-        fs = listdir(f)
-        for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
-            if osPath.isdir(f+self.fileSep+item):
-                try:
-                    self.recursiveSize(f+self.fileSep+item)
-                except OSError:
-                    pass
-            else:
-                try:
-                    self._totalSize += osPath.getsize(f+self.fileSep+item)
-                except PermissionError: #Thrown when the file is owned by another user/administrator.
-                    pass
 ```
 
+This is the File class talked about in the **File Storage** section of the design. As a recap, here is the class diagram I made for this class:
+
+![](Diagrams/fileClass.png)
+
+Most of the variables have been kept the same, however `extension` was added for when I get the thumbnail of the file, as if the file is not a png or a jpg, then a thumbnail cannot be shown (since it isn't an image). I also have the variable `outerScreen` that holds a reference to the Kivy Screen object that created it, so it can access functions and variables from the Screen if it needs to.
+
+There are a few new functions too. `_getNormDir` gets the normal file path if path is `None` (it is also a private funtion (`_`), as it is only needed once by the object, and shouldn't be used again by anything else). `_getFileSize` gets the total size of the File object. If it is a folder (isDir) then `_recursiveSize` is called to handle it. If the size can not be read, then the function returns " -", which will display nicely in the GUI. 

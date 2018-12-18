@@ -11,12 +11,12 @@ from kivy.clock import Clock
 from threading import Thread
 
 import SHA
-from configOperations import readConfigFile
 
-useBT = readConfigFile(lineNumToRead=2)  # 2 = third line == bluetooth
-if useBT == "True": # Using bool(useBT) returns True even if it is "False", because it is checking the variable exists.
+# Try importing the BT module, if it isn't available then they just can't use BT. Imported in case the user wants to switch from normal login to Bluetooth login.
+try:
     from bluetooth import *
-
+except:
+    pass
 
 class LoginScreen(Screen):
 

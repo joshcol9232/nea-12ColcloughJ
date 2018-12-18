@@ -331,9 +331,7 @@ def encryptFileName(key, name):
 
     outString = ""
     for number in encName:
-        if number < 10:
-            outString += "0"+str(number)
-        elif 10 <= number <= 15:
+        if number <= 15:
             outString += "0"+hex(number).replace("0x", "")
         else:
             outString += hex(number).replace("0x", "")
@@ -406,9 +404,8 @@ def test(singleInput=False):
 
 def convHexDigestToBytes(hexIn):        # Used when decrypting the file name
     hexList = []
-    for i in range(len(hexIn)):
-        if i % 2 == 0:
-            hexList.append(hexIn[i]+hexIn[i+1])
+    for i in range(0, len(hexIn), 2):
+        hexList.append(hexIn[i]+hexIn[i+1])
     for j in range(len(hexList)):
         hexList[j] = int("0x"+hexList[j], 16)
 

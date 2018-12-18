@@ -18,7 +18,7 @@
 
         TextInput:
             id: Search
-            size_hint: .46, .08
+            size_hint: .52, .08
             font_size: 22
             hint_text: "Search:"
             pos_hint: {"x": 0.16, "top": 1}
@@ -29,7 +29,7 @@
         Button:
             id: home
             size_hint: .06, .08
-            pos_hint: {"x": .62, "y": 0.84}
+            pos_hint: {"x": 0.62, "y": 0.84}
             on_release: root.goHome()
             Image:
                 source: root.getPathForButton("home.png")
@@ -41,7 +41,7 @@
         Button:
             id: settings
             size_hint: .06, .08
-            pos_hint: {"x": 0.62, "top": 1}
+            pos_hint: {"x": 0.56, "y": 0.84}
             on_release: root.manager.current = "Settings"
             Image:
                 source: root.getPathForButton("settings.png")
@@ -49,6 +49,40 @@
                 y: self.parent.y + (self.parent.y*(self.parent.size_hint[1]/2))/4
                 size: 40, 40
                 allow_stretch: True
+
+        Button:
+            id: addFolder
+            size_hint: .06, .08
+            pos_hint: {"x": 0.5, "y": 0.84}
+            text: "New Folder"
+            text_size: self.size
+            halign: "center"
+            valign: "center"
+            on_release: root.openAddFolderPop()
+
+        Button:
+            id: recyclingBin
+            size_hint: .06, .08
+            pos_hint: {"x": 0.44, "y": 0.84}
+            on_release: root.openRecycling()
+            Image:
+                source: root.getPathForButton("recycling.png")
+                x: self.parent.x+5
+                y: self.parent.y + (self.parent.y*(self.parent.size_hint[1]/2))/10
+                size: 50, 50
+
+        ProgressBar:
+            id: pb1
+            min: 0
+            max: root.values(False)[0]
+            value: root.values(False)[1]
+            size_hint: .23, .08
+            pos_hint: {"x": 0.16, "y": 0.84}
+
+        Label:
+            pos_hint: {"x": 0.2, "y": 0.82}
+            size_hint: .16, .16
+            text: root.values(True)
 
         Button:     #Padlock
             id: LogOut
@@ -86,47 +120,3 @@
                 size: 100, 133.54
                 allow_stretch: False
 
-        Button:
-            id: manuallyRefresh
-            size_hint: .06, .08
-            pos_hint: {"right": 1, "y": 0.76}
-            on_release: root.refreshButtons()
-            Image:
-                source: root.getPathForButton("refresh-icon.png")
-                x: self.parent.x - 10
-                y: self.parent.y - 30
-                size: 80, 112
-                allow_stretch: True
-
-        Button:
-            id: addFolder
-            size_hint: .06, .08
-            pos_hint: {"right": 1, "y": 0.68}
-            text: "Add Folder"
-            text_size: self.size
-            on_release: root.openAddFolderPop()
-
-        Button:
-            id: recyclingBin
-            size_hint: .09, .14
-            pos_hint: {"right": 1, "bottom": 1}
-            on_release: root.openRecycling()
-            Image:
-                source: root.getPathForButton("recycling.png")
-                size: Window.width/8, Window.height/8
-                x: Window.width - Window.width/9
-                y: 0
-
-
-        ProgressBar:
-            id: pb1
-            min: 0
-            max: root.values(False)[0]
-            value: root.values(False)[1]
-            size_hint: .46, .08
-            pos_hint: {"x": 0.16, "y": 0.84}
-
-        Label:
-            pos_hint: {"x": 0.4, "y": 0.82}
-            size_hint: .16, .16
-            text: root.values(True)

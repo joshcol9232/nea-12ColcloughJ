@@ -44,7 +44,7 @@ class File:
         if self.isDir:
             if recurse:
                 self._totalSize = 0
-                self.recursiveSize(self.hexPath)
+                self._recursiveSize(self.hexPath)
                 size = self._totalSize
                 return size
             else:
@@ -57,6 +57,22 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
+    def _recursiveSize(self, f, encrypt=False):  #Get size of folders.
+        fs = listdir(f)
+        for item in fs:
+            if encrypt:
+                item = aesFName.encryptFileName(self.key, item)
+            if osPath.isdir(f+self.fileSep+item):
+                try:
+                    self._recursiveSize(f+self.fileSep+item)
+                except OSError:
+                    pass
+            else:
+                try:
+                    self._totalSize += osPath.getsize(f+self.fileSep+item)
+                except PermissionError: #Thrown when the file is owned by another user/administrator.
+                    pass
+
     def getCheckSum(self, new=True):
         if self.checkSum == None or new:
             goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
@@ -67,21 +83,4 @@ class File:
             self.checkSum = out.decode()
 
         return self.checkSum
-
-    def recursiveSize(self, f, encrypt=False):  #Get size of folders.
-        fs = listdir(f)
-        for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
-            if osPath.isdir(f+self.fileSep+item):
-                try:
-                    self.recursiveSize(f+self.fileSep+item)
-                except OSError:
-                    pass
-            else:
-                try:
-                    self._totalSize += osPath.getsize(f+self.fileSep+item)
-                except PermissionError: #Thrown when the file is owned by another user/administrator.
-                    pass
-
 
