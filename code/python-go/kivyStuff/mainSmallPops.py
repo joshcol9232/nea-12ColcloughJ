@@ -131,7 +131,7 @@ class encPopup(Popup): #For single files
 
                     self.per.text = "{0:.2f}%".format(per)
 
-                if self.pb.value >= self.pb.max-16:
+                if self.pb.value >= self.pb.max-32:  # -32 is due to padding.
                     done = True
                 else:
                     sleep(0.005) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
