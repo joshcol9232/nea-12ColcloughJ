@@ -1,4 +1,5 @@
 from kivy.uix.button import Button
+from kivy.uix.image import Image
 
 from sortsCy import quickSortSize
 
@@ -64,8 +65,8 @@ class sizeSortButton(Button):           #Sorts the files/folders by size
 class infoButton(Button):       #The button that displays information about the file.
 
     def __init__(self, mainScreen, fileObj, **kwargs):
-        super(Button, self).__init__(**kwargs)
         self.outerScreen = mainScreen
+        super(Button, self).__init__(**kwargs)
         self.fileObj = fileObj
 
 

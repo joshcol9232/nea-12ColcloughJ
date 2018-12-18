@@ -18,9 +18,9 @@
     BubbleButton:
         text: "Scoop"
 
-
 <nameSortButton@Button>:
     font_size: 14
+    size_hint: 10.4, 1
     on_release: root.changeSortOrder()
 
 <sizeSortButton@Button>:
@@ -32,8 +32,12 @@
     size_hint: .05, 1
     halign: "left"
     valign: "middle"
-    text: " INFO"
     on_release: root.outerScreen.getFileInfo(self.fileObj)
+    Image:
+        source: self.parent.outerScreen.assetsPath+"info.png"
+        center_x: self.parent.center_x
+        center_y: self.parent.center_y
+        size: 20, 20
 
 <infoLabel@Label>:
     text_size: self.width, None

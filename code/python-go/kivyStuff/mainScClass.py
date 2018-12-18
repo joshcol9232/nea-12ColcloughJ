@@ -58,10 +58,10 @@ class MainScreen(Screen):
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.currentDir = self.path
-        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0})
+        self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0})
 
 
-    def on_enter(self): #When the screen is started.
+    def on_enter(self): # When the screen is started.
         self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
@@ -268,9 +268,9 @@ class MainScreen(Screen):
         self.serverThread.start()
 
     def setupSortButtons(self):
-        self.sortsGrid = GridLayout(cols=2, size_hint=(.9, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
-        self.nameSort = mainBtns.nameSortButton(self, text="^", size_hint_x=.87)
-        self.sizeSort = mainBtns.sizeSortButton(self, size_hint_x=.13)
+        self.sortsGrid = GridLayout(cols=2, size_hint=(.99, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
+        self.nameSort = mainBtns.nameSortButton(self, text="^")
+        self.sizeSort = mainBtns.sizeSortButton(self)
         self.sortsGrid.add_widget(self.nameSort)
         self.sortsGrid.add_widget(self.sizeSort)
         self.add_widget(self.sortsGrid) #Add the sort buttons grid to the float layout of MainScreen.
@@ -346,7 +346,7 @@ class MainScreen(Screen):
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
-        self.scroll = ScrollView(size_hint=(.9, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
+        self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
 
         self.createButtonsCore(fileObjects)

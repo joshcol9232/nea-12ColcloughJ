@@ -15,7 +15,6 @@
     FloatLayout:
         id: MainLayout
 
-
         TextInput:
             id: Search
             size_hint: .52, .08
@@ -25,7 +24,6 @@
             multiline: False
             on_text_validate: root.searchForItem(self.text)
 
-
         Button:
             id: home
             size_hint: .06, .08
@@ -33,9 +31,9 @@
             on_release: root.goHome()
             Image:
                 source: root.getPathForButton("home.png")
-                x: self.parent.x + 5
-                y: self.parent.y
-                size: 50, 50
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
+                size: 40, 40
                 allow_stretch: True
 
         Button:
@@ -45,8 +43,8 @@
             on_release: root.manager.current = "Settings"
             Image:
                 source: root.getPathForButton("settings.png")
-                x: self.parent.x+10
-                y: self.parent.y + (self.parent.y*(self.parent.size_hint[1]/2))/4
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
                 size: 40, 40
                 allow_stretch: True
 
@@ -54,11 +52,15 @@
             id: addFolder
             size_hint: .06, .08
             pos_hint: {"x": 0.5, "y": 0.84}
-            text: "New Folder"
             text_size: self.size
             halign: "center"
             valign: "center"
             on_release: root.openAddFolderPop()
+            Image:
+                source: root.getPathForButton("newFolder.png")
+                center_x: self.parent.center_x+3 # Drop shadow
+                center_y: self.parent.center_y
+                size: 50, 50
 
         Button:
             id: recyclingBin
@@ -67,8 +69,8 @@
             on_release: root.openRecycling()
             Image:
                 source: root.getPathForButton("recycling.png")
-                x: self.parent.x+5
-                y: self.parent.y + (self.parent.y*(self.parent.size_hint[1]/2))/10
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y+3
                 size: 50, 50
 
         ProgressBar:
@@ -76,7 +78,7 @@
             min: 0
             max: root.values(False)[0]
             value: root.values(False)[1]
-            size_hint: .23, .08
+            size_hint: .28, .08
             pos_hint: {"x": 0.16, "y": 0.84}
 
         Label:
@@ -88,13 +90,12 @@
             id: LogOut
             size_hint: .16, .16
             pos_hint: {"x": 0, "top": 1}
-            on_release: root.lock()#root.clearUpTempFiles();app.root.current = "Login"
+            on_release: root.lock()
             Image:
                 source: root.getPathForButton("padlock.png")
-                x: self.parent.x + self.size[0]
-                y: self.parent.y + self.parent.y*(self.parent.size_hint[1]/4)
-                size: 50, 66.765 #1 : 1.3353 ratio
-                allow_stretch: False
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
+                size: 60, self.size[1]
 
         Button:
             id: addFile
@@ -103,8 +104,8 @@
             on_release: root.openAddFilePop()
             Image:
                 source: root.getPathForButton("addFile.png")
-                x: self.parent.x + self.parent.size[0]/5
-                y: self.parent.y - self.parent.y*(self.parent.size_hint[1]/4)
+                center_x: self.parent.center_x+2 # Drop shadow
+                center_y: self.parent.center_y-5
                 size: 100, 133.54
                 allow_stretch: False
 
@@ -115,8 +116,8 @@
             on_release: root.goBackFolder()
             Image:
                 source: root.getPathForButton("backUpFolder.png")
-                x: self.parent.x + (self.parent.width/5)
-                y: self.parent.y - (self.parent.height/6)
+                center_x: self.parent.center_x+2 # Drop shadow
+                center_y: self.parent.center_y
                 size: 100, 133.54
                 allow_stretch: False
 
