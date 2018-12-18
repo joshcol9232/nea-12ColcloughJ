@@ -422,12 +422,14 @@ class MainScreen(Screen):
 
         infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
 
-        if fileObj.isDir and fileObj.rawSize > 0:
-            decBtn = Button(text="Decrypt Folder", halign="left", valign="middle")
-            decBtn.bind(on_release=partial(self.decryptDir, fileObj))
+        decBtnText = "Decrypt File"
+        if fileObj.isDir:
+            decBtnText = "Decrypt Folder"
+
+        if fileObj.rawSize > 0:
+            decBtn = Button(text=decBtnText, halign="left", valign="middle")
+            decBtn.bind(on_release=partial(self.decryptFileToLoc, fileObj))
             infoGrid.add_widget(decBtn)
-        else:
-            infoGrid.add_widget(self.infoLabel())
 
         self.infoPopup.open()
 
@@ -732,8 +734,7 @@ class MainScreen(Screen):
         if os.path.exists(fileLoc) and op:         #Checks file exits already in temp files, so it doesn't have to decrypt again.
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
-            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name)
-
+            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
 
     def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
         if os.path.exists(dir):
@@ -759,9 +760,8 @@ class MainScreen(Screen):
         self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-    def decryptDir(self, fileObj, button):
-        selectPop = mainSPops.decryptDirPop(self, fileObj)
-        selectPop.open()
+    def decryptFileToLoc(self, fileObj, button):
+        mainSPops.decryptFileToLocPop(self, fileObj).open()
 
     def encDecDirCore(self, encType, d, targetLoc): #Encrypts whole directory.
         fs = os.listdir(d)

@@ -206,19 +206,33 @@ class btTransferPop(encPopup):
         self.dismiss()
 
 
-class decryptDirPop(Popup): # Input box for location of where directory is to be saved.
+class decryptFileToLocPop(Popup): # Input box for location of where directory is to be saved.
 
     def __init__(self, mainScreen, fileObj, **kwargs):
-        super(Popup, self).__init__(**kwargs)
         self.outerScreen = mainScreen
         self.fileObj = fileObj
+        super(Popup, self).__init__(**kwargs)
 
     def checkCanDec(self, inp):
         if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
-            if not os.path.exists(inp):
-                os.makedirs(inp)
-            if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-            self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+            if self.fileObj.isDir:
+                if not os.path.exists(inp):
+                    os.makedirs(inp)
+                if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
+                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+            else:
+                if inp[len(inp)-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
+                    if not os.path.exists(inp):
+                        os.makedirs(inp)
+                    inp += self.fileObj.name
+                self.outerScreen.encDecTerminal("n", self.fileObj.hexPath, inp, op=False)
+
+    def getTitle(self):
+        if self.fileObj.isDir:
+            return "Decrypt Folder"
+        else:
+            return "Decrypt File"
+
 
 class addNewFolderPop(Popup):
 
