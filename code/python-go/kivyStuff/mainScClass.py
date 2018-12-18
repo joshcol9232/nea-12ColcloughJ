@@ -625,7 +625,7 @@ class MainScreen(Screen):
         return bool(extension == "png" or extension == "jpg")
 
     def getThumbnail(self, fileObj, asImageObj=True):
-        if (self.recycleFolder not in self.currentDir) and (self.thumbsName not in self.currentDir):    # Checks that there is a thumbnail folder in this directory.
+        if self.thumbsName not in self.currentDir:    # Checks that there is a thumbnail folder in this directory.
             if self.thumbsName not in os.listdir(self.currentDir): # Only check this when not in the recycling folder
                 os.makedirs(self.currentDir+self.thumbsName)
                 print("Made thumbnail directory since it wasn't there")

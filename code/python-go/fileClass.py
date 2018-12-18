@@ -27,6 +27,8 @@ class File:
         if extension == None:
             extension = self.path.split(".")
             self.extension = extension[len(extension)-1].lower()
+        else:
+            extension = extension.lower()
 
         if self.isDir:
             self.hexPath += self.fileSep

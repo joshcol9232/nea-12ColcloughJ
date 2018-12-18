@@ -33,21 +33,23 @@ class encPopup(Popup): #For single files
 
         self.grid = GridLayout(cols=1)
         self.subGrid = GridLayout(cols=4)
-        self.currFile = Label(text="")
+        self.currFile = Label(text="", halign="center", valign="center")
+        self.currFile.bind(size=self.currFile.setter("text_size"))  # Wrap text inside label
         self.per = Label(text="")
         self.spd = Label(text="")
         self.tim = Label(text="")
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
         self.wholePb = ProgressBar(value=0, max=self._getTotalSize(), size_hint=(.9, .2))
-        self.grid.add_widget(Label(text=labText))
+        self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
         self.subGrid.add_widget(self.spd)
         self.subGrid.add_widget(self.tim)
-        self.subGrid.add_widget(self.outOf)
         self.grid.add_widget(self.subGrid)
-        self.grid.add_widget(self.pb)
+        if len(self.fileList) > 1:   # Don't bother showing 2 progress bars if the user is only doing 1 file.
+            self.grid.add_widget(self.pb)
+            self.subGrid.add_widget(self.outOf)
         self.grid.add_widget(self.wholePb)
         self.content = self.grid
 

@@ -1508,6 +1508,7 @@ assets/
 │   ├── backUpFolder.png
 │   ├── folder.png
 │   ├── home.png
+│   ├── info.png
 │   ├── padlock.png
 │   ├── recycling.png
 │   ├── refresh-icon.png
@@ -1518,10 +1519,11 @@ assets/
     ├── add file.psd
     ├── back up folder.psd
     ├── folder.psd
+    ├── info.svg
     ├── padlock.psd
     └── remove file.psd
 
-2 directories, 15 files
+2 directories, 17 files
 ```
 
 Some images are taken from the internet, so they do not have `.psd` files (photoshop files).
@@ -1738,7 +1740,58 @@ Here is an image of the Main Screen:
 
 ![](TechSolution/GUI/mainScreen.png)
 
-The layout has changed slightly from the design, as I moved the recycling bin to the bottom right because it felt a bit empty, but then that bar felt too empty so I moved
+I tried to keep it as similar as possible to the design in the **Design** section, however I had to add a button to add a new folder, as I realised that was a necessity.
+Also, instead of writing "Information" on the information button, I made an image to be put over the button instead, as it looks a bit better.
+All the buttons in the GUI are darker than in the design, but that is fine.
+
+It is easy to distinguish between files and folders, and doesn't feel cluttered. The progress bar showing the amount of space used on the current storage device, in my opinion looks better than in the design. It is easy to sort by name (click the button above all the files) or to sort by size (click the button above all of the sizes).
+
+When you click a folder, you change directory to that folder, and the contents of that folder are displayed on the screen. If it is a file, it is decrypted to `<systems_temp_folder>/FileMate/<fileName>`, where it is then opened with the system's default application and can be renamed and edited.
+
+#### The Information Tab
+
+The information tab shows you information about the file:
+- The location the file/folder is relative to the Vault.
+- The size of the file/folder.
+- A thumbnail of the image, if it is a file not a folder, and if the file is an image.
+
+You also have a few options within the information tab to chose from:
+- Delete the file/folder.
+- Decrypt the file/folder to a specified location.
+
+Here is a screenshot of the information popup:
+
+![](TechSolution/GUI/zuccInfo.png)
+
+When you click decrypt file, you are greeted with another popup asking where you would like the file to go:
+
+
+![](TechSolution/GUI/zuccDecrypt.png)
+
+Once you input a correct directory name, it decrypts the file to that directory. If the path ends with the file separator (e.g "/"), then it will be decrypted to that folder with it's original name. If the path does not, then it is saved to that exact location, with that new name. For example, if I wanted to decrypt a file called `Zuckerburg.png`, then I put in `/home/josh/zucc.png`, then it would decrypt the file and would be saved as `zucc.png`. If I instead put in `/home/josh/`, then it would be saved to `/home/josh/Zuckerburg.png`.
+
+
+When you delete the file, the file moves to the recycling folder located in `Vault/.$recycling` (relative to the vault). To recover the file, you click the recycling bin button, and you get put in the recycling folder (with a popup warning the user they are in the recycling bin). Now when you click items in the recycling folder, instead of opening them and decrypting it, it moves the file back into the vault. You can still view information about the file like usuall, and search for items. To leave the recycling bin, you click the folder up button on the top right, or the home key below the search bar.
+
+### Encryption and Decryption Status
+
+When decrypting a file, a popup opens showing you the percentage of the way through you are in the file and the current speed of decryption.
+When decrypting a folder, the same information is shown, however there are two progress bars. One for the current file being decrypted, and one for the total progress of decrypting the folder. Also, you are shown how many files in the folder have been encrypted out of the total.
+This is the exact same for encryption too by the way.
+
+Here is an image of a folder being encrypted (12GB):
+
+![](TechSolution/GUI/folderProgress.png)
+
+Here is an image of a file being encrypted (244 MB):
+
+![](TechSolution/GUI/gentooProgress.png)
+
+As I have said before, when a file is decrypted, it is decrypted to `<systems_temp_folder>/FileMate/<fileName>`, and is then opened using the system's default program for that file type. A checksum is calculated before the file is opened, and after the file is closed using BLAKE2b. The checksum is then compared, and if the checksum is different, then the file is encrypted back into the vault.
+
+
+I will go into more detail on how it gets those statistics later in the **Technical Solution**.
+
 
 
 
