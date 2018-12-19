@@ -82,7 +82,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
 ---
 
-### Objectives:
+## Objectives:
 
 1. GUI should:
 
@@ -1705,7 +1705,7 @@ def runConfigOperations():
 
 I will go through the visuals first, and then move onto the code.
 
-### Login Screen:
+### Login Screen
 
 Here is an image of the Login Screen:
 
@@ -1734,7 +1734,7 @@ They can then click away from the popup to dismiss it, and do what they want fro
 Once the key has been entered correctly, the screen changes to the Main Screen.
 
 
-### Main Screen:
+### Main Screen
 
 Here is an image of the Main Screen:
 
@@ -1747,6 +1747,8 @@ All the buttons in the GUI are darker than in the design, but that is fine.
 It is easy to distinguish between files and folders, and doesn't feel cluttered. The progress bar showing the amount of space used on the current storage device, in my opinion looks better than in the design. It is easy to sort by name (click the button above all the files) or to sort by size (click the button above all of the sizes).
 
 When you click a folder, you change directory to that folder, and the contents of that folder are displayed on the screen. If it is a file, it is decrypted to `<systems_temp_folder>/FileMate/<fileName>`, where it is then opened with the system's default application and can be renamed and edited.
+
+When you click to add a new folder, you get the exact same popup as in the **Information Tab** when you decrypt an item to a location. 
 
 #### The Information Tab
 
@@ -1790,12 +1792,30 @@ Here is an image of a file being encrypted (244 MB):
 As I have said before, when a file is decrypted, it is decrypted to `<systems_temp_folder>/FileMate/<fileName>`, and is then opened using the system's default program for that file type. A checksum is calculated before the file is opened, and after the file is closed using BLAKE2b. The checksum is then compared, and if the checksum is different, then the file is encrypted back into the vault.
 
 
-I will go into more detail on how it gets those statistics later in the **Technical Solution**.
+### Setings Screen
+
+Here is an image of the settings screen:
+
+![](TechSolution/GUI/settingsScreen.png)
+
+The current Vault location is displayed at the top of the screen, followed by an input to change the Vault location, followed by a pair of switches to change whever the search is recursive, and which login screen to use as default. When done, the user can click "Exit" to exit to the main screen again.
 
 
+### The Search
 
+The search does a linear search through the unsorted directory, checking if the search term is in the file name, and at what position the item appears in the file name. This data is appended in tuples like this: `(pos, fileName)`. These tuples are then sorted by their `pos` value using a quick sort, and if the search term matched a file in the list exactly, letter for letter, then it will be added to the start of the list.
 
-## AES:
+The list of results is then displayed:
+
+![](TechSolution/GUI/searchResults.png)
+
+If no results are found, a popup opens saying "No results found for: search item".
+
+## Algorithms
+
+In this section I will explain each algorithm if the comments in the code are not sufficient, and point out any of the bits that have changed or are different in the **Design** section.
+
+### AES:
 
 Here is the code for AES (`code/python-go/aes.go`):
 
@@ -2007,14 +2027,14 @@ func expandKey(inputKey []byte) ([176]byte) {
   return expandedKeys
 }
 
-func addRoundKey(state []byte, roundKey []byte) ([]byte) {       // Add round key is also it's own inverse
+func addRoundKey(state []byte, roundKey []byte) ([]byte) {   // Add round key is also it's own inverse
   for i := 0; i < 16; i++ {
     state[i] ^= roundKey[i] // XOR each byte of the key with each byte of the state.
   }
   return state
 }
 
-func subBytes(state []byte) []byte {
+func subBytes(state []byte) []byte {    // Substitute each byte with it's value in the sBox.
   for i := 0; i < 16; i++ {
     state[i] = sBox[state[i]]
   }
@@ -2053,7 +2073,7 @@ func invShiftRows(state []byte) ([]byte) {
   //  15  3  7 11         3  7 11 15   Shifted right by 3
 }
 
-func mixColumns(state []byte) ([]byte) {
+func mixColumns(state []byte) ([]byte) {  // Do mix columns using lookup tables.
   return []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
                 state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
                 state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
@@ -2349,15 +2369,18 @@ func main() {
 }
 ```
 
+MixColumns is the same as in **Design**, where I explain how lookup tables can be used towards the end of the **Mix Columns** section.
+`checkKey` decrypts the first block of a file and compares it to the key. If the decrypted block is the same as the key, then the key is valid. This is because when I encrypt files, I append the encrypted key to the beggining of the new file, so that it can be checked when decrypting the file.
+
 The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, where `<field1>`is the first argument of the function you want to execute, and `<field2>` is the second argument. If there is no second argument, then this can just be set to `0`. The key is input like this: `1 2 3 4 5 6 7 8 9 10 11 12 13 14 15` (it is hashed first though), where it is then split by the space in-between each number, and each number is converted to a byte, where it can be used in the functions that need it.
 
 `aes.go` is compiled to `AES` for Linux/MacOS, and `AESWin.exe` for Windows.
 
 
 
-## AES for file names:
+### AES for file names:
 
-AES for file names is written in Python, as it needs to be accessed a lot, and does work on small volumes of data. Here is the code (`code/python-go/aesFName.py`):
+AES for file names is written in Python, as it needs to be accessed a lot, and does work on small volumes of data. For more information on the actuall encryption part, look at `aes.go` in the section above for more commented code. Here is the code (`code/python-go/aesFName.py`):
 
 ```python
 # For more information on each function, look at aes.go since most of this is the same.
@@ -2604,7 +2627,7 @@ def mixColumns(state):
         mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]]
 
 def invMixColumns(state):
-    return [mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],  #Note how the operation shifts right one each time
+    return [mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],
             mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
             mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
             mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
@@ -2730,16 +2753,13 @@ def convHexDigestToBytes(hexIn):        # Used when decrypting the file name
 
     return bytearray(hexList)
 
-
 ```
 
 When a file name in encrypted, the original name is encoded into bytes, it is encrypted, then each byte is converted to it's hex representation. The `0x` is removed, and if the hex doesn't have 2 digits, then a `0` is added at the front, as Python's `hex` function returns `0x9` if the number was `9`, for example. This means that when you go to change this hex string back into numbers, you can't tell the numbers apart, so you have to make each 2 digits in length.
 
 
 
-
-
-## SHA256:
+### SHA256:
 
 Here is the code for SHA256 (`code/python-go/SHA.py`, `code/mobile/SHA.py`):
 
@@ -2935,7 +2955,7 @@ The file is called SHA.py, and is imported by LoginScreen (default login without
 
 
 
-## BLAKE2b:
+### BLAKE2b:
 
 Here is the code for BLAKE2b (`code/python-go/blake.go`):
 
@@ -3132,9 +3152,11 @@ Address1: $01100010$, Address2: $0000001$
 
 It is called little-endian because the smaller (little) number is stored in the first address (the end). Big-endian is just the opposite way around.
 
+The `get64` function turns 8 64-bit words into 1 64-bit word, or 8 bytes.
 
 
-## The Sorts:
+
+### The Sorts:
 
 Here is the code for the sorts (`code/python-go/sortsCythonSource/sortsCy.pyx`):
 
@@ -3248,7 +3270,7 @@ When you build the Cython program, you get a shared object file (.so), and a C f
 
 
 
-## The File class:
+### The File class:
 
 Here is the code for the File class (`code/python-go/fileClass.py`):
 

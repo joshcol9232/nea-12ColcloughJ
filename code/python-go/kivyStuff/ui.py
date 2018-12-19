@@ -2,9 +2,7 @@ from tempfile import gettempdir
 import shutil
 
 from kivy.config import Config
-Config.set("graphics", "resizable", False)
-Config.set("graphics", "width", "1000")
-Config.set("graphics", "height", "600")
+Config.set("graphics", "resizable", True)
 Config.set("input", "mouse", "mouse,disable_multitouch")
 Config.write()
 
