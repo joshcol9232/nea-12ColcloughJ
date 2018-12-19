@@ -269,8 +269,8 @@ def padKey(key):
     return key
 
 def checkForPadding(inp):
-    while inp[len(inp)-1] == 0: # 0 is not a letter and is not punctuation.
-        inp = inp[:len(inp)-2]
+    while inp[-1] == 0: # 0 is not a letter and is not punctuation.
+        inp = inp[:-2]
 
     return inp
 

@@ -105,8 +105,7 @@ class encPopup(Popup): #For single files
 
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
-                fileName = self.fileList[i].split(self.outerScreen.fileSep)
-                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, fileName[len(fileName)-1])
+                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, self.fileList[i].split(self.outerScreen.fileSep)[-1])
             else:
                 self.currFile.text = self.fileList[i]
 
@@ -220,10 +219,10 @@ class decryptFileToLocPop(Popup): # Input box for location of where directory is
             if self.fileObj.isDir:
                 if not os.path.exists(inp):
                     os.makedirs(inp)
-                if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
+                if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
                 self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
             else:
-                if inp[len(inp)-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
+                if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
                     if not os.path.exists(inp):
                         os.makedirs(inp)
                     inp += self.fileObj.name

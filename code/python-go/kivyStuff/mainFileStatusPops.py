@@ -182,6 +182,6 @@ class decryptDirPop(Popup):
         if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
             if not os.path.exists(inp):
                 os.makedirs(inp)
-            if inp[len(inp)-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
+            if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
             print(inp, "inp")
             self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)

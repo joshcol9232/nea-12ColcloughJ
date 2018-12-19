@@ -75,7 +75,7 @@ def getStartDir(fileSep=None):
     startDir = osPath.dirname(osPath.realpath(__file__))+fileSep
     tempDir = startDir.split(fileSep)
     for i in range(2):
-        del tempDir[len(tempDir)-2]
+        del tempDir[-2]
     return startDir, fileSep.join(tempDir)+fileSep+"assets"+fileSep+"exports"+fileSep
 
 
@@ -112,7 +112,7 @@ def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault
                 editConfTerm("vaultDir", inp, config)
             else:
                 makedirs(inp)
-                if inp[len(inp)-1] != fileSep:
+                if inp[-1] != fileSep:
                     inp += fileSep
                 editConfTerm("vaultDir", inp, config)
 

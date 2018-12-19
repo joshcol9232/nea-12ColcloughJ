@@ -17,6 +17,8 @@ try:
     from bluetooth import *
 except:
     pass
+else:
+    from bluetooth import *
 
 class LoginScreen(Screen):
 

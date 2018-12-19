@@ -124,6 +124,7 @@ class MainScreen(Screen):
                               service_classes = [ uuid, SERIAL_PORT_CLASS ],
                               profiles = [ SERIAL_PORT_PROFILE ],)
         except BluetoothError as e:
+            print(e)
             Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login."), size_hint=(.4, .4), auto_dismiss=True).open()
             return
 
@@ -179,8 +180,8 @@ class MainScreen(Screen):
 
                     elif buff[:12] == fileSelectCommand:
                         commandParams = buff[12:]
-                        if commandParams[len(commandParams)-11:] == endHeader:
-                            fileWantedList = commandParams[:len(commandParams)-11]
+                        if commandParams[-11:] == endHeader:
+                            fileWantedList = commandParams[:-11]
                             fileWanted = ""
                             for letter in fileWantedList:
                                 fileWanted += chr(letter)
@@ -524,7 +525,7 @@ class MainScreen(Screen):
 
     def getPathBack(self, origPath):  #Gets the path above the current folder.
         tempDir = origPath.split(self.fileSep)
-        del tempDir[len(tempDir)-2]
+        del tempDir[-2]
         tempDir = self.fileSep.join(tempDir)
         return tempDir
 
@@ -618,7 +619,7 @@ class MainScreen(Screen):
 
     def getFileExtension(self, fileName):
         extension = fileName.split(".")
-        return extension[len(extension)-1].lower()
+        return extension[-1].lower()
 
     def isImage(self, fileName):  # Used to get a file extension from a given file name.
         extension = self.getFileExtension(fileName).lower()
@@ -640,11 +641,11 @@ class MainScreen(Screen):
         fileName = ""
         if type == "y":     #The file name also needs to be encrypted
             tempDir = d.split(self.fileSep)
-            fileName = tempDir[len(tempDir)-1]
+            fileName = tempDir[-1]
             targetLoc = targetLoc.split(self.fileSep)
             #replace file name with new hex
-            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, fileName)
-            thumbTarget = self.fileSep.join(targetLoc[:len(targetLoc)-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[len(targetLoc)-1]
+            targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
+            thumbTarget = self.fileSep.join(targetLoc[:len(targetLoc)-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
 
             popText = "Encrypting..."
             targetLoc = self.fileSep.join(targetLoc)
@@ -659,10 +660,10 @@ class MainScreen(Screen):
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)
-            fileName = tempDir[len(tempDir)-1]
+            fileName = tempDir[-1]
             if newName == None:
                 targetLoc = targetLoc.split(self.fileSep)
-                newName = targetLoc[len(targetLoc)-1] #Stops you from doing it twice in decrypt()
+                newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
                 targetLoc = self.fileSep.join(targetLoc)
                 fileName = newName
             popText = "Decrypting..."
@@ -686,8 +687,8 @@ class MainScreen(Screen):
 
     def openFile(self, location, startLoc):
         locationFolder = location.split(self.fileSep)
-        nameOfOriginal = locationFolder[len(locationFolder)-1]
-        locationFolder = self.fileSep.join(locationFolder[:len(locationFolder)-1])
+        nameOfOriginal = locationFolder[-1]
+        locationFolder = self.fileSep.join(locationFolder[:-1])
         startList = os.listdir(locationFolder)
         if self.fileSep == "\\":
             location = location.split("\\")
@@ -767,9 +768,9 @@ class MainScreen(Screen):
         fs = os.listdir(d)
         targetLoc = targetLoc.split(self.fileSep)
         if encType == "y": # Decrypt folder names
-            targetLoc[len(targetLoc)-1] = aesFName.encryptFileName(self.key, targetLoc[len(targetLoc)-1])
+            targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
         else:
-            targetLoc[len(targetLoc)-1] = aesFName.decryptFileName(self.key, targetLoc[len(targetLoc)-1])
+            targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
         targetLoc = self.fileSep.join(targetLoc)
         for item in fs:
             if os.path.isdir(d+item):
@@ -792,13 +793,13 @@ class MainScreen(Screen):
     def checkCanEncryptCore(self, inp):
         if self.checkDirExists(inp):
             if os.path.isdir(inp):
-                if inp[len(inp)-1] != self.fileSep:
+                if inp[-1] != self.fileSep:
                     inp += self.fileSep
                 inpSplit = inp.split(self.fileSep)
-                self.encDecDir("y", inp, self.currentDir+inpSplit[len(inpSplit)-2])
+                self.encDecDir("y", inp, self.currentDir+inpSplit[-2])
             else:
                 inpSplit = inp.split(self.fileSep)
-                self.encDecTerminal("y", inp, self.currentDir+inpSplit[len(inpSplit)-1])
+                self.encDecTerminal("y", inp, self.currentDir+inpSplit[-1])
 
 
     def checkCanEncrypt(self, inp):
