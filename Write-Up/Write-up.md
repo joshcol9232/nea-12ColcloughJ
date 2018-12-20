@@ -4021,7 +4021,8 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   # Set so that file list can be sent
+                            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling") # Set so that file list can be sent
+                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -4106,10 +4107,11 @@ class MainScreen(Screen):
             listOfFolders = []
             listOfFiles = []
             for item in fs:
-                if os.path.isdir(path+item):
-                    listOfFolders.append(aesFName.decryptFileName(self.key, item))
-                else:
-                    listOfFiles.append(aesFName.decryptFileName(self.key, item))
+                if (item != self.thumbsName) and (item != self.recycleName):
+                    if os.path.isdir(path+item):
+                        listOfFolders.append(aesFName.decryptFileName(self.key, item))
+                    else:
+                        listOfFiles.append(aesFName.decryptFileName(self.key, item))
 
             self.lastPathSent = path
 
@@ -4192,7 +4194,7 @@ class MainScreen(Screen):
                 if item.isDir:   # Colour folders darker than files
                     back = (0.3, 0.3, 0.3, 1)   # Works as a tint rather than a colour.
 
-                btn = mainBtns.listButton(item, text=("    "+item.name), background_color=back)
+                btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=back)
                 info = mainBtns.infoButton(self, item, background_color=back)
 
                 btn.bind(size=btn.setter("text_size"))  # Set the text to wrap within the button
@@ -4423,9 +4425,9 @@ class MainScreen(Screen):
 
 
 ####Progress Bar Information####
-    def values(self, st):   # Information for space left on device.
+    def values(self, st):   #Information for space left on device.
         values = disk_usage(self.path) # Imported from shutil
-        if st:   # Get string for text above status
+        if st:
             return self.getGoodUnit(int(values[1]))+" / " + self.getGoodUnit(int(values[0])) + " used."
         else:
             return [values[0], values[1]]
@@ -5671,6 +5673,9 @@ ScreenManagement:
 
 The way the app is built is slightly different than my PC app, as the mobile app is more built around the main `kv` file. The ScreenManager (`ScreenManagement`) is set as the root widget of the `kv` file, and then the app is built from the `kv` file.
 
+
+### Pad Screen
+
 Here is the code for the `PadScreen`, which also contains the 'screen' (actually a popup) that lets you select a device:
 
 ```python
@@ -5688,6 +5693,7 @@ from jnius import autoclass
 from btShared import recieveFileList
 import SHA
 
+# Import java Bluetooth classes.
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
 BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
 BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
@@ -5700,8 +5706,8 @@ def createSocketStream(self, devName):
     for dev in pairedDevs:
         if dev.getName() == devName:
             socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
-            rStream = socket.getInputStream()   #Recieving data
-            sStream = socket.getOutputStream()  #Sending data
+            rStream = socket.getInputStream()   # Stream for recieving data
+            sStream = socket.getOutputStream()  #Stream for sending data
             self.devName = devName
             found = True
             break   #Stop when device found
@@ -5731,18 +5737,18 @@ class PadScreen(Screen, FloatLayout):
 
         def setupAll(self, instance=None):
             paired = self.getDeviceList()
-            if paired:
+            if paired:   # If there are paired devices.
                 self.setupDevButtons(paired)
             else:
                 grid = GridLayout(cols=1)
                 info = Label(text="No paired devices found.\nPlease make sure your Bluetooth\nis on, you are in range of\nyour device, and you are paired\nto your device.")
                 btn = Button(text="Retry", size_hint_y=.2)
                 btn.bind(on_release=self.setupAll)
-                self.content = grid
+                self.content = grid   # Change content of popup to the grid
 
-        def setupDevButtons(self, listOfDevs):
+        def setupDevButtons(self, listOfDevs):    # Similar to `createButtons` in `MainScreen` on PC app
             self.layout = GridLayout(cols=1, spacing=20, size_hint_y=None)
-            self.layout.bind(minimum_height=self.layout.setter("height"))
+            self.layout.bind(minimum_height=self.layout.setter("height"))   # Set due to ScrollView
 
             for devName in listOfDevs:
                 btn = self.DeviceButton(self, text=devName, size_hint_y=None, height=Window.height/10, halign="left", valign="middle")
@@ -5756,17 +5762,17 @@ class PadScreen(Screen, FloatLayout):
             result = []
             pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
             for dev in pairedDevs:
-                result.append(dev.getName())
+                result.append(dev.getName())  # Get the names of each device.
 
             return result
 
 
-        def changeToDeviceList(self, instance=None):
+        def changeToDeviceList(self, instance=None): # has to be a function as it is bound to a button
             self.content = self.view
 
         def setupBT(self, devName):
             try:
-                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)
+                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)   # Create the two streams for communicating with the PC app
             except Exception, e:
                 print u"Can't connect to device."
                 self.connected = False
@@ -5793,15 +5799,15 @@ class PadScreen(Screen, FloatLayout):
         Clock.schedule_once(self.deviceSelection.open, 0.5)
 
     def addNum(self, num):
-        if len(self.nums) < 16:
+        if len(self.nums) < 16:    # Maximum length of key is 16
             self.nums.append(int(num))
             self.numsString += "*"
             self.updateDisplay()
 
-    def updateDisplay(self):
-        self.ids.display.text = self.numsString
+    def updateDisplay(self):       # Updates the Label at the top of PadScreen
+        self.ids.display.text = self.numsString   # self.numsString just contains asterisks "*"
 
-    def backSpace(self):
+    def backSpace(self):      # For deleting the input
         if len(self.nums) != 0:
             del self.nums[-1]
             self.numsString = self.numsString[:len(self.nums)]
@@ -5810,8 +5816,8 @@ class PadScreen(Screen, FloatLayout):
 
     def confirm(self):
         pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
-        if self.rStream != None and self.sStream != None:
-            self.sStream.write("{}".format("#"))
+        if self.rStream != None and self.sStream != None:  # if the connection is still up
+            self.sStream.write("{}".format("#"))   # Key sent as #<key>~
             self.nums = SHA.getSHA128of16(self.nums)
             for num in self.nums:
                 self.sStream.write("{},".format(num))
@@ -5821,35 +5827,32 @@ class PadScreen(Screen, FloatLayout):
             pop.open()
 
             data = self.rStream.read()
-            while True:
-                print data, u"data"
-                if len(str(data)) != 0:
-                    print data, u"break"
-                    break
+            while len(str(data)) == 0:
                 try:
                     data = self.rStream.read()
                 except Exception as e:
                     print e, u"Couldn't recieve data."
 
+            print u"Out of while loop"
             print data, u"Response"
-            if data == 49:
+            if data == 49:   # Response sent by the PC if the key is valid.
                 pop.dismiss()
                 print u"Valid"
 
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 Clock.schedule_once(corPop.open, -1)
 
-                #Time to recieve file names of current directory
+                # Time to recieve file names of current directory
                 listOfFiles = recieveFileList(self.rStream)
 
-                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream
+                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream # Hand over the streams to the other screens
 
                 self.manager.get_screen("Select").sStream, self.manager.get_screen("Select").rStream = self.sStream, self.rStream
                 self.manager.get_screen("Select").fileList = listOfFiles
 
                 self.manager.current = "Main"
 
-            elif data == 48:
+            elif data == 48: # Response sent by the PC if code is invalid.
                 print u"Invalid."
                 pop.dismiss()
                 invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
@@ -5861,8 +5864,417 @@ class PadScreen(Screen, FloatLayout):
                 print type(data), "data was not either 49 or 48..."
         else:
             print u"Can't connect to device."
-            noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
-            noConnect.open()
+            Popup(self, title="Can't connect.",
+                  content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate program."), 
+                  title_align="center",
+                  size_hint=(.6, .6),
+                  pos_hint={"x_center": .5, "y_center": .5},
+                  auto_dismiss=True).open()
+
             self.deviceSelection.open()
 ```
 
+The class `DeviceSelectionPopup` is inside of `PadScreen`, because it is only ever needed by `PadScreen`, and shoudln't exist unless `PadScreen` exists. The same thing applies with `DeviceButton`.
+
+
+As soon as the screen opens, the `DeviceSelectionPopup` is opened, as it is needed at start up.
+
+Most of this is just GUI.
+
+
+### Main Screen
+
+This is the home screen of the app, although it is extremely basic (literally a Label and a Button).
+
+Here is the code (`code/mobile/mainScreen.py`):
+
+```python
+from kivy.uix.label import Label
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import Screen
+from time import sleep
+
+from btShared import recieveFile
+
+class MainScreen(Screen, FloatLayout):
+
+    def __init__(self, **kwargs):
+        super(MainScreen, self).__init__(**kwargs)
+        self.sStream = None
+        self.rStream = None
+```
+
+Modules used in the `.kv` file, that are not from Kivy, have to be imported here.
+
+
+### File Seletion Screen & Shared Bluetooth functions
+
+This screen is where the can browse the folders in the Vault, or download files from it instead.
+
+I have used the protocol in the **Design** section to recieve both the list of files and to download files. 
+
+Here is the code for recieving a list of files, and for recieving a file (`code/mobile/btShared.py`):
+
+```python
+from plyer import storagepath
+from os import remove
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+
+#Shared methods
+def recieveFileList(rStream, buffAlreadyKnown=[]):
+    buff = buffAlreadyKnown    # If called from other places, some of they data may already 
+    data = ""
+
+    endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
+
+    while buff[-11:] != endList:        # If last 11 elements of the buffer is ~!!ENDLIST!
+        try:
+            data = rStream.read()
+        except Exception as e:
+            print e, "Failed while getting file list."
+            break
+        else:
+            buff.append(data)
+
+    buff = buff[10:-11] # Get the actuall list of files from the buffer
+
+    listOfFiles = "".join([chr(i) for i in buff]) # Join input into a string
+    listOfFiles = listOfFiles.split("--")[1:]  # First element will be "" due to first part of string being "--""
+
+    print "List of files given:", listOfFiles
+    return listOfFiles
+
+def recieveFile(rStream, buffAlreadyKnown=[]):
+    print("Recieve file has been called.")
+    # File is sent with    !NAME!<name here>~~!~<data>~!!ENDF!   like a data sandwich.
+    # To do: make dictionary with each nameInstruction, startHeader etc, so they can be
+    # easily identified.
+    downloadsDir = storagepath.get_downloads_dir()
+
+    buff = buffAlreadyKnown
+    data = ""
+    nameInstruction = [33, 78, 65, 77, 69, 33]                  # !NAME!
+    endFile         = [126, 33, 69, 78, 68, 70, 73, 76, 69, 33] # ~!ENDFILE!
+    separator       = [126, 126, 33, 126, 126]                  # ~~!~~
+    nameFound = False
+    name = []
+    fo, fw = None, None
+    fileName = ""
+    bufferSize = 1024
+    buffCount = 0
+
+    while len(str(data)) > -1:   # While connection is open
+        try:
+            data = rStream.read()   # Read from the recieving stream
+        except Exception as e:
+            print e, u"Failed recieving file."
+            if buffCount > 0:  # Clean up the file if it has been edited
+                fo.close()
+                remove(downloadsDir+"/"+fileName)  # Remove incomplete file. (from os module)
+            return False
+        else:
+            buff.append(data)
+
+        if not nameFound:
+            name = []
+            for i in range(len(buff)-6):  # -6 because that is the length of nameInstruction (scan is 6 wide)
+                if buff[i:i+6] == nameInstruction:     # Are these 6 items the same as nameInstruction
+                    z = i+6  # Move past nameInstruction
+                    while (buff[z:z+5] != separator) and (z+5 < len(buff)):   # Scans current buffer for the name every time a new element is added to buffer, while the name has not been found.
+                        name.append(buff[z])
+                        z += 1
+
+                    if buff[z:z+5] == separator:  # Once you get to the separator, then you know the name has been recieved.
+                        nameFound = True          # Name has been found
+                        buff[i:z+5] = [] # Clear name + separator
+
+                        for letter in name:
+                            fileName += chr(letter)
+
+                        fo = open(downloadsDir+"/"+fileName, "wb") # Open for writing
+
+
+        elif ((len(buff) > bufferSize+10) or (buff[-10:] == endFile)):   # If end of file header found
+            if buff[-10:] == endFile:
+                buff[-10:] = []
+                print u"End found"
+                fo.write(bytearray(buff))
+                fo.close()
+
+                pop = Popup(title="Success!", content=Label(text="File recieved successfuly.\nYou can find your file in\nyour 'Download' folder."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.7, .4))
+                pop.open()
+                return True
+
+            else:
+                fo.write(bytearray(buff[:bufferSize]))
+                buff[:bufferSize] = []
+                buffCount += bufferSize
+```
+
+`recieveFileList` is called when `!FILELIST!` is recieved while changing directory, or when first entering the screen. It waits for `~!ENDLIST!`, and then joins the contents of the data recieved (that is not the start header) into a string, then splits the string by "--" to get the list of files. The first element of this list will be [""], because the file list looks like this: `--item1--item2`.
+
+`recieveFile` is called when `!NAME!` is recieved while waiting for a response from `!FILESELECT!` command (sent when a file/folder is selected while browsing the files), and the response will be `!FILELIST!` if the item was a folder (containing list of items in that folder), or `!NAME!` followed by the file's data (if the item was a file).
+
+
+Moving on to the file selection screen (`FileSelectionScreen` at `code/mobile/fileSelectionScreen.py`).
+
+Here is the code:
+
+```python
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
+from kivy.core.window import Window
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.screenmanager import Screen
+
+from btShared import recieveFileList, recieveFile
+
+class FileSelectionScreen(Screen, FloatLayout):
+
+    class listButton(Button):
+
+        def __init__(self, mainScreen, fileName, **kwargs):
+            super(Button, self).__init__(**kwargs)
+            self.outerScreen = mainScreen
+            self.fileName = fileName
+
+
+    def __init__(self, **kwargs):
+        super(FileSelectionScreen, self).__init__(**kwargs)
+        self.sStream = None
+        self.rStream = None
+        self.fileList = []
+
+        # List of possible responses
+        self.endOfTreeResponse = [33, 69, 78, 68, 79, 70, 84, 82, 69, 69, 33]  # !ENDOFTREE!
+        self.startList         = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33]      # !FILELIST!
+        self.nameInstruction   = [33, 78, 65, 77, 69, 33]                      # !NAME!  --Start of a file
+        self.fileNotFound      = [33, 78, 79, 84, 70, 79, 85, 78, 68, 33]      # !NOTFOUND!  --Response to file selection
+
+
+    def on_enter(self):
+        self.createButtons(self.fileList)
+
+    def removeButtons(self):     # Clears all the widgets off the screen
+        self.grid.clear_widgets()
+        self.scroll.clear_widgets()
+        self.grid = 0
+        try:
+            self.remove_widget(self.scroll)
+        except Exception as e:
+            print e, u"Already removed?"
+        self.scroll = 0
+
+    def createButtons(self, array):   # Similar to createButtons on the PC app
+        self.grid = GridLayout(cols=1, size_hint_y=None) # Added in case I need to add more columns in the future (file size etc)
+        self.grid.bind(minimum_height=self.grid.setter("height"))
+        for item in array:
+            btn = self.listButton(self, item, text=("    "+str(item)), height=Window.height/10, halign="left", valign="middle")
+            btn.bind(size=btn.setter("text_size"))
+            self.grid.add_widget(btn)
+
+        self.scroll = ScrollView(size_hint=(1, .86))
+        self.scroll.add_widget(self.grid)
+        self.add_widget(self.scroll)
+
+    def recreateButtons(self, array):
+        self.removeButtons()
+        self.createButtons(array)
+
+    def selectFile(self, fileName):
+        # File request looks like: !FILESELECT!<name here>~!ENDSELECT!
+        msg = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33] # !FILESELECT!
+
+        for letter in fileName:
+            msg.append(ord(letter))
+
+        msg += [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33] # End header: ~!ENDSELECT!
+
+        self.sStream.flush() # Clear write buffer on data stream.
+
+        for i in msg:
+            self.sStream.write(i)
+
+        # Get response
+        buff = []
+        data = ""
+        responseFound = False
+        print u"Waiting for response"
+
+        while not responseFound:
+            try:
+                data = self.rStream.read()
+            except Exception as e:
+                print e, "Failed recieving response to select file."
+                return False
+            else:
+                buff.append(data)
+
+            if (buff[:6] == self.nameInstruction) and (len(buff) >= 6):  # If the response is !NAME!, then it was a file and will be sent to this program
+                print u"Is name instruction"
+                recieveFile(self.rStream, buff)
+                responseFound = True
+                buff = []
+
+            elif (buff[:10] == self.fileNotFound) and (len(buff) >= 10): # If the response was !NOTFOUND! then the host couldn't find the item we wanted
+                print u"Response is fileNotFound."
+                raise ValueError("File was not found by host.")
+                responseFound = True
+                buff = []
+
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):    # If the response was !FILELIST! then it was a folder, so prepare to recieve the list of files in that folder.
+                print u"Response is a file list."
+                self.fileList = recieveFileList(self.rStream, buff)
+                responseFound = True
+                self.recreateButtons(self.fileList)
+
+            elif len(buff) >= 13:                           # Reset the buffer and wait for next command
+                print u"Didn't get response :(", buff
+                buff = []
+
+
+    def getBackDir(self):
+        # Back dir request looks like: !BACK!
+        backCommand = [33, 66, 65, 67, 75, 33]
+        self.sStream.flush() # Clear the buffer for sending
+        for i in backCommand:
+            self.sStream.write(i)
+
+        data = ""
+        buff = []
+        responseFound = False
+        while not responseFound:
+            try:
+                data = self.rStream.read()
+            except Exception as e:
+                print e, "Failed recieving server response to BACK request."
+                return False
+            else:
+                buff.append(data)
+
+            if (buff[:11] == self.endOfTreeResponse) and (len(buff) >= 11):   # If you cannot go further back in the directory, !ENDOFTREE! is sent from the PC
+                print "END OF TREE"
+                buff = []
+                responseFound = True
+
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):   # Otherwise, it should be a list of new file names
+                responseFound = True
+                self.fileList = recieveFileList(self.rStream, buff)
+                self.recreateButtons(self.fileList)
+
+            elif len(buff) >= 11:
+                print "start header not found yet :(", buff
+                buff = []
+```
+
+Again like `PadScreen`, this screen has and embedded class. `listButton`'s are displayed showing the contents of the current directory.
+
+`selectFile` is called when a `listButton` is pressed, and requests to navigate that button.
+
+`getBackDir` is called when the back button is pressed, and requests the list of items that are in the directory above the one we are currently in.
+
+
+### SHA
+
+SHA is the exact same on the mobile app, as it is on the PC program.
+
+
+### What is buildozer.spec?
+
+`buildozer.spec` is used for building the app and putting it onto the mobile device, and is unrelated to the rest of the code.
+
+For transparency, here is the contents:
+
+```
+[app]
+
+# (str) Title of your application
+title = FM Pad
+# (str) Package name
+package.name = PadApp
+
+# (str) Package domain (needed for android/ios packaging)
+package.domain = org.test
+
+# (str) Source code where the main.py live
+source.dir = .
+
+# (list) Source files to include (let empty to include all the files)
+source.include_exts = py,png,jpg,kv,atlas
+
+# (str) Application versioning (method 1)
+version = 0.1
+
+# (str) Application versioning (method 2)
+# version.regex = __version__ = ['"](.*)['"]
+# version.filename = %(source.dir)s/main.py
+
+# (list) Application requirements
+# comma seperated e.g. requirements = sqlite3,kivy
+requirements = python2,android,plyer,pyjnius,kivy
+
+# (str) Custom source folders for requirements
+# Sets custom source for any requirements with recipes
+# requirements.source.kivy = ../../kivy
+
+# (list) Garden requirements
+#garden_requirements =
+
+# (str) Presplash of the application
+#presplash.filename = %(source.dir)s/data/presplash.png
+
+# (str) Icon of the application
+#icon.filename = %(source.dir)s/data/icon.png
+
+# (str) Supported orientation (one of landscape, portrait or all)
+orientation = portrait
+
+# (list) List of service to declare
+#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
+
+#
+# OSX Specific
+#
+
+#
+# author = © Copyright Info
+
+# change the major version of python used by the app
+osx.python_version = 3
+
+# Kivy version to use
+osx.kivy_version = 1.10.1
+
+#
+# Android specific
+#
+
+# (bool) Indicate if the application should be fullscreen or not
+fullscreen = 0
+
+# (string) Presplash background color (for new android toolchain)
+# Supported formats are: #RRGGBB #AARRGGBB or one of the following names:
+# red, blue, green, black, white, gray, cyan, magenta, yellow, lightgray,
+# darkgray, grey, lightgrey, darkgrey, aqua, fuchsia, lime, maroon, navy,
+# olive, purple, silver, teal.
+#android.presplash_color = #FFFFFF
+
+# (list) Permissions
+android.permissions = BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_PRIVILEGED
+
+[buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
+
+# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+warn_on_root = 1
+
+# (str) Path to build artifact storage, absolute or relative to spec file
+build_dir = /home/kivy/VMOUT/
+```
+
+And that is all of the code.

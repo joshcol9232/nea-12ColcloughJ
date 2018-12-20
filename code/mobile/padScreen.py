@@ -12,6 +12,7 @@ from jnius import autoclass
 from btShared import recieveFileList
 import SHA
 
+# Import java Bluetooth classes.
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
 BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
 BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
@@ -24,8 +25,8 @@ def createSocketStream(self, devName):
     for dev in pairedDevs:
         if dev.getName() == devName:
             socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
-            rStream = socket.getInputStream()   #Recieving data
-            sStream = socket.getOutputStream()  #Sending data
+            rStream = socket.getInputStream()   # Stream for recieving data
+            sStream = socket.getOutputStream()  #Stream for sending data
             self.devName = devName
             found = True
             break   #Stop when device found
@@ -55,18 +56,18 @@ class PadScreen(Screen, FloatLayout):
 
         def setupAll(self, instance=None):
             paired = self.getDeviceList()
-            if paired:
+            if paired:   # If there are paired devices.
                 self.setupDevButtons(paired)
             else:
                 grid = GridLayout(cols=1)
                 info = Label(text="No paired devices found.\nPlease make sure your Bluetooth\nis on, you are in range of\nyour device, and you are paired\nto your device.")
                 btn = Button(text="Retry", size_hint_y=.2)
                 btn.bind(on_release=self.setupAll)
-                self.content = grid
+                self.content = grid   # Change content of popup to the grid
 
-        def setupDevButtons(self, listOfDevs):
+        def setupDevButtons(self, listOfDevs):    # Similar to `createButtons` in `MainScreen` on PC app
             self.layout = GridLayout(cols=1, spacing=20, size_hint_y=None)
-            self.layout.bind(minimum_height=self.layout.setter("height"))
+            self.layout.bind(minimum_height=self.layout.setter("height"))   # Set due to ScrollView
 
             for devName in listOfDevs:
                 btn = self.DeviceButton(self, text=devName, size_hint_y=None, height=Window.height/10, halign="left", valign="middle")
@@ -80,17 +81,17 @@ class PadScreen(Screen, FloatLayout):
             result = []
             pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
             for dev in pairedDevs:
-                result.append(dev.getName())
+                result.append(dev.getName())  # Get the names of each device.
 
             return result
 
 
-        def changeToDeviceList(self, instance=None):
+        def changeToDeviceList(self, instance=None): # has to be a function as it is bound to a button
             self.content = self.view
 
         def setupBT(self, devName):
             try:
-                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)
+                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)   # Create the two streams for communicating with the PC app
             except Exception, e:
                 print u"Can't connect to device."
                 self.connected = False
@@ -117,15 +118,15 @@ class PadScreen(Screen, FloatLayout):
         Clock.schedule_once(self.deviceSelection.open, 0.5)
 
     def addNum(self, num):
-        if len(self.nums) < 16:
+        if len(self.nums) < 16:    # Maximum length of key is 16
             self.nums.append(int(num))
             self.numsString += "*"
             self.updateDisplay()
 
-    def updateDisplay(self):
-        self.ids.display.text = self.numsString
+    def updateDisplay(self):       # Updates the Label at the top of PadScreen
+        self.ids.display.text = self.numsString   # self.numsString just contains asterisks "*"
 
-    def backSpace(self):
+    def backSpace(self):      # For deleting the input
         if len(self.nums) != 0:
             del self.nums[-1]
             self.numsString = self.numsString[:len(self.nums)]
@@ -134,8 +135,8 @@ class PadScreen(Screen, FloatLayout):
 
     def confirm(self):
         pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
-        if self.rStream != None and self.sStream != None:
-            self.sStream.write("{}".format("#"))
+        if self.rStream != None and self.sStream != None:  # if the connection is still up
+            self.sStream.write("{}".format("#"))   # Key sent as #<key>~
             self.nums = SHA.getSHA128of16(self.nums)
             for num in self.nums:
                 self.sStream.write("{},".format(num))
@@ -145,11 +146,7 @@ class PadScreen(Screen, FloatLayout):
             pop.open()
 
             data = self.rStream.read()
-            while True:
-                print data, u"data"
-                if len(str(data)) != 0:
-                    print data, u"break"
-                    break
+            while len(str(data)) == 0:
                 try:
                     data = self.rStream.read()
                 except Exception as e:
@@ -157,24 +154,24 @@ class PadScreen(Screen, FloatLayout):
 
             print u"Out of while loop"
             print data, u"Response"
-            if data == 49:
+            if data == 49:   # Response sent by the PC if the key is valid.
                 pop.dismiss()
                 print u"Valid"
 
                 corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
                 Clock.schedule_once(corPop.open, -1)
 
-                #Time to recieve file names of current directory
+                # Time to recieve file names of current directory
                 listOfFiles = recieveFileList(self.rStream)
 
-                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream
+                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream # Hand over the streams to the other screens
 
                 self.manager.get_screen("Select").sStream, self.manager.get_screen("Select").rStream = self.sStream, self.rStream
                 self.manager.get_screen("Select").fileList = listOfFiles
 
                 self.manager.current = "Main"
 
-            elif data == 48:
+            elif data == 48: # Response sent by the PC if code is invalid.
                 print u"Invalid."
                 pop.dismiss()
                 invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
@@ -186,8 +183,13 @@ class PadScreen(Screen, FloatLayout):
                 print type(data), "data was not either 49 or 48..."
         else:
             print u"Can't connect to device."
-            noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
-            noConnect.open()
+            Popup(self, title="Can't connect.",
+                  content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate program."), 
+                  title_align="center",
+                  size_hint=(.6, .6),
+                  pos_hint={"x_center": .5, "y_center": .5},
+                  auto_dismiss=True).open()
+
             self.deviceSelection.open()
 
 

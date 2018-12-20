@@ -24,20 +24,16 @@ class FileSelectionScreen(Screen, FloatLayout):
         self.fileList = []
 
         # List of possible responses
-        self.endOfTreeResponse = [33, 69, 78, 68, 79, 70, 84, 82, 69, 69, 33] # !ENDOFTREE!
-        self.startList         = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33] # !FILELIST!
-        self.endList           = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          # ~!!ENDLIST!
-        self.nameInstruction   = [33, 78, 65, 77, 69, 33]                       # !NAME!  --Start of a file
-        self.fileNotFound      = [33, 78, 79, 84, 70, 79, 85, 78, 68, 33]          # !NOTFOUND!  --Response to file selection
+        self.endOfTreeResponse = [33, 69, 78, 68, 79, 70, 84, 82, 69, 69, 33]  # !ENDOFTREE!
+        self.startList         = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33]      # !FILELIST!
+        self.nameInstruction   = [33, 78, 65, 77, 69, 33]                      # !NAME!  --Start of a file
+        self.fileNotFound      = [33, 78, 79, 84, 70, 79, 85, 78, 68, 33]      # !NOTFOUND!  --Response to file selection
 
 
     def on_enter(self):
         self.createButtons(self.fileList)
 
-    def exit(self):
-        self.manager.current = "Main"
-
-    def removeButtons(self):
+    def removeButtons(self):     # Clears all the widgets off the screen
         self.grid.clear_widgets()
         self.scroll.clear_widgets()
         self.grid = 0
@@ -47,7 +43,7 @@ class FileSelectionScreen(Screen, FloatLayout):
             print e, u"Already removed?"
         self.scroll = 0
 
-    def createButtons(self, array):
+    def createButtons(self, array):   # Similar to createButtons on the PC app
         self.grid = GridLayout(cols=1, size_hint_y=None) # Added in case I need to add more columns in the future (file size etc)
         self.grid.bind(minimum_height=self.grid.setter("height"))
         for item in array:
@@ -58,17 +54,14 @@ class FileSelectionScreen(Screen, FloatLayout):
         self.scroll = ScrollView(size_hint=(1, .86))
         self.scroll.add_widget(self.grid)
         self.add_widget(self.scroll)
-        print u"done creating buttons"
 
     def recreateButtons(self, array):
         self.removeButtons()
         self.createButtons(array)
 
     def selectFile(self, fileName):
-        print fileName, "Selected."
         # File request looks like: !FILESELECT!<name here>~!ENDSELECT!
         msg = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33] # !FILESELECT!
-
 
         for letter in fileName:
             msg.append(ord(letter))
@@ -76,7 +69,6 @@ class FileSelectionScreen(Screen, FloatLayout):
         msg += [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33] # End header: ~!ENDSELECT!
 
         self.sStream.flush() # Clear write buffer on data stream.
-        print msg, "full msg to be sent."
 
         for i in msg:
             self.sStream.write(i)
@@ -86,6 +78,7 @@ class FileSelectionScreen(Screen, FloatLayout):
         data = ""
         responseFound = False
         print u"Waiting for response"
+
         while not responseFound:
             try:
                 data = self.rStream.read()
@@ -95,25 +88,25 @@ class FileSelectionScreen(Screen, FloatLayout):
             else:
                 buff.append(data)
 
-            if (buff[:6] == self.nameInstruction) and (len(buff) >= 6):
+            if (buff[:6] == self.nameInstruction) and (len(buff) >= 6):  # If the response is !NAME!, then it was a file and will be sent to this program
                 print u"Is name instruction"
                 recieveFile(self.rStream, buff)
                 responseFound = True
                 buff = []
 
-            elif (buff[:10] == self.fileNotFound) and (len(buff) >= 10):
+            elif (buff[:10] == self.fileNotFound) and (len(buff) >= 10): # If the response was !NOTFOUND! then the host couldn't find the item we wanted
                 print u"Response is fileNotFound."
                 raise ValueError("File was not found by host.")
                 responseFound = True
                 buff = []
 
-            elif (buff[:10] == self.startList) and (len(buff) >= 10):
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):    # If the response was !FILELIST! then it was a folder, so prepare to recieve the list of files in that folder.
                 print u"Response is a file list."
                 self.fileList = recieveFileList(self.rStream, buff)
                 responseFound = True
                 self.recreateButtons(self.fileList)
 
-            elif len(buff) >= 13:
+            elif len(buff) >= 13:                           # Reset the buffer and wait for next command
                 print u"Didn't get response :(", buff
                 buff = []
 
@@ -136,12 +129,12 @@ class FileSelectionScreen(Screen, FloatLayout):
             else:
                 buff.append(data)
 
-            if (buff[:11] == self.endOfTreeResponse) and (len(buff) >= 11):
+            if (buff[:11] == self.endOfTreeResponse) and (len(buff) >= 11):   # If you cannot go further back in the directory, !ENDOFTREE! is sent from the PC
                 print "END OF TREE"
                 buff = []
                 responseFound = True
 
-            elif (buff[:10] == self.startList) and (len(buff) >= 10):
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):   # Otherwise, it should be a list of new file names
                 print "START OF LIST"
                 responseFound = True
                 self.fileList = recieveFileList(self.rStream, buff)

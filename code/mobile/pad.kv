@@ -101,7 +101,7 @@ ScreenManagement:
             size_hint: .4, .14
             background_color: (0.8, 0.8, 0.8, 1)
             pos_hint: {"top": 1, "left": 1}
-            on_release: root.exit()
+            on_release: root.manager.current = "Main"
 
         Button:
             text: "Go back"

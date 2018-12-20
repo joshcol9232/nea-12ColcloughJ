@@ -149,7 +149,8 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   # Set so that file list can be sent
+                            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling") # Set so that file list can be sent
+                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -234,7 +235,7 @@ class MainScreen(Screen):
             listOfFolders = []
             listOfFiles = []
             for item in fs:
-                if self.thumbsName not in path+item:
+                if (item != self.thumbsName) and (item != self.recycleName):
                     if os.path.isdir(path+item):
                         listOfFolders.append(aesFName.decryptFileName(self.key, item))
                     else:

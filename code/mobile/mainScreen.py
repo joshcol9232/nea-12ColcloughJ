@@ -1,8 +1,5 @@
-from kivy.uix.label import Label
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
-from time import sleep
 
 from btShared import recieveFile
 

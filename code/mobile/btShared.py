@@ -1,25 +1,16 @@
-from jnius import autoclass
 from plyer import storagepath
 from os import remove
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 
-####Bluetooth stuff in android accessed via jnius####
-BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
-BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
-BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
-UUID = autoclass(u"java.util.UUID")
-
-
 #Shared methods
 def recieveFileList(rStream, buffAlreadyKnown=[]):
-    buff = buffAlreadyKnown
+    buff = buffAlreadyKnown    # If called from other places, some of they data may already 
     data = ""
 
-    startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33] #!FILELIST!
-    endList   = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
+    endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
 
-    while buff[-11:] != endList:
+    while buff[-11:] != endList:        # If last 11 elements of the buffer is ~!!ENDLIST!
         try:
             data = rStream.read()
         except Exception as e:
@@ -28,29 +19,17 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
         else:
             buff.append(data)
 
-    buff = buff[11:len(buff)-11]
+    buff = buff[10:-11] # Get the actuall list of files from the buffer
 
-    listOfFiles = []
-    for i in range(len(buff)):
-        if (buff[i-1] == 45) and (buff[i] == 45):  #If two "--" in a row (what i used to separate the names).
-            a = i + 1
-            name = []
-            while (buff[a] != 45 or buff[a+1] != 45) and (a < len(buff)-1):
-                name.append(chr(buff[a]))
-                a += 1
-
-                if a == len(buff)-1:
-                    name.append(chr(buff[a]))
-
-            listOfFiles.append("".join(name))
-
+    listOfFiles = "".join([chr(i) for i in buff]) # Join input into a string
+    listOfFiles = listOfFiles.split("--")[1:]  # First element will be "" due to first part of string being "--""
 
     print "List of files given:", listOfFiles
     return listOfFiles
 
 def recieveFile(rStream, buffAlreadyKnown=[]):
     print("Recieve file has been called.")
-    # File is sent with    !NAME!#!!<name here>!!~<data>~!!ENDF!   like a data sandwich.
+    # File is sent with    !NAME!<name here>~~!~<data>~!!ENDF!   like a data sandwich.
     # To do: make dictionary with each nameInstruction, startHeader etc, so they can be
     # easily identified.
     downloadsDir = storagepath.get_downloads_dir()
@@ -67,12 +46,12 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
     bufferSize = 1024
     buffCount = 0
 
-    while len(str(data)) > -1:
+    while len(str(data)) > -1:   # While connection is open
         try:
-            data = rStream.read()
+            data = rStream.read()   # Read from the recieving stream
         except Exception as e:
             print e, u"Failed recieving file."
-            if buffCount > 0:
+            if buffCount > 0:  # Clean up the file if it has been edited
                 fo.close()
                 remove(downloadsDir+"/"+fileName)  # Remove incomplete file. (from os module)
             return False
@@ -81,26 +60,24 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
 
         if not nameFound:
             name = []
-            for i in range(len(buff)-6):
-                if buff[i:i+6] == nameInstruction:
-                    z = i+6
-                    while (buff[z:z+5] != separator) and (z+5 < len(buff)):
+            for i in range(len(buff)-6):  # -6 because that is the length of nameInstruction (scan is 6 wide)
+                if buff[i:i+6] == nameInstruction:     # Are these 6 items the same as nameInstruction
+                    z = i+6  # Move past nameInstruction
+                    while (buff[z:z+5] != separator) and (z+5 < len(buff)):   # Scans current buffer for the name every time a new element is added to buffer, while the name has not been found.
                         name.append(buff[z])
                         z += 1
 
-                    if buff[z:z+5] == separator:
-                        nameFound = True
+                    if buff[z:z+5] == separator:  # Once you get to the separator, then you know the name has been recieved.
+                        nameFound = True          # Name has been found
                         buff[i:z+5] = [] # Clear name + separator
 
                         for letter in name:
                             fileName += chr(letter)
 
-                        fw = open(downloadsDir+"/"+fileName, "wb") #Clear file
-                        fw.close()
-                        fo = open(downloadsDir+"/"+fileName, "ab")
+                        fo = open(downloadsDir+"/"+fileName, "wb") # Open for writing
 
 
-        elif ((len(buff) > bufferSize+10) or (buff[-10:] == endFile)):
+        elif ((len(buff) > bufferSize+10) or (buff[-10:] == endFile)):   # If end of file header found
             if buff[-10:] == endFile:
                 buff[-10:] = []
                 print u"End found"
