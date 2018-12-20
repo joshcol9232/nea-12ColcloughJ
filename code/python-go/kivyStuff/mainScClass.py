@@ -149,6 +149,7 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
+                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   # Set so that file list can be sent
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -233,10 +234,11 @@ class MainScreen(Screen):
             listOfFolders = []
             listOfFiles = []
             for item in fs:
-                if os.path.isdir(path+item):
-                    listOfFolders.append(aesFName.decryptFileName(self.key, item))
-                else:
-                    listOfFiles.append(aesFName.decryptFileName(self.key, item))
+                if self.thumbsName not in path+item:
+                    if os.path.isdir(path+item):
+                        listOfFolders.append(aesFName.decryptFileName(self.key, item))
+                    else:
+                        listOfFiles.append(aesFName.decryptFileName(self.key, item))
 
             self.lastPathSent = path
 
@@ -639,7 +641,7 @@ class MainScreen(Screen):
             popText = "Decrypting..."
 
         if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
-            self.encPop = mainSPops.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
+            self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
             mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
         if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
@@ -728,7 +730,7 @@ class MainScreen(Screen):
         if encType == "n":
             labText = "Decrypting..."
 
-        self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
+        self.encPop = mainSPops.encDecPop(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)

@@ -189,7 +189,6 @@ Another issue could be that if a file is deleted, the contents of the file might
 
 
 
-
 # Design
 
 ## Bluetooth:
@@ -1456,11 +1455,9 @@ code
     ├── AES
     ├── aesFName.py
     ├── aes.go
-    ├── aes_test.go
     ├── AESWin.exe
     ├── BLAKE
     ├── blake.go
-    ├── blake_test.go
     ├── config.cfg
     ├── configOperations.py
     ├── fileClass.py
@@ -1468,15 +1465,17 @@ code
     │   ├── kvFiles
     │   │   ├── loginScBT.kv
     │   │   ├── loginSc.kv
-    │   │   ├── mainScClasses.kv
+    │   │   ├── mainScButtons.kv
     │   │   ├── mainSc.kv
+    │   │   ├── mainScLabels.kv
+    │   │   ├── mainScPops.kv
     │   │   └── settingsSc.kv
     │   ├── loginClass.py
     │   ├── mainBtns.py
     │   ├── mainScClass.py
     │   ├── mainSmallPops.py
+    │   ├── settingsScreen.py
     │   └── ui.py
-    ├── settingsScreen.py
     ├── SHA.py
     ├── sortsCy.c
     ├── sortsCy.cpython-37m-x86_64-linux-gnu.so
@@ -1698,7 +1697,7 @@ def runConfigOperations():
 
 
 
-## The GUI:
+## The PC App GUI:
 
 I will go through the visuals first, and then move onto the code.
 
@@ -1807,6 +1806,54 @@ The list of results is then displayed:
 ![](TechSolution/GUI/searchResults.png)
 
 If no results are found, a popup opens saying "No results found for: search item".
+
+
+
+## The Mobile App GUI
+
+The mobile app has a basic design, as I wanted to keep it as small as possible, and images were not really needed.
+
+When you first open the app, you are greeted by a scrollable list of devices to connect to (if Bluetooth is on):
+
+<img src="TechSolution/GUI/Mobile/startScreen.png" style="zoom:15%"/>
+
+If you can't connect to a device, then you are greeted by this large popup:
+
+<img src="TechSolution/GUI/Mobile/noConnect.png" style="zoom:15%"/>
+
+If you click retry, it takes you back to the start screen.
+
+If you connect successfully, you are greeted by this screen:
+
+<img src="TechSolution/GUI/Mobile/padScreen.png" style="zoom:15%"/>
+
+Where you can then enter your key and submit it. While you are entering it, it looks like this:
+
+<img src="TechSolution/GUI/Mobile/padScreenInp.png" style="zoom:15%"/>
+
+Once you press submit, a popup opens telling you if the key was correct or not, and then you are put into this screen:
+
+<img src="TechSolution/GUI/Mobile/mainScreen.png" style="zoom:15%"/>
+
+From here you can either close the app and leave it running in the background, or browse files. If you close the app completely, the app on the PC locks. **NOTE TO MR REGHIF: I will make a YouTube video here at some point showing the full process. Btw have a nice christmas.**
+
+Here is what the app looks like while you are browsing files:
+
+<img src="TechSolution/GUI/Mobile/fileSelection.png" style="zoom:15%"/>
+
+Here you can navigate folders and download files. Here is an image of a navigated folder:
+
+<img src="TechSolution/GUI/Mobile/fileSelectionTraverse.png" style="zoom:15%"/>
+
+If you want to download a file, a popup opens on the PC app showing the current status of the file using `btTransferPop` on `MainScreen`, and once the download has finished, a popup opens saying that it has finished, and where you can find it:
+
+<img src="TechSolution/GUI/Mobile/downloadComplete.png" style="zoom:15%"/>
+
+Now you can find that file in your devices "Download" folder.
+
+
+
+
 
 ## Key Algorithms
 
@@ -3462,7 +3509,7 @@ There are a few new functions too. `_getNormDir` gets the normal file path if pa
 
 
 
-## GUI Code
+## PC app GUI Code
 
 In this section, I will go through the code for the entire GUI (basically anything in the `code/python-go/kivyStuff` folder).
 
@@ -3516,7 +3563,6 @@ class uiApp(App):
         fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc = configOperations.runConfigOperations()
         # Load kv files for each screen.
         Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")     # MainScreen styling.
-        Builder.load_file(startDir+"kivyStuff/kvFiles/mainScClasses.kv") # MainScreen sub-classes styling.
         Builder.load_file(startDir+"kivyStuff/kvFiles/settingsSc.kv") # SettingsScreen styling.
 
         if useBT:
@@ -3975,6 +4021,7 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
+                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   # Set so that file list can be sent
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -4465,7 +4512,7 @@ class MainScreen(Screen):
             popText = "Decrypting..."
 
         if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
-            self.encPop = mainSPops.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
+            self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
             mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
         if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
@@ -4554,7 +4601,7 @@ class MainScreen(Screen):
         if encType == "n":
             labText = "Decrypting..."
 
-        self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
+        self.encPop = mainSPops.encDecPop(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
@@ -4638,6 +4685,10 @@ Most custom child widgets that the MainScreen needs are defined in `code/python-
 Here is the `.kv` file for MainScreen (`code/python-go/kivyStuff/kvFiles/mainSc.kv`):
 
 ```cs
+#:include kivyStuff/kvFiles/mainScButtons.kv
+#:include kivyStuff/kvFiles/mainScPops.kv
+#:include kivyStuff/kvFiles/mainScLabels.kv
+
 <MainScreen>:
     addFile: addFile
     RelativeLayout:                 #Adds background in case fade transition breaks.
@@ -4722,7 +4773,7 @@ Here is the `.kv` file for MainScreen (`code/python-go/kivyStuff/kvFiles/mainSc.
             size_hint: .16, .16
             text: root.values(True)
 
-        Button:
+        Button:     #Padlock
             id: LogOut
             size_hint: .16, .16
             pos_hint: {"x": 0, "top": 1}
@@ -4756,8 +4807,11 @@ Here is the `.kv` file for MainScreen (`code/python-go/kivyStuff/kvFiles/mainSc.
                 center_y: self.parent.center_y
                 size: 100, 133.54
                 allow_stretch: False
+
+
 ```
 
+The first three lines import the styling for the custom child widgets, which I will explain next.
 
 
 ### Main Screen Buttons
@@ -4850,8 +4904,965 @@ The `sizeSortButton` class works similarly to `nameSortButton`, however it has t
 
 The `infoButton` and `deleteButton` classes are both similar to `listButton` in that they just have a few extra attributes.
 
+Here is the `kv` file for the custom buttons (`code/python-go/kivyStuff/kvFiles/mainScButtons.kv`):
+
+```cs
+#: import Window kivy.core.window.Window
+
+<listButton@Button>:
+    font_size: 14
+    halign: "left"
+    valign: "middle"
+    height: 30
+    size_hint: 1, None
+    on_release: root.outerScreen.traverseButton(self.fileObj)
+
+<nameSortButton@Button>:
+    font_size: 14
+    size_hint: 10.4, 1
+    on_release: root.changeSortOrder()
+
+<sizeSortButton@Button>:
+    font_size: 14
+    on_release: root.changeSizeOrder()
+
+<infoButton@Button>:
+    font_size: 14
+    size_hint: .05, 1
+    halign: "left"
+    valign: "middle"
+    on_release: root.outerScreen.getFileInfo(self.fileObj)
+    Image:
+        source: self.parent.outerScreen.assetsPath+"info.png"
+        center_x: self.parent.center_x
+        center_y: self.parent.center_y
+        size: 20, 20
+
+<deleteButton@Button>:
+    on_release: root.outerScreen.deleteFile(self.fileObj)
+```
+
+The first line imports `Window` from `kivy.core.window`. The equivalent in python would be:
+
+```python
+from kivy.core.window import Window
+```
+
+
+### Main Screen Popups
+
+Here is the code for the MainScreen popups (`code/python-go/kivyStuff/mainSmallPops.py`):
+
+```python
+import os
+from threading import Thread
+from time import time, sleep
+from random import uniform as randUniform
+
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.clock import Clock
+from kivy.clock import mainthread
+from kivy.core.window import Window
+from kivy.uix.button import Button
+from kivy.uix.progressbar import ProgressBar
+from kivy.uix.popup import Popup
+
+import aesFName
+from configOperations import dirInputValid
+
+class encDecPop(Popup): #For single files
+
+    def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+        super(Popup, self).__init__(**kwargs)
+        self.outerScreen = outerScreen
+        self.fileList = fileList
+        self.locList = locList
+        self.done = False
+
+        # Kivy stuff
+        self.title = "Please wait..."
+        self.pos_hint = {"center_x": .5, "center_y": .5}
+        self.size_hint = (.7, .4)
+        self.auto_dismiss = False
+
+        self.grid = GridLayout(cols=1)
+        self.subGrid = GridLayout(cols=4)
+        self.currFile = Label(text="", halign="center", valign="center")
+        self.currFile.bind(size=self.currFile.setter("text_size"))  # Wrap text inside label
+        self.per = Label(text="")
+        self.spd = Label(text="")
+        self.tim = Label(text="")
+        self.outOf = Label(text="")
+        self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
+        self.wholePb = ProgressBar(value=0, max=self._getTotalSize(), size_hint=(.9, .2))
+        self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
+        self.grid.add_widget(self.currFile)
+        self.subGrid.add_widget(self.per)
+        self.subGrid.add_widget(self.spd)
+        self.subGrid.add_widget(self.tim)
+        self.grid.add_widget(self.subGrid)
+        if len(self.fileList) > 1:   # Don't bother showing 2 progress bars if the user is only doing 1 file.
+            self.grid.add_widget(self.pb)
+            self.subGrid.add_widget(self.outOf)
+        self.grid.add_widget(self.wholePb)
+        self.content = self.grid
+
+        self.checkThread = Thread(target=self.encDec, args=(encType, op,), daemon=True)
+        self.checkThread.start()
+
+    def _getTotalSize(self):
+        total = 0
+        for file in self.fileList:
+            total += os.path.getsize(file)
+        return total
+
+    def _getGoodUnit(self, bps):
+        divCount = 0
+        divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
+        while bps > 1000:
+            bps = bps/1000
+            divCount += 1
+
+        return ("%.2f" % bps) + divisions[divCount]
+
+    def _getGoodUnitTime(self, time):
+        divCount = 0
+        times = [(0.001, "Miliseconds"), (1, "Seconds"), (60, "Minutes"), (3600, "Hours"), (86400, "Days"), (604800, "Weeks"), (2419200, "Months"), (31557600, "Years")]   # 1 second, 1 minute, 1 hour, 1 day, 1 week, 1 month, 1 year in seconds
+        i = 0
+        while i < len(times):  # Is broken when return is found
+            if time > times[i][0]:
+                i += 1
+            else:
+                return ("%.2f" % float(time/times[i-1][0])) + " " + times[i-1][1] + " left"
+
+        return "A lot of time left."
+
+
+    def encDec(self, encType, op):
+        total = 0
+        totalPer = 0
+        factor = 0.5
+        timeLast = 0
+        lastSize = 0
+        timeDelta = 0
+        perDelta = 0
+        per = 0
+        prevPer = 0
+        for i in range(len(self.fileList)):
+            done = False
+            self.pb.value = 0
+            self.pb.max = os.path.getsize(self.fileList[i])
+            if i == len(self.fileList)-1:
+                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
+            else:
+                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
+
+            self.outOf.text = str(i)+"/"+str(len(self.fileList))
+            if encType == "n":
+                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, self.fileList[i].split(self.outerScreen.fileSep)[-1])
+            else:
+                self.currFile.text = self.fileList[i]
+
+            while not done: # Padding can cause issues as original size is not known.
+                if os.path.exists(self.locList[i]):
+                    self.pb.value = os.path.getsize(self.locList[i])
+                    self.wholePb.value = total + self.pb.value
+                    per = self.wholePb.value_normalized*100
+
+                    a = time()   # Temporary variable to hold the time
+                    timeDelta = a - timeLast     # Get time difference
+                    if timeDelta >= 0.5:  # Update every 0.5 seconds
+                        perDelta = per - prevPer   # Change in percentage in that time.
+                        timeLast = a
+                        sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
+                        speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
+
+                        if speed != 0:
+                            self.tim.text = self._getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.spd.text = self._getGoodUnit(speed)
+
+                        lastSize = self.wholePb.value
+                        prevPer = per
+
+                    self.per.text = "{0:.2f}%".format(per)
+
+                if self.pb.value >= self.pb.max-32 or self.pb.value_normalized == 1:  # -32 is due to padding.
+                    done = True
+                else:
+                    sleep(0.005) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
+
+            self.pb.value = self.pb.max
+            totalPer += 100
+            total += self.pb.max
+
+        self.dismiss()
+
+
+class btTransferPop(encDecPop):
+
+    def __init__(self, mainScreen, fileObjTmp, **kwargs):
+        super(Popup, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+        self.title = "Please wait..."
+        self.size_hint = (.7, .4)
+        self.pos_hint = {"center_x": .5, "center_y": .5}
+        self.auto_dismiss = False
+        self.grid = GridLayout(cols=1)
+        self.subGrid = GridLayout(cols=3)
+        self.currFile = Label(text=fileObjTmp.path)
+        self.per = Label(text="")
+        self.spd = Label(text="")
+        self.tim = Label(text="")
+        self.pb = ProgressBar(value=0, max=1, size_hint=(.9, .2))
+        self.grid.add_widget(Label(text="Sending..."))
+        self.grid.add_widget(self.currFile)
+        self.subGrid.add_widget(self.per)
+        self.subGrid.add_widget(self.spd)
+        self.subGrid.add_widget(self.tim)
+        self.grid.add_widget(self.subGrid)
+        self.grid.add_widget(self.pb)
+        self.content = self.grid
+
+        self.sendThread = Thread(target=self.sendFile, args=(fileObjTmp,), daemon=True) # can be cancelled mid way through
+        self.sendThread.start()
+
+    def sendFile(self, fileObj):
+        # File name is sent with !NAME!#!!<name here>!!~
+        # File data is sent right afterwards, ending with ~!!ENDF!
+        # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
+        self.outerScreen.clientSock.send("!NAME!{}~~!~~".format(fileObj.name))
+        #print("!NAME!{}~~!~~".format(fileObj.name), "Sent")
+
+        newLoc = self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
+        if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
+            os.makedirs(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep)
+
+        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+
+        bufferSize = 1024
+        buff = []
+        fr = open(newLoc, "rb")
+        buff = fr.read(bufferSize)    #Read 1Kb of data
+        buffCount = 0
+        self.per.text = "{0:.2f}%".format(0)
+
+        start = time()
+        #Send data
+        while buff:
+            self.outerScreen.clientSock.send(buff)
+            buffCount += bufferSize
+            buff = fr.read(bufferSize)
+
+            self.pb.value = buffCount/fileObj.rawSize
+            self.per.text = "{0:.2f}%".format(self.pb.value*100)
+            self.spd.text = self._getGoodUnit(buffCount/(time() - start))
+
+        self.outerScreen.clientSock.send("~!ENDFILE!")
+        self.dismiss()
+
+
+class decryptFileToLocPop(Popup): # Input box for location of where directory is to be saved.
+
+    def __init__(self, mainScreen, fileObj, **kwargs):
+        self.outerScreen = mainScreen
+        self.fileObj = fileObj
+        super(Popup, self).__init__(**kwargs)
+
+    def checkCanDec(self, inp):
+        if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
+            if self.fileObj.isDir:
+                if not os.path.exists(inp):
+                    os.makedirs(inp)
+                if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
+                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+            else:
+                if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
+                    if not os.path.exists(inp):
+                        os.makedirs(inp)
+                    inp += self.fileObj.name
+                self.outerScreen.encDecTerminal("n", self.fileObj.hexPath, inp, op=False)
+
+    def getTitle(self):
+        if self.fileObj.isDir:
+            return "Decrypt Folder"
+        else:
+            return "Decrypt File"
+
+
+class addNewFolderPop(Popup):
+
+    def __init__(self, mainScreen, **kwargs):
+        super(Popup, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+
+    def makeFolder(self, text):
+        if dirInputValid(self.outerScreen.currentDir+text, self.outerScreen.fileSep):
+            try:
+                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+            except OSError as e:
+                if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
+                    pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})
+                    pop.open()
+
+            self.outerScreen.refreshFiles()
+            self.dismiss()
+
+class addFilePop(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
+
+    def __init__(self, mainScreen, **kwargs):
+        super(Popup, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+
+    class ConfirmationPopup(Popup):     #Popup for confirming encryption.
+
+        def __init__(self, fileScreen, input, **kwargs):
+            super(Popup, self).__init__(**kwargs)
+            self.fileScreen = fileScreen
+            self.inputText = input
+
+
+    def checkIfSure(self, input):
+        self.ConfirmationPopup(self, input).open()
+```
+
+I have not got any styling for `encDecPop` or `btTransferPop` because I have to access the GUI elements a lot. `btTransferPop` inherits from `encDecPop` to get useful methods that need to be used in both classes.
+
+I will break down the way `encDecPop` gets the statistics it needs:
+
+1. The encDecPop is created, and in `__init__` it starts a new thread which executes `self.encDec`.
+2. `encDec` goes through the list of files given (`self.fileList` and `self.locList` (which contains the loctations to enc/decrypt to)), calling `self.outerScreen.encDecTerminal(<parameters>)`.
+3. The maximum value of the status bar is set based on the size of the original file.
+4. While the file is enc/decrypting, it's size is monitored using `os.path.getsize(<file>)`, and the 1 or 2 progess bars' (depending on if multiple files are being operated on) values are updated with the new size.
+5. The speed of the operation is obtained by getting the difference in size of the file in the time difference, divided by the time difference (or `sizeDelta/timeDelta`).
+6. The time remaining of the operation is obtained by dividing the total amount of data left by the speed (`(self.wholePb.max - self.wholePb.value)/speed`).
+7. Both of these values have a function to get a nice human-readable output (`_getGoodUnit` for the speed, and `_getGoodUnitTime` for the time remaining).
+8. The loop sleeps for 0.005 seconds to not max out the CPU, as it doesn't need to be updated that often (reduces usage to about 5%).
+
+
+`btTransferPop` does works very similar to this, however since it is sending the data itself, it can get 100% accurate measurements of the statistics. Every time another batch of data is sent, the popup is updated.
+
+
+`decryptFileToLocPop` is just a text input popup that is opened when the user wants to decrypt a file or folder to a certain location. It validates the input is a correct file path, and then creates a new `encDecPop` to handle the rest of the operation.
+
+`addFilePop` is very similar to `decryptFileToLocPop`, however it has a bit more information, and is for encrypting a new file into the Vault (at `MainScreen.currentDir`). It has it's own child popup that asks for confirmation.
+
+I named the file `mainSmallPops` incase I added large popups that filled the entire screen, in which case they would have their own file called `mainLargePops`, just to help me distinguish between the two.
+
+Here is the styling for `mainSmallPops` (`code/python-go/kivyStuff/kvFiles/mainScPops.kv`):
+
+```cs
+#: import Clock kivy.clock.Clock
+
+<ConfirmationPopup@Popup>:
+    title: "Confirmation"
+    size_hint: .4, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: False
+    FloatLayout:
+        Label:
+            text: "Are you sure?"
+            pos_hint: {"center_x": .5, "center_y": .7}
+        Button:
+            text: "No!!!"
+            pos_hint: {"center_x": .25, "center_y": .25}
+            size_hint: .4, .3
+            on_release: Clock.schedule_once(root.dismiss, -1)
+
+        Button:
+            text: "Yes"
+            pos_hint: {"center_x": .75, "center_y": .25}
+            size_hint: .4, .3
+            on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
+
+<addNewFolderPop@Popup>:
+    title: "Add New Folder"
+    size_hint: .7, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: True
+    GridLayout:
+        cols: 1
+        Label:
+            text: "New Folder Name:"
+        TextInput:
+            id: folderNameInput
+            size_hint: .7, .4
+            multiline: False
+            hint_text: "Name"
+            on_text_validate: root.makeFolder(self.text)
+
+<decryptFileToLocPop@Popup>:
+    title: root.getTitle()
+    size_hint: .7, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: True
+    GridLayout:
+        cols: 1
+        Label:
+            text: "Input the destination:"
+        TextInput:
+            id: decDirInput
+            size_hint: .7, .4
+            multiline: False
+            hint_text: "Directory:"
+            on_text_validate: root.checkCanDec(self.text)
+
+
+<addFilePop@Popup>:
+    id: addFile
+    submitDirs: submitDirs
+    size_hint: .7, .7
+    title: "Add File"
+    FloatLayout:
+        Label:
+            size_hint: .46, .08
+            font_size: 18
+            text: "Enter the directories what files you would like to encrypt (can be a folder).\nYou can seperate each directory with '--' if you want to do multiple locations."
+            pos_hint: {"center_x": 0.5, "y": 0.8}
+
+        Button:
+            size_hint: .16, .16
+            pos_hint: {"center_x": .5, "center_y": .2}
+            text: "Close"
+            on_release: root.dismiss()
+
+        TextInput:
+            size_hint: .9, .12
+            font_size: 22
+            hint_text: "Directories"
+            id: dirInp
+            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+            multiline: False
+
+        Button:
+            id: submitDirs
+            size_hint: .16, .16
+            pos_hint: {"center_x": .5, "center_y": .4}
+            text: "Submit"
+            on_release: root.checkIfSure(root.ids.dirInp.text)
+
+```
+
+
+### Main Screen Labels
+
+There is only one custom Label in my program, so this should be short.
+
+It is defined in the `MainScreen` class:
+
+```python
+class MainScreen(Screen):
+
+    class infoLabel(Label):
+      pass
+```
+
+Here is the styling for the class (`code/python-go/kivyStuff/kvFiles/mainScLabels.kv`):
+
+```cs
+<infoLabel@Label>:
+    text_size: self.width, None
+    height: self.texture_size[1]
+```
+
+What this does is wrap the text and constrain it within it's area. `infoLabel` is used for the information in the information popup, so it has to be constrained into it's area. The `text_size` is set to `self.width, None` because it is in a grid layout, so the grid should change it's size.
+
+
+And that is everything in MainScreen.
+
+
+## Settings Screen
+
+Here is the code for `SettingsScreen` (`code/python-go/kivyStuff/settingsScreen.py`):
+
+```python
+from os import path, makedirs
+from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import Screen
+
+from configOperations import changeVaultLoc, editConfTerm
+
+class SettingsScreen(Screen):
+
+    def __init__(self, mainScreen, configLoc, **kwargs):
+        self.outerScreen = mainScreen
+        self.config = configLoc
+        super(Screen, self).__init__(**kwargs)   # Done after so that when Screen.__init__ runs, it already has those attributes.
+
+        self.ids.searchSwitch.bind(active=self.searchSwitchCallback)
+        self.ids.btSwitch.bind(active=self.btSwitchCallback)
+
+    def searchSwitchCallback(self, switch, value):
+        self.outerScreen.searchRecursively = not self.outerScreen.searchRecursively
+        return editConfTerm("searchRecursively", str(value), self.config)
+
+    def btSwitchCallback(self, switch, value):
+        self.outerScreen.useBTTemp = not self.outerScreen.useBTTemp
+        return editConfTerm("bluetooth", str(value), self.config)
+
+    def changeVault(self, inp):
+        if inp[len(inp)-1] != self.outerScreen.fileSep:
+            inp += self.outerScreen.fileSep
+        try:
+            changeVaultLoc(inp, self.outerScreen.fileSep, self.config)
+        except FileNotFoundError:
+            Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
+        except PermissionError as e:
+            Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
+        except Exception as e:
+            print(e)
+            Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
+        else:
+            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+            self.outerScreen.path = inp
+            self.outerScreen.currentDir = inp
+            self.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
+            self.outerScreen.resetButtons()
+            done.open()
+```
+
+Here is the styling for this screen:
+
+```cs
+<SettingsScreen>:
+    auto_dismiss: False
+    newLoc: newLoc
+    title: "Settings"
+    GridLayout:
+        cols: 2
+        Label:
+            canvas.before:
+                Color:
+                    rgba: 0.33, 0.33, 0.33, 1     # Aproximately the same as kivy's default button colour.
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            text: "Settings Menu"
+            font_size: 40
+        Label:
+            canvas.before:
+                Color:
+                    rgba: 0.33, 0.33, 0.33, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+
+        Label:
+            text: "Vault Location:"
+            font_size: 20
+        Label:
+            text: root.outerScreen.path
+            font_size: 14
+
+        Label:
+            text: "Change Vault Location:"
+            font_size: 16
+        GridLayout:
+            cols: 2
+            TextInput:
+                id: newLoc
+                size_hint_x: .85
+                font_size: 22
+                multiline: False
+                hint_text: "Location"
+            Button:
+                size_hint_x: .15
+                text: "Submit"
+                on_release: root.changeVault(newLoc.text)
+
+
+        Label:
+            text: "Search folders recursively\n(takes longer but searches through folders)"
+        Switch:
+            id: searchSwitch
+            active: root.outerScreen.searchRecursively
+
+        Label:
+            text: "Bluetooth login (as default)"
+        Switch:
+            id: btSwitch
+            active: root.outerScreen.useBTTemp
+
+        Label:
+        Label:
+
+        Label:
+        Label:
+
+        Label:
+            text: "Note: Changes that you make that affect the login method only take effect once the program is restarted."
+            text_size: self.size
+        Label:
+
+        Button:
+            text: "Exit"
+            font_size: 20
+
+            on_release: root.manager.current = "Main"
+
+
+```
+
+There are a few blank labels to fill the space in-between the exit button, and the rest of the settings.
+
+This screen is quite simple, and most of the code is managing the GUI (boring).
 
 
 
-### Main Screen Popups (and Button styling)
+## Mobile App GUI Code
+
+All of the mobile code is in Python 2, other than SHA, which is Python 3.
+
+### The root of the GUI
+
+The main file of the program is `main.py` in `code/mobile/main.py`. 
+Here is the code of `main.py`:
+
+```python
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.lang import Builder
+
+from padScreen import PadScreen
+from mainScreen import MainScreen
+from fileSelectionScreen import FileSelectionScreen
+
+
+class ScreenManagement(ScreenManager):
+    pass
+
+presentation = Builder.load_file(u"pad.kv")
+
+class uiApp(App):
+
+    def build(self):
+        return presentation
+
+def runUI():
+    ui = uiApp()
+    ui.run()
+
+
+if __name__ == u"__main__":
+    runUI()
+
+```
+
+All this does it load the `pad.kv` file, which contains the styling for the entire program, and also import all of the screens.
+
+Here is `pad.kv` (`code/mobile/pad.kv`):
+
+```cs
+#: import FadeTransition kivy.uix.screenmanager.FadeTransition
+#: import Window kivy.core.window.Window
+#: import Clock kivy.clock.Clock
+
+ScreenManagement:
+    id: screenmanager
+    transition: FadeTransition()
+    PadScreen:
+        name: "Pad"
+        id: Pad
+        manager: screenmanager
+    MainScreen:
+        name: "Main"
+        id: Main
+        manager: screenmanager
+    FileSelectionScreen:
+        name: "Select"
+        id: Select
+        manager: screenmanager
+
+<PadNum@Button>:
+    font_size: 30
+    on_release: root.root.addNum(self.text)   # = PadScreen.addnNum(self.text)
+
+<DeviceButton@Button>:
+    font_size: 80
+    on_release: self.devicePop.setupBT(self.text)
+
+<PadScreen>:
+    display: display
+    FloatLayout:
+        GridLayout:
+            size_hint_y: .7
+            cols: 3
+            Button:
+                text: "7"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "8"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "9"
+                on_release: root.addNum(self.text)
+
+            Button:
+                text: "4"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "5"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "6"
+                on_release: root.addNum(self.text)
+
+            Button:
+                text: "1"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "2"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "3"
+                on_release: root.addNum(self.text)
+
+
+            Button:
+                text: "Delete"
+                on_release: root.backSpace()
+            Button:
+                text: "0"
+                on_release: root.addNum(self.text)
+            Button:
+                text: "Submit"
+                on_release: root.confirm()
+
+        Label:
+            id: display
+            text: root.numsString
+            font_size: Window.height/20
+            pos_hint: {"center_x": .5, "y": .35}
+
+<MainScreen>:
+    FloatLayout:
+        Label:
+            text: "To lock the Vault, close the program.\nAll downloaded files are stored in\nyour 'Download' folder."
+
+        Button:
+            pos_hint: {"x": .25, "y": .2}
+            size_hint: .5, .2
+            text: "Select files from PC"
+            on_release: root.manager.current = "Select"
+
+<listButton@Button>:
+    size_hint: 1, None
+    on_release: root.outerScreen.selectFile(self.fileName)
+
+<FileSelectionScreen>:
+    FloatLayout:
+        Button:
+            text: "Exit"
+            size_hint: .4, .14
+            background_color: (0.8, 0.8, 0.8, 1)
+            pos_hint: {"top": 1, "left": 1}
+            on_release: root.exit()
+
+        Button:
+            text: "Go back"
+            size_hint: .4, .14
+            background_color: (0.8, 0.8, 0.8, 1)
+            pos_hint: {"top": 1, "right": 1}
+            on_release: root.getBackDir()
+```
+
+The way the app is built is slightly different than my PC app, as the mobile app is more built around the main `kv` file. The ScreenManager (`ScreenManagement`) is set as the root widget of the `kv` file, and then the app is built from the `kv` file.
+
+Here is the code for the `PadScreen`, which also contains the 'screen' (actually a popup) that lets you select a device:
+
+```python
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
+from kivy.uix.popup import Popup
+from kivy.core.window import Window
+from kivy.uix.scrollview import ScrollView
+from kivy.clock import Clock
+from kivy.uix.screenmanager import Screen
+from jnius import autoclass
+
+from btShared import recieveFileList
+import SHA
+
+BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
+BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
+BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
+UUID = autoclass(u"java.util.UUID")
+
+def createSocketStream(self, devName):
+    pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
+    socket = None
+    found = False
+    for dev in pairedDevs:
+        if dev.getName() == devName:
+            socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
+            rStream = socket.getInputStream()   #Recieving data
+            sStream = socket.getOutputStream()  #Sending data
+            self.devName = devName
+            found = True
+            break   #Stop when device found
+    if found:
+        socket.connect()
+        return rStream, sStream
+    else:
+        raise ConnectionAbortedError(u"Couldn't find + connect to device.")
+
+class PadScreen(Screen, FloatLayout):
+
+    class DeviceSelectionPopup(Popup):
+
+        class DeviceButton(Button):
+
+            def __init__(self, devPopup, **kwargs):
+                self.devicePop = devPopup
+                super(Button, self).__init__(**kwargs)
+                self.outerScreen = self.devicePop.outerScreen
+
+        def __init__(self, padScreen, **kwargs):
+            self.outerScreen = padScreen
+            super(Popup, self).__init__(**kwargs)
+            self.devName = ""
+            self.connected = False
+            self.setupAll()
+
+        def setupAll(self, instance=None):
+            paired = self.getDeviceList()
+            if paired:
+                self.setupDevButtons(paired)
+            else:
+                grid = GridLayout(cols=1)
+                info = Label(text="No paired devices found.\nPlease make sure your Bluetooth\nis on, you are in range of\nyour device, and you are paired\nto your device.")
+                btn = Button(text="Retry", size_hint_y=.2)
+                btn.bind(on_release=self.setupAll)
+                self.content = grid
+
+        def setupDevButtons(self, listOfDevs):
+            self.layout = GridLayout(cols=1, spacing=20, size_hint_y=None)
+            self.layout.bind(minimum_height=self.layout.setter("height"))
+
+            for devName in listOfDevs:
+                btn = self.DeviceButton(self, text=devName, size_hint_y=None, height=Window.height/10, halign="left", valign="middle")
+                self.layout.add_widget(btn)
+
+            self.view = ScrollView(size_hint=(1, 1))
+            self.view.add_widget(self.layout)
+            self.content = self.view
+
+        def getDeviceList(self):
+            result = []
+            pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
+            for dev in pairedDevs:
+                result.append(dev.getName())
+
+            return result
+
+
+        def changeToDeviceList(self, instance=None):
+            self.content = self.view
+
+        def setupBT(self, devName):
+            try:
+                self.outerScreen.rStream, self.outerScreen.sStream = createSocketStream(self, devName)
+            except Exception, e:
+                print u"Can't connect to device."
+                self.connected = False
+                grid = GridLayout(cols=1)
+                info = Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app.")
+                btn = Button(text="Retry", size_hint_y=.2)
+                btn.bind(on_press=self.changeToDeviceList)
+                grid.add_widget(info)
+                grid.add_widget(btn)
+                self.content = grid
+            else:
+                print u"Connected to:", devName
+                self.connected = True
+                self.dismiss()
+
+
+    def __init__(self, **kwargs):
+        super(PadScreen, self).__init__(**kwargs)
+        self.nums = []
+        self.numsString = u""
+        self.rStream = None
+        self.sStream = None
+        self.deviceSelection = self.DeviceSelectionPopup(self, title="Select your device:", title_align="center", size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
+        Clock.schedule_once(self.deviceSelection.open, 0.5)
+
+    def addNum(self, num):
+        if len(self.nums) < 16:
+            self.nums.append(int(num))
+            self.numsString += "*"
+            self.updateDisplay()
+
+    def updateDisplay(self):
+        self.ids.display.text = self.numsString
+
+    def backSpace(self):
+        if len(self.nums) != 0:
+            del self.nums[-1]
+            self.numsString = self.numsString[:len(self.nums)]
+            self.updateDisplay()
+
+
+    def confirm(self):
+        pop = Popup(title="Please Wait...", content=Label(text="Waiting for confirmation."), size_hint=(1, 1), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=False)
+        if self.rStream != None and self.sStream != None:
+            self.sStream.write("{}".format("#"))
+            self.nums = SHA.getSHA128of16(self.nums)
+            for num in self.nums:
+                self.sStream.write("{},".format(num))
+            self.sStream.write("{}".format("~"))
+            self.sStream.flush()
+            print u"Numbers sent."
+            pop.open()
+
+            data = self.rStream.read()
+            while True:
+                print data, u"data"
+                if len(str(data)) != 0:
+                    print data, u"break"
+                    break
+                try:
+                    data = self.rStream.read()
+                except Exception as e:
+                    print e, u"Couldn't recieve data."
+
+            print data, u"Response"
+            if data == 49:
+                pop.dismiss()
+                print u"Valid"
+
+                corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                Clock.schedule_once(corPop.open, -1)
+
+                #Time to recieve file names of current directory
+                listOfFiles = recieveFileList(self.rStream)
+
+                self.manager.get_screen("Main").sStream, self.manager.get_screen("Main").rStream = self.sStream, self.rStream
+
+                self.manager.get_screen("Select").sStream, self.manager.get_screen("Select").rStream = self.sStream, self.rStream
+                self.manager.get_screen("Select").fileList = listOfFiles
+
+                self.manager.current = "Main"
+
+            elif data == 48:
+                print u"Invalid."
+                pop.dismiss()
+                invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                self.nums = []
+                self.numsString = u""
+                self.updateDisplay()
+                invPop.open()
+            else:
+                print type(data), "data was not either 49 or 48..."
+        else:
+            print u"Can't connect to device."
+            noConnect = Popup(self, title="Can't connect.", content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate app."), title_align="center", size_hint=(.6, .6), pos_hint={"x_center": .5, "y_center": .5}, auto_dismiss=True)
+            noConnect.open()
+            self.deviceSelection.open()
+```
 

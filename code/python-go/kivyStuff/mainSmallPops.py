@@ -16,7 +16,7 @@ from kivy.uix.popup import Popup
 import aesFName
 from configOperations import dirInputValid
 
-class encPopup(Popup): #For single files
+class encDecPop(Popup): #For single files
 
     def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
         super(Popup, self).__init__(**kwargs)
@@ -53,7 +53,7 @@ class encPopup(Popup): #For single files
         self.grid.add_widget(self.wholePb)
         self.content = self.grid
 
-        self.checkThread = Thread(target=self.enc, args=(encType, op,), daemon=True)
+        self.checkThread = Thread(target=self.encDec, args=(encType, op,), daemon=True)
         self.checkThread.start()
 
     def _getTotalSize(self):
@@ -84,7 +84,7 @@ class encPopup(Popup): #For single files
         return "A lot of time left."
 
 
-    def enc(self, encType, op):
+    def encDec(self, encType, op):
         total = 0
         totalPer = 0
         factor = 0.5
@@ -144,7 +144,7 @@ class encPopup(Popup): #For single files
         self.dismiss()
 
 
-class btTransferPop(encPopup):
+class btTransferPop(encDecPop):
 
     def __init__(self, mainScreen, fileObjTmp, **kwargs):
         super(Popup, self).__init__(**kwargs)
@@ -268,7 +268,4 @@ class addFilePop(Popup):     #The screen (it's actually a Popup) for adding fold
 
 
     def checkIfSure(self, input):
-        sure = self.ConfirmationPopup(self, input)
-        sure.open()
-
-
+        self.ConfirmationPopup(self, input).open()

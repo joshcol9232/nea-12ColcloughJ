@@ -10,7 +10,7 @@ from fileSelectionScreen import FileSelectionScreen
 class ScreenManagement(ScreenManager):
     pass
 
-presentation = Builder.load_file(u"pad.kv")
+presentation = Builder.load_file(u"pad.kv")   # Load the kv file
 
 class uiApp(App):
 

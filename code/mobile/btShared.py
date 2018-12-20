@@ -12,25 +12,6 @@ UUID = autoclass(u"java.util.UUID")
 
 
 #Shared methods
-def createSocketStream(self, devName):
-    pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
-    socket = None
-    found = False
-    for dev in pairedDevs:
-        if dev.getName() == devName:
-            socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
-            rStream = socket.getInputStream()   #Recieving data
-            sStream = socket.getOutputStream()  #Sending data
-            self.devName = devName
-            found = True
-            break   #Stop when device found
-    if found:
-        socket.connect()
-        return rStream, sStream
-    else:
-        raise ConnectionAbortedError(u"Couldn't find + connect to device.")
-
-
 def recieveFileList(rStream, buffAlreadyKnown=[]):
     buff = buffAlreadyKnown
     data = ""

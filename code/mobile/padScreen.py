@@ -9,13 +9,31 @@ from kivy.clock import Clock
 from kivy.uix.screenmanager import Screen
 from jnius import autoclass
 
-from btShared import createSocketStream, recieveFileList
+from btShared import recieveFileList
 import SHA
 
 BluetoothAdapter = autoclass(u"android.bluetooth.BluetoothAdapter")
 BluetoothDevice = autoclass(u"android.bluetooth.BluetoothDevice")
 BluetoothSocket = autoclass(u"android.bluetooth.BluetoothSocket")
 UUID = autoclass(u"java.util.UUID")
+
+def createSocketStream(self, devName):
+    pairedDevs = BluetoothAdapter.getDefaultAdapter().getBondedDevices().toArray()
+    socket = None
+    found = False
+    for dev in pairedDevs:
+        if dev.getName() == devName:
+            socket = dev.createRfcommSocketToServiceRecord(UUID.fromString("80677070-a2f5-11e8-b568-0800200c9a66")) #Random UUID from https://www.famkruithof.net/uuid/uuidgen
+            rStream = socket.getInputStream()   #Recieving data
+            sStream = socket.getOutputStream()  #Sending data
+            self.devName = devName
+            found = True
+            break   #Stop when device found
+    if found:
+        socket.connect()
+        return rStream, sStream
+    else:
+        raise ConnectionAbortedError(u"Couldn't find + connect to device.")
 
 class PadScreen(Screen, FloatLayout):
 
