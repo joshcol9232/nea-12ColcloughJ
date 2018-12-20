@@ -38,7 +38,7 @@ def recieveFileList(rStream, buffAlreadyKnown=[]):
     startList = [33, 70, 73, 76, 69, 76, 73, 83, 84, 33] #!FILELIST!
     endList   = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
 
-    while buff[len(buff)-11:] != endList:
+    while buff[-11:] != endList:
         try:
             data = rStream.read()
         except Exception as e:
@@ -119,9 +119,9 @@ def recieveFile(rStream, buffAlreadyKnown=[]):
                         fo = open(downloadsDir+"/"+fileName, "ab")
 
 
-        elif ((len(buff) > bufferSize+10) or (buff[len(buff)-10:] == endFile)):
-            if buff[len(buff)-10:] == endFile:
-                buff[len(buff)-10:] = []
+        elif ((len(buff) > bufferSize+10) or (buff[-10:] == endFile)):
+            if buff[-10:] == endFile:
+                buff[-10:] = []
                 print u"End found"
                 fo.write(bytearray(buff))
                 fo.close()

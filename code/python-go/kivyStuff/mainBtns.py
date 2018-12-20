@@ -13,7 +13,7 @@ class listButton(Button):           #File button when using main screen.
 class nameSortButton(Button):           #Sorts the listButtons alphabetically and by folders/files.
 
     def __init__(self, mainScreen, **kwargs):
-        super(Button, self).__init__(**kwargs)
+        super(Button, self).__init__(**kwargs)   # Run kivy Button.__init__ class with it's key word arguments.
         self.outerScreen = mainScreen
 
     def changeSortOrder(self):
@@ -39,7 +39,7 @@ class sizeSortButton(Button):           #Sorts the files/folders by size
     def sortBySize(self):
         self.sortList = quickSortSize(self.outerScreen.currentList)
         if not self.ascending:
-            self.sortList = self.sortList[::-1]
+            self.sortList = self.sortList[::-1]    # Reverse sorted list.
 
         self.outerScreen.removeButtons()
         self.outerScreen.createButtons(self.sortList, False)
@@ -51,15 +51,13 @@ class sizeSortButton(Button):           #Sorts the files/folders by size
         else:
             self.text = "^"
 
-        if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):
+        if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):   # Checking that the sortList is for the current directory and we haven't moved.
             self.sortList = self.sortList[::-1]
             self.outerScreen.currentList = self.sortList
-            print("Using old list")
             self.outerScreen.removeButtons()
             self.outerScreen.createButtons(self.sortList, False)
         else:
             self.outerScreen.previousDir = self.outerScreen.currentDir
-            print("Re-sorting")
             self.sortBySize()
 
 class infoButton(Button):       #The button that displays information about the file.

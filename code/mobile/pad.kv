@@ -65,7 +65,7 @@ ScreenManagement:
 
 
             Button:
-                text: "DEL"
+                text: "Delete"
                 on_release: root.backSpace()
             Button:
                 text: "0"
@@ -99,21 +99,15 @@ ScreenManagement:
     FloatLayout:
         Button:
             text: "Exit"
-            size_hint: .3, .14
+            size_hint: .4, .14
+            background_color: (0.8, 0.8, 0.8, 1)
             pos_hint: {"top": 1, "left": 1}
             on_release: root.exit()
 
         Button:
             text: "Go back"
-            size_hint: .3, .14
+            size_hint: .4, .14
+            background_color: (0.8, 0.8, 0.8, 1)
             pos_hint: {"top": 1, "right": 1}
             on_release: root.getBackDir()
-
-        TextInput:
-            id: searchInput
-            size_hint: 1, .08
-            pos_hint: {"left": 1, "y": .78}
-            hint_text: "Search:"
-            multiline: False
-            on_text_validate: print self.text
 

@@ -109,7 +109,7 @@ class PadScreen(Screen, FloatLayout):
 
     def backSpace(self):
         if len(self.nums) != 0:
-            del self.nums[len(self.nums)-1]
+            del self.nums[-1]
             self.numsString = self.numsString[:len(self.nums)]
             self.updateDisplay()
 
@@ -160,6 +160,9 @@ class PadScreen(Screen, FloatLayout):
                 print u"Invalid."
                 pop.dismiss()
                 invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                self.nums = []
+                self.numsString = u""
+                self.updateDisplay()
                 invPop.open()
             else:
                 print type(data), "data was not either 49 or 48..."

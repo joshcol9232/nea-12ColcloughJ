@@ -1,9 +1,9 @@
-#: import Window kivy.core.window.Window
+#:include kivyStuff/kvFiles/mainScButtons.kv
+#:include kivyStuff/kvFiles/mainScPops.kv
+#:include kivyStuff/kvFiles/mainScLabels.kv
 
 <MainScreen>:
     addFile: addFile
-    key: root.key
-
     RelativeLayout:                 #Adds background in case fade transition breaks.
         canvas.before:
             Color:

@@ -17,26 +17,24 @@ try:
     from bluetooth import *
 except:
     pass
-else:
-    from bluetooth import *
 
 class LoginScreen(Screen):
 
     def __init__(self, fileSep, path, startDir, **kwargs):
         self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
-        super(Screen, self).__init__(**kwargs)
+        super(Screen, self).__init__(**kwargs)  # Run kivy's Screen.__init__ function with the key word arguments (such as size or position)
         self.key = ""
 
     def cancel(self):
-        self.manager.get_screen("Main").useBT = True
-        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv")
-        self.manager.add_widget(LoginScreenBT(self.fileSep, self.path, self.startDir, name="Login"))
+        self.manager.get_screen("Main").useBT = True                      # Am now using BT
+        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv") # Load the styling file for BT login screen
+        self.manager.add_widget(LoginScreenBT(self.fileSep, self.path, self.startDir, name="Login")) # Create the new screen
         self.name = "Dead"  # To prevent clash with new login screen.
-        self.manager.current = "Login"
-        self.manager.remove_widget(self)
-        self = None
+        self.manager.current = "Login"   # Change to Login
+        self.manager.remove_widget(self) # Remove self from the app
+        self = None                      # Kill self
 
-    def findFile(self, dir):    #For finding a file to decrypt first block and compare it with key given.
+    def findFile(self, dir):    # For finding a file to decrypt first block and compare it with key given.
         fs = listdir(dir)
         for item in fs:
             if osIsDir(dir+item+"/"):
@@ -49,7 +47,7 @@ class LoginScreen(Screen):
                 self.count += 1
                 return
 
-    def passToTerm(self, key, d):           #Makes a pipe to communicate with the AES written in go.
+    def passToTerm(self, key, d):           # Makes a pipe to communicate with AES
         if self.fileSep == "\\":
             progname = "AESWin"
         else:
@@ -58,7 +56,7 @@ class LoginScreen(Screen):
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         return out
 
-    def getIfValidKey(self, inputKey):              #Gets the output of the AES key checker.
+    def getIfValidKey(self, inputKey):              # Gets the output of the AES key checker.
         if len(listdir(self.path)) > 1:
             self.decryptTestFile = ""
             self.count = 0
@@ -71,7 +69,7 @@ class LoginScreen(Screen):
         else:
             return True
 
-    def checkKey(self, inputKey):   #Handles the UI while the key is checked, and passes key to functions to check it.
+    def checkKey(self, inputKey):   # Handles the GUI while the key is checked, and passes key to functions to check it.
         try:
             int(inputKey)
         except:
@@ -100,8 +98,8 @@ class LoginScreen(Screen):
                     pop.open()
                     return "Login"
 
-    def needToSetKey(self):             #For checking if the user needs to make a new key.
-        if len(listdir(self.path)) == 0:
+    def needToSetKey(self):      # Gets text to tell the user if they need to set a key.
+        if len(listdir(self.path)) == 0:   # If there are no files in the vault, then the key hasn't been set yet.
             return "Input New Key (Write this down if you have to)"
         else:
             return "Input Key"
@@ -116,11 +114,11 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
 
     def on_enter(self):
         self.serv = None
-        self.startServ = Clock.schedule_once(self.startSrv, 0.5) #Use the clock to allow the screen to be rendered. (Waits 0.7 seconds for screen to be loaded.)
+        self.startServ = Clock.schedule_once(self.startSrv, 0.5) # Use the clock to allow the screen to be rendered. (Waits 0.5 seconds for screen to be loaded.)
 
     def checkKey(self, inputKey):
         inputKey = inputKey.split(",")
-        inputKey = inputKey[:len(inputKey)-1]
+        inputKey = inputKey[:-1]
         key = " ".join(str(i) for i in inputKey)    #Formatting for AES
         valid = self.getIfValidKey(key)
         if valid:
@@ -132,8 +130,8 @@ class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScr
 
     def cancel(self):
         if self.serv != None:
-            self.manager.get_screen("Main").serverSock.close()
-            self.serv.join()
+            self.manager.get_screen("Main").serverSock.close()  # Close the BT server
+            self.serv.join()  # Close the thread that runs the server (in LoginScreenBT)
             try:
                 self.manager.get_screen("Main").clientSock.close()
             except AttributeError:  # clientSock will not be initilized if there are no clients.

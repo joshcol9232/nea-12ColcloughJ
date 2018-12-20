@@ -1,0 +1,42 @@
+#: import Window kivy.core.window.Window
+
+<listButton@Button>:
+    font_size: 14
+    halign: "left"
+    valign: "middle"
+    height: 30
+    size_hint: 1, None
+    on_release: root.outerScreen.traverseButton(self.fileObj)
+    #drag_rectangle: self.x, self.y, self.width, self.height
+    #drag_timeout: 10000000
+    #drag_distance: 0
+
+<listButtonBubble@Bubble>:
+    size_hint: .1, .1
+    pos_hint: {"x_center": self.touch.opos[0]/Window.width, "y_center": self.touch.opos[1]/Window.height}
+    BubbleButton:
+        text: "Scoop"
+
+<nameSortButton@Button>:
+    font_size: 14
+    size_hint: 10.4, 1
+    on_release: root.changeSortOrder()
+
+<sizeSortButton@Button>:
+    font_size: 14
+    on_release: root.changeSizeOrder()
+
+<infoButton@Button>:
+    font_size: 14
+    size_hint: .05, 1
+    halign: "left"
+    valign: "middle"
+    on_release: root.outerScreen.getFileInfo(self.fileObj)
+    Image:
+        source: self.parent.outerScreen.assetsPath+"info.png"
+        center_x: self.parent.center_x
+        center_y: self.parent.center_y
+        size: 20, 20
+
+<deleteButton@Button>:
+    on_release: root.outerScreen.deleteFile(self.fileObj)

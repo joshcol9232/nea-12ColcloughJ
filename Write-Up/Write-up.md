@@ -1451,9 +1451,7 @@ code
 │   ├── mainScreen.py
 │   ├── pad.kv
 │   ├── padScreen.py
-│   ├── SHA.py
-│   ├── sortsCy.c
-│   └── sortsCy.cpython-37m-x86_64-linux-gnu.so
+│   └── SHA.py
 └── python-go
     ├── AES
     ├── aesFName.py
@@ -1462,6 +1460,7 @@ code
     ├── AESWin.exe
     ├── BLAKE
     ├── blake.go
+    ├── blake_test.go
     ├── config.cfg
     ├── configOperations.py
     ├── fileClass.py
@@ -1474,7 +1473,6 @@ code
     │   │   └── settingsSc.kv
     │   ├── loginClass.py
     │   ├── mainBtns.py
-    │   ├── mainFileStatusPops.py
     │   ├── mainScClass.py
     │   ├── mainSmallPops.py
     │   └── ui.py
@@ -1490,7 +1488,6 @@ code
     │   └── sortsCy.pyx
     └── start.py
 
-7 directories, 39 files
 ```
 
 I have taken out all of the `__pycache__` folders that Python generates.
@@ -1629,7 +1626,7 @@ def getStartDir(fileSep=None):
     startDir = osPath.dirname(osPath.realpath(__file__))+fileSep
     tempDir = startDir.split(fileSep)
     for i in range(2):
-        del tempDir[len(tempDir)-2]
+        del tempDir[-2]
     return startDir, fileSep.join(tempDir)+fileSep+"assets"+fileSep+"exports"+fileSep
 
 
@@ -1666,7 +1663,7 @@ def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault
                 editConfTerm("vaultDir", inp, config)
             else:
                 makedirs(inp)
-                if inp[len(inp)-1] != fileSep:
+                if inp[-1] != fileSep:
                     inp += fileSep
                 editConfTerm("vaultDir", inp, config)
 
@@ -1811,7 +1808,7 @@ The list of results is then displayed:
 
 If no results are found, a popup opens saying "No results found for: search item".
 
-## Algorithms
+## Key Algorithms
 
 In this section I will explain each algorithm if the comments in the code are not sufficient, and point out any of the bits that have changed or are different in the **Design** section.
 
@@ -2376,6 +2373,65 @@ The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, wh
 
 `aes.go` is compiled to `AES` for Linux/MacOS, and `AESWin.exe` for Windows.
 
+I have created a benchmark function in `aes.go` to measure the true speed of the operation:
+
+```go
+import (
+  ...       // Not actually a line of code, just skipping through the code
+  "testing"
+)
+
+...
+
+// BENCHMARK
+func BenchmarkEncryptFile(b *testing.B) {
+  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"   // This write up
+  w := "/home/josh/temp"  // Temporary location
+  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69} // Random key
+  for n := 0; n < b.N; n++ {
+    encryptFile(key, f, w)
+  }
+}
+```
+
+Now if I run `go test aes_test.go -bench=.`, Go tests the function however many times it can in a certain period, and gives how long it took on average in nanoseconds. Here is an example output:
+
+```
+goos: linux
+goarch: amd64
+BenchmarkEncryptFile-4          10   187673212 ns/op
+PASS
+ok    command-line-arguments  2.085s
+```
+
+I made a small Python program to work out the speed, and for the sake of transparency here it is:
+
+```python
+def getGoodUnit(bytes):       #Get a good unit for displaying the sizes of files.
+    if bytes == " -":
+        return " -"
+    else:
+        divCount = 0
+        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+        while bytes > 1000:
+            bytes = bytes/1000
+            divCount += 1
+
+        return ("%.2f" % bytes) + divisions[divCount]
+
+def calc(time, data):
+    time = time * (10**-9)
+    datTime = data/time
+    return getGoodUnit(datTime)
+
+print(calc(float(input("Time taken: ")), int(input("Num of bytes: ")))+"/s")
+```
+
+There is no error checking or anything since I am the only person using it (and because I'm lazy).
+
+The result is that on an i7-6600k, the speed of AES was 18.92 MB/s (187673212 ns/op for 10 operations), while on a laptop i7-3537U it was 10.21 MB/s.
+The speed is quite good, as when working on small files (< 2 MB), opening and editing files should be almost instant, and even opening larger files shouldn't take too long. At 18.92 MB/s a 2 GB file would take 105.7 seconds, or 1:45 minutes, which isn't too bad. I timed a 2 GB file (2,036,826,112 bytes precisely) and it actually took 2:00 minutes (yes, on the dot), probably due to background processes.
+
 
 
 ### AES for file names:
@@ -2653,9 +2709,9 @@ def padKey(key):
 
     return key
 
-def checkForPadding(inp):       # Padding for file names can be any number that is not in the ascii table.
-    while inp[len(inp)-1] == 0: # 0 is not a letter and is not punctuation.
-        inp = inp[:len(inp)-2]
+def checkForPadding(inp):
+    while inp[-1] == 0: # 0 is not a letter and is not punctuation.
+        inp = inp[:-2]
 
     return inp
 
@@ -3155,6 +3211,38 @@ It is called little-endian because the smaller (little) number is stored in the 
 The `get64` function turns 8 64-bit words into 1 64-bit word, or 8 bytes.
 
 
+Now similar to `aes.go`, I wrote a benchmark function for `blake.go` that looks like this:
+
+```go
+import (
+  ...
+  "testing"
+)
+
+...
+
+func BenchmarkBLAKEchecksum(b *testing.B) {
+  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"
+  for n := 0; n < b.N; n++ {
+    BLAKEchecksum(f, 64)
+  }
+}
+```
+
+And the results on the i7-6600k were:
+
+```
+goos: linux
+goarch: amd64
+BenchmarkBLAKEchecksum-4          20    59748242 ns/op
+PASS
+ok    command-line-arguments  1.264s
+```
+
+which (using the Python program I used while testing `aes.go`) is 59.42 MB/s, which is very decent. The results of BLAKE on the i7-3537U was `104655494 ns/op`, which is 33.92 MB/s.
+You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply.
+
+
 
 ### The Sorts:
 
@@ -3169,7 +3257,7 @@ cpdef int compareStrings(fileObj, string2, fileObjects=True):  # Returns 0 if st
     else:
         string1 = fileObj
 
-    while not (count >= len(string1) or count >= len(string2)):
+    while not (count >= len(string1) or count >= len(string2)):-
         if ord(string2[count].lower()) < ord(string1[count].lower()):
             return 1
         elif ord(string2[count].lower()) > ord(string1[count].lower()):
@@ -3268,11 +3356,13 @@ When you build the Cython program, you get a shared object file (.so), and a C f
 
 `quickSortTuples` is used for sorting search results, as search results are collected along with the position that the search item was found in the word. For example, if I searched for "b" in a folder, and there was a file called "brian.png", then the search result would be (0, "brian.png"). `quickSortTuples` then sorts these results by the number. I need to use a tuple so that I know what string belongs to which number.
 
+`compareStrings` starts at the first character of each string, compares the characters using `ord()` to get their ASCII value, if character1 has a bigger ASCII value than character2, then the function will return `1`, of character1 is less than character2, then the function will return `0`. If they are both the same, then the function moves onto the next pair of characters. If both strings turn out to be exactly the same, then the function returns `2`. `quickSortAlph` uses this output to determine which side of the pivot the item should be added to. If the output of the function was `2`, then the item is the search item, so add it to the middle. If the output of the function was `1` then append it to the left side of the list, and if the returned value was `0` then append it to the right. All of the quick sorts allways sort in ascending order, and then if the program wants it in descending order, then all you have to do is reverse the list (`list = list[::-1]`).
+
 
 
 ### The File class:
 
-Here is the code for the File class (`code/python-go/fileClass.py`):
+Here is the code for the File class (`code/python-go/fileClass.py`), often assigned the variable name `fileObj` in the rest of the program:
 
 ```python
 from os import path as osPath
@@ -3303,7 +3393,7 @@ class File:
 
         if extension == None:
             extension = self.path.split(".")
-            self.extension = extension[len(extension)-1].lower()
+            self.extension = extension[-1].lower()
 
         if self.isDir:
             self.hexPath += self.fileSep
@@ -3369,3 +3459,1399 @@ This is the File class talked about in the **File Storage** section of the desig
 Most of the variables have been kept the same, however `extension` was added for when I get the thumbnail of the file, as if the file is not a png or a jpg, then a thumbnail cannot be shown (since it isn't an image). I also have the variable `outerScreen` that holds a reference to the Kivy Screen object that created it, so it can access functions and variables from the Screen if it needs to.
 
 There are a few new functions too. `_getNormDir` gets the normal file path if path is `None` (it is also a private funtion (`_`), as it is only needed once by the object, and shouldn't be used again by anything else). `_getFileSize` gets the total size of the File object. If it is a folder (isDir) then `_recursiveSize` is called to handle it. If the size can not be read, then the function returns " -", which will display nicely in the GUI. 
+
+
+
+## GUI Code
+
+In this section, I will go through the code for the entire GUI (basically anything in the `code/python-go/kivyStuff` folder).
+
+
+### The root of the GUI
+
+The GUI is started once `code/python-go/kivyStuff/ui.py`'s runUI() function is called from `code/python-go/start.py`.
+Here is the code for `ui.py`:
+
+```python
+from tempfile import gettempdir
+from shutil import rmtree
+
+from kivy.config import Config
+Config.set("graphics", "resizable", True)
+Config.set("input", "mouse", "mouse,disable_multitouch") # Disable multitouch features used on mobile apps.
+Config.write()
+
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.lang import Builder
+
+######Import personal classes######
+from mainScClass import MainScreen
+from loginClass import LoginScreen, LoginScreenBT
+from settingsScreen import SettingsScreen
+
+#########Import config functions########
+import configOperations
+
+
+def runUI():
+    ui = uiApp(title="FileMate")
+    ui.run()
+
+    # When program closes:
+    print("Deleting temp files.")
+    try:
+        fSep = configOperations.getFileSep()
+        rmtree(gettempdir()+fSep+"FileMate"+fSep) # Remove all temporary files.
+    except FileNotFoundError:
+        print("No temp files.")
+    print("App closed.")
+
+class uiApp(App):
+
+    def build(self):
+        sm = ScreenManager()
+
+        sm.transition = FadeTransition() # Set transition animation when changing screens.
+        fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc = configOperations.runConfigOperations()
+        # Load kv files for each screen.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")     # MainScreen styling.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/mainScClasses.kv") # MainScreen sub-classes styling.
+        Builder.load_file(startDir+"kivyStuff/kvFiles/settingsSc.kv") # SettingsScreen styling.
+
+        if useBT:
+            Builder.load_file(startDir+"kivyStuff/kvFiles/loginScBT.kv")
+            sm.add_widget(LoginScreenBT(fileSep, path, startDir, name="Login"))
+        else:
+            Builder.load_file(startDir+"kivyStuff/kvFiles/loginSc.kv")
+            sm.add_widget(LoginScreen(fileSep, path, startDir, name="Login"))
+
+        sm.add_widget(MainScreen(fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, name="Main")) # fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, **kwargs
+        sm.add_widget(SettingsScreen(sm.get_screen("Main"), configLoc, name="Settings"))
+        sm.current = "Login"
+
+        return sm
+
+
+if __name__ == "__main__":
+    runUI()
+```
+
+This is the program that runs the app itself. All it does is create the root App, and add the ScreenManager as the root widget, where then child widgets (in this case screens) can be added.
+
+
+
+### Login classes
+
+Here is the code for both the regular login (LoginScreen), and the Bluetooth login screen (LoginScreenBT) (at `code/python-go/kivyStuff/loginClass.py`):
+
+```python
+from os import listdir
+from os.path import isdir as osIsDir
+from subprocess import Popen, PIPE
+
+from kivy.uix.screenmanager import Screen
+from kivy.lang.builder import Builder
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
+
+from kivy.clock import Clock
+from threading import Thread
+
+import SHA
+
+# Try importing the BT module, if it isn't available then they just can't use BT. Imported in case the user wants to switch from normal login to Bluetooth login.
+try:
+    from bluetooth import *
+except:
+    pass
+
+class LoginScreen(Screen):
+
+    def __init__(self, fileSep, path, startDir, **kwargs):
+        self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
+        super(Screen, self).__init__(**kwargs)
+        self.key = ""
+
+    def cancel(self):
+        self.manager.get_screen("Main").useBT = True                      # Am now using BT
+        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginScBT.kv") # Load the styling file for BT login screen
+        self.manager.add_widget(LoginScreenBT(self.fileSep, self.path, self.startDir, name="Login")) # Create the new screen
+        self.name = "Dead"  # To prevent clash with new login screen.
+        self.manager.current = "Login"   # Change to Login
+        self.manager.remove_widget(self) # Remove self from the app
+        self = None                      # Kill self
+
+    def findFile(self, dir):    # For finding a file to decrypt first block and compare it with key given.
+        fs = listdir(dir)
+        for item in fs:
+            if osIsDir(dir+item+"/"):
+                if self.count == 0:
+                    self.findFile(dir+item+"/")
+                else:
+                    return
+            else:
+                self.decryptTestFile = dir+item
+                self.count += 1
+                return
+
+    def passToTerm(self, key, d):           # Makes a pipe to communicate with AES
+        if self.fileSep == "\\":
+            progname = "AESWin"
+        else:
+            progname = "AES"
+        goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
+        return out
+
+    def getIfValidKey(self, inputKey):              # Gets the output of the AES key checker.
+        if len(listdir(self.path)) > 1:
+            self.decryptTestFile = ""
+            self.count = 0
+            self.findFile(self.path)
+            diditwork = self.passToTerm(inputKey, self.decryptTestFile)
+            if diditwork == b"-Valid-\n": #The go program prints "-Valid-\n" or "-Invalid-\n" once it is done checking the key.
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def checkKey(self, inputKey):   # Handles the GUI while the key is checked, and passes key to functions to check it.
+        try:
+            int(inputKey)
+        except:
+            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop.open()
+            return "Login"
+        else:
+            if len(str(inputKey)) > 16:
+                pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+                pop.open()
+                return "Login"
+            else:
+                inputKeyTemp = []
+                for i in range(len(inputKey)):
+                    inputKeyTemp.append(int(inputKey[i]))
+                inputKey = inputKeyTemp
+                inputKey = SHA.getSHA128of16(inputKey)
+                key = " ".join(str(i) for i in inputKey)
+                valid = self.getIfValidKey(key)
+                if valid:
+                    self.ids.keyInput.text = "" #reset key input if valid
+                    self.key = key
+                    return "Main"
+                else:
+                    pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+                    pop.open()
+                    return "Login"
+
+    def needToSetKey(self):      # Gets text to tell the user if they need to set a key.
+        if len(listdir(self.path)) == 0:   # If there are no files in the vault, then the key hasn't been set yet.
+            return "Input New Key (Write this down if you have to)"
+        else:
+            return "Input Key"
+
+
+class LoginScreenBT(LoginScreen, Screen):      #Has the same methods as LoginScreen, but some overwritten with bluetooth.
+
+    def __init__(self, fileSep, path, startDir, **kwargs):
+        self.fileSep, self.path, self.startDir = fileSep, path, startDir
+        super(Screen, self).__init__(**kwargs)
+        self.key = ""
+
+    def on_enter(self):
+        self.serv = None
+        self.startServ = Clock.schedule_once(self.startSrv, 0.5) # Use the clock to allow the screen to be rendered. (Waits 0.5 seconds for screen to be loaded.)
+
+    def checkKey(self, inputKey):
+        inputKey = inputKey.split(",")
+        inputKey = inputKey[:-1]
+        key = " ".join(str(i) for i in inputKey)    #Formatting for AES
+        valid = self.getIfValidKey(key)
+        if valid:
+            self.key = key
+            self.manager.get_screen("Main").key = key
+            return True
+        else:
+            return False
+
+    def cancel(self):
+        if self.serv != None:
+            self.manager.get_screen("Main").serverSock.close()  # Close the BT server
+            self.serv.join()  # Close the thread that runs the server (in LoginScreenBT)
+            try:
+                self.manager.get_screen("Main").clientSock.close()
+            except AttributeError:  # clientSock will not be initilized if there are no clients.
+                pass
+        else:
+            self.startServ.cancel()   # Cancels scheduled task to start server, as we are switching screens anyway.
+
+        print("Server closed.")
+        self.manager.get_screen("Main").useBT = False
+        Builder.load_file(self.startDir+"kivyStuff/kvFiles/loginSc.kv")
+        self.manager.add_widget(LoginScreen(self.fileSep, self.path, self.startDir, name="Login"))
+        self.name = "Dead"      # To prevent name clash with other login screen.
+        self.manager.current = "Login"
+        self.manager.remove_widget(self)
+        self = None
+
+    def startSrv(self, dt=None):
+        self.serv = Thread(target=self.manager.get_screen("Main").startBT, daemon=True)  # Runs the function in MainScreen, which prevents segmentation, so I don't have to shutdown server when screen is switched
+        self.serv.start()
+```
+
+`LoginScreenBT.startSrv` starts the Bluetooth server, however the server is run inside of the `MainScreen` class, which displays the files. This is important because when you change screen and have a thread running, the thread gets cut off and a `Segmentation Fault` is thrown. Running the server in `MainScreen` also means that the server does not need to be closed and opened again (which is what I was doing before I did this).
+
+The function `cancel` is called when the user wants to switch between login screens. What it does is rename the kivy Screen to something other than "Login", load the `.kv` file for the new login screen, then create the new Login screen, and change screen to that one.
+
+`.kv` files are for Kivy's styling language, layed out similar to css. `.kv` files work like this:
+
+```cs
+RootWidget:                 # Example: ScreenManager:
+  ChildWidget:
+    key_word_argument: value
+
+<CustomClass@KivyClass>:    # Example: <LoginScreen@Screen>
+  ...
+```
+
+For custom classes, you do not always have to specify a `KivyClass`.
+
+Here is the style sheet `kv` file for both login screens:
+
+LoginScreen (`code/python-go/kivyStuff/kvFiles/loginSc.kv`):
+
+```cs
+<LoginScreen>:
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    Label:
+        id: labelLogin
+        size_hint: .46, .08
+        text: root.needToSetKey()
+        font_size: 22
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    TextInput:
+        id: keyInput
+        size_hint: .7, .08
+        font_size: 22
+        hint_text: "Key (16 characters maximum)"
+        pos_hint: {"center_x": 0.5, "center_y": 0.6}
+        password: True
+        multiline: False
+        on_text_validate: root.manager.current = root.checkKey(keyInput.text)
+
+    Button:
+        id: submitKey
+        size_hint: .16, .16
+        font_size: 22
+        text: "Submit"
+        pos_hint: {"center_x": 0.5, "center_y": 0.3}
+        on_release: root.manager.current = root.checkKey(keyInput.text)
+
+    Button:
+        size_hint: .18, .16
+        pos_hint: {"x": 0, "bottom": 1}
+        text: "Login with BT"
+        font_size: 22
+        on_release: root.cancel()
+```
+
+The syntax highligting on this document may be a bit off, as the closest highlighting language is `cs`. Comments are done using `#`, however in `cs` they are `//`.
+
+LoginScreenBT:
+
+```cs
+<LoginScreenBT>:
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    Button:
+        size_hint: .18, .16
+        pos_hint: {"x": 0, "bottom": 1}
+        text: "Login without BT"
+        font_size: 22
+        on_release: root.cancel()
+
+    Label:
+        id: labelLogin
+        size_hint: .46, .08
+        text: "Connect via bluetooth."
+        font_size: 22
+        pos_hint: {"center_x": 0.5, "y": 0.8}
+
+    Label:
+        id: clientLabel
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+```
+
+The `id` field of some of the widgets is used to access that widget from within the Python code. For example, to access the Label with the text "Connect via bluetooth." in LoginScreenBT, you would have to do
+
+```python
+class LoginScreenBT:
+  ...
+  self.ids.labelLogin
+  ...
+```
+
+and then from there you can change any attribute of that Label, such as the text (`self.ids.labelLogin.text = "blah"`).
+
+The `RelativeLayout` at the top of each class is only for setting the background to black for both screens. None of the other widgets are children of the `RelativeLayout`. Just thought I should clarify that before moving onto the different types of positioning.
+
+Positioning widgets in Kivy can work using relative positioning, or exact positioning, where exact positioning requires that you put the exact pixel coordinates as the position, while relative positioning takes the width and height of the window and translates it onto a 0 to 1 scale. `x` goes from left to right, 0 to 1, and `y` goes from bottom to top 0 to 1.
+When setting the `pos_hint` of each widget, there are a few other options than `"x"` and `"y"`, such as `"center_(x/y)"`, which sets the position of the widget relative to it's centre, `"top/bottom"` which sets the position relative to the top or bottom of the screen, `"left/right"` which sets the position relative to the left or right of the screen.
+
+`size_hint` also uses the relative layout system (not actual `RelativeLayout`, there are others like `FloatLayout`) to set the size of a widget depending on the size of the screen.
+
+Also, when I reference `root.something`, `root` is the root widget of this child widget, so in this case either `LoginScreen` or `LoginScreenBT`. `self` refers to the widget itself.
+
+
+### Main Screen
+
+Here is the code for the MainScreen class:
+
+```python
+import os
+from shutil import move, disk_usage, rmtree
+from threading import Thread
+from functools import partial   # For parsing in functions with multiple arguments to widgets/threads
+from subprocess import Popen, PIPE
+
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.clock import Clock
+from kivy.clock import mainthread
+from kivy.core.window import Window
+from kivy.uix.button import Button
+from kivy.uix.progressbar import ProgressBar
+from kivy.uix.popup import Popup
+from kivy.uix.image import Image
+from kivy.uix.screenmanager import Screen
+
+from fileClass import File
+import aesFName
+import sortsCy
+# Own kivy classes
+import mainBtns
+from settingsScreen import SettingsScreen
+import mainSmallPops as mainSPops
+
+try:
+    from bluetooth import *
+except:
+    pass
+
+class MainScreen(Screen):
+
+    class infoLabel(Label):   # Not a popup so only suitable place.
+        pass
+
+    def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, **kwargs):
+        self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT, self.configLoc = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc
+        super(Screen, self).__init__(**kwargs)
+        self.ascending = True       # Sort order
+        self.key = ""
+        self.encPop = None
+        self.entered = False
+        self.validBTKey = False
+        self.useBTTemp = self.useBT
+        self.previousDir = None
+        self.lastPathSent = ""
+        self.recycleFolder = ""
+        self.recycleName = ""
+        self.thumbsName = ""
+
+        Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
+        self.currentDir = self.path
+
+
+    def on_enter(self): # When the screen is started.
+        self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
+        if not self.entered:
+            self.setupSortButtons() #Put sort buttons in place.
+            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")    # Prepare recycling and thumbnail folder names for use in the program.
+            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
+            self.recycleFolder = self.path+self.recycleName+self.fileSep
+
+            if not os.path.exists(self.recycleFolder):
+                print("Recycling folder not found in directory, making one now.")
+                os.makedirs(self.recycleFolder)
+
+            self.entered = True
+
+        if self.recycleFolder in self.currentDir:
+            self.createButtons(self.List(self.path))     # Don't want to log into the recycling bin, as the user might get confused.
+        else:
+            self.createButtons(self.List(self.currentDir)) # Loads previous directory.
+
+    def on_leave(self):     # Kept separate from lock because i may want to add more screens that need the key, and do not log the user out.
+        if self.useBT:      # Popups that are open block the lock button, but if BT is lost, the popups stay open.
+            try:                            # Try to close any popups that may be open.
+                self.largePop.dismiss()
+                self.remove_widget(self.largePop)
+            except Exception as e:
+                print(e, "Already closed?")
+            try:
+                self.smallPop.dismiss()
+                self.remove_widget(self.smallPop)
+            except Exception as e:
+                print(e, "Already closed?")
+            try:
+                self.encPop.dismiss()
+                self.remove_widget(self.encPop)
+            except Exception as e:
+                print(e, "Already closed?")
+
+        self.remove_widget(self.scroll)
+
+    def lock(self, fromRunServ=False):  # Procedure for when the program is locked. If it has been called from runServMain, then we might still be on login screen, so don't change screen to login, and restart the server.
+        self.clearUpTempFiles() # Delete all temporary files (decrypted files ready for use).
+        if self.useBT:
+            self.manager.get_screen("Login").ids.clientLabel.text = ""
+
+        if fromRunServ and self.validBTKey == False:
+            self.runServMain()
+        else:
+            self.validBTKey = False
+            return mainthread(self.changeToLogin())      #Change screen to the login screen. Ran on mainthread in case it was called in
+
+    def runServMain(self):
+        self.serverSock = BluetoothSocket( RFCOMM )
+        self.serverSock.bind(("",PORT_ANY))
+        self.serverSock.listen(1)
+
+        uuid = "80677070-a2f5-11e8-b568-0800200c9a66"
+
+        try:
+            advertise_service(self.serverSock, "FileMateServer",
+                              service_id = uuid,
+                              service_classes = [ uuid, SERIAL_PORT_CLASS ],
+                              profiles = [ SERIAL_PORT_PROFILE ],)
+        except BluetoothError as e:
+            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login.\n\nReason: "+str(e)), size_hint=(.4, .4), auto_dismiss=True).open()
+            return
+
+        print("[BT]: Waiting for connection on RFCOMM channel", self.serverSock.getsockname()[1])
+
+        self.clientSock, self.clientInfo = self.serverSock.accept()  # Wait for a connection
+        print("[BT]: Accepted connection from ", self.clientInfo)
+        self.manager.get_screen("Login").ids.clientLabel.text = "Connected to: "+str(self.clientInfo[0])
+
+        numbers = []
+        data = ""
+        buff = []
+        backCommand = [33, 66, 65, 67, 75, 33]                                # !BACK!
+        fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33]  # !FILESELECT!
+        endHeader =  [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33]        # ~!ENDSELECT!
+
+        try:
+            while len(data) > -1:
+                data = self.clientSock.recv(1024) # Recieve 1kb of data
+                print("[BT]: Received data.")
+                if not self.validBTKey:                 # If the key is not valid yet, BT server has to wait for key
+                    numbers.append(str(data, "utf-8"))
+                    if b"~" in data:    # End of key message
+                        append = False
+                        tempNums = "".join(numbers)
+                        tempNums = tempNums.replace("#", "")
+                        tempNums = tempNums.replace("~", "")
+                        if self.manager.get_screen("Login").checkKey(tempNums):   # Check the key in login.
+                            numbers = []
+                            self.clientSock.send("1")
+                            print("[BT]: Send true.")
+                            self.validBTKey = True
+                            self.sendFileList(self.getListForSend(self.path))
+                            mainthread(self.changeToMain())   # Exit thread and change screen to main.
+                        else:
+                            numbers = []
+                            self.clientSock.send("0")
+                            print("[BT]: Send false.")
+                            self.validBTKey = False
+
+                else:
+                    for i in data:
+                        buff.append(i)
+
+                    if buff[:6] == backCommand:   # Buffer is reset every time a header is found
+                        pathBack = self.getPathBack(self.lastPathSent)
+                        if (not pathBack) or (pathBack.replace(self.path, "") == pathBack):    # If you can't go further back (if pathBack has less than path, then remove returns the original string).
+                            print("[BT]: Can't go further back.")
+                            self.clientSock.send("!ENDOFTREE!")
+                        else:
+                            self.sendFileList(self.getListForSend(pathBack))
+                        buff = []
+
+                    elif buff[:12] == fileSelectCommand:  # If the command is fileSelect
+                        commandParams = buff[12:]         # Get parameters (buffer will not be reset)
+                        if commandParams[-12:] == endHeader:  # If end of the buffer is the endHeader, then proceed.
+                            fileWantedList = commandParams[:-12]
+                            fileWanted = ""
+                            for letter in fileWantedList:
+                                fileWanted += chr(letter)
+
+                            print("[BT]:", fileWanted, "fileWanted")
+                            buff = []
+                            filesInPath = self.List(self.lastPathSent)  # Get list of files at directory requested.
+
+                            f = 0
+                            fileObj = None
+                            while (f < len(filesInPath)) and (fileObj == None): # Searches for the file in the path
+                                if filesInPath[f].name == fileWanted:
+                                    fileObj = filesInPath[f]
+                                f += 1
+
+                            if fileObj != None:    # If the file was found, then send it
+                                if fileObj.isDir:  # If it was a directory then send the list of files in that directory.
+                                    self.sendFileList(self.getListForSend(fileObj.hexPath))
+                                else:
+                                    self.makeSendFile(fileObj) # Otherwise send the file.
+
+                            else:
+                                print("[BT]: Couldn't find that file :/")
+                                self.clientSock.send("!NOTFOUND!")
+
+
+                    elif len(buff) > 12: # Clear buffer and wait for next command.
+                        buff = []
+
+
+        except IOError as e:
+            print(e)        # Will be caused when app on mobile closes.
+
+        print("[BT]: Closed.")
+
+        self.clientSock.close()
+        self.serverSock.close()
+        self.lock(fromRunServ=True)
+
+    def sendFileList(self, fileList):
+        # File list sent like: !FILELIST!--fileName1--filename2~!!ENDLIST!
+        self.clientSock.send("!FILELIST!")
+        print("[BT]: Sent !FILELIST!")
+
+        for i in fileList:
+            self.clientSock.send("--{}".format(i))
+
+        print("[BT]: Sent full list, now sent end.")
+        self.clientSock.send("~!!ENDLIST!")
+
+
+    def getListForSend(self, path):
+        if not path:
+            return False
+        else:
+            fs = os.listdir(path)
+            listOfFolders = []
+            listOfFiles = []
+            for item in fs:
+                if os.path.isdir(path+item):
+                    listOfFolders.append(aesFName.decryptFileName(self.key, item))
+                else:
+                    listOfFiles.append(aesFName.decryptFileName(self.key, item))
+
+            self.lastPathSent = path
+
+            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)  # Sort the list and return it
+
+
+
+##Functions for changing screen within threads (used to prevent segmentation faults)
+    @mainthread
+    def changeToMain(self):
+        self.manager.current = "Main"
+
+    @mainthread
+    def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
+        self.manager.current = "Login"
+##############################################
+
+    def startBT(self):
+        self.serverThread = Thread(target=self.runServMain, daemon=True)      #Start BT server as thread so the screen still renders.
+        self.serverThread.start()
+
+    def setupSortButtons(self):
+        self.sortsGrid = GridLayout(cols=2, size_hint=(.99, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
+        self.nameSort = mainBtns.nameSortButton(self, text="^")  # Default starts with Alphabetical sort ascending.
+        self.sizeSort = mainBtns.sizeSortButton(self)
+        self.sortsGrid.add_widget(self.nameSort)
+        self.sortsGrid.add_widget(self.sizeSort)
+        self.add_widget(self.sortsGrid) #Add the sort buttons grid to the float layout of MainScreen.
+
+    def getGoodUnit(self, bytes):       #Get a good unit for displaying the sizes of files.
+        if bytes == " -":
+            return " -"
+        else:
+            divCount = 0
+            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+            while bytes > 1000:
+                bytes = bytes/1000
+                divCount += 1
+
+            return ("%.2f" % bytes) + divisions[divCount]
+
+    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Get a sorted list of files for display. Displays all folders before files.
+        folders = []
+        files = []
+        for i in range(len(fileObjects)):   #Separate into folders and files
+            if fileObjects[i].isDir:
+                folders.append(fileObjects[i])
+            else:
+                files.append(fileObjects[i])
+
+        foldersSort = sortsCy.quickSortAlph(folders)   #Quick sort the list of folders and the list of files.
+        filesSort = sortsCy.quickSortAlph(files)
+
+        if inverse: #If inverse
+            foldersSort = foldersSort[::-1] #Invert the array
+            filesSort = filesSort[::-1]
+
+        return foldersSort+filesSort
+
+    def openRecycling(self):  # Open the recycling folder.
+        if not os.path.exists(self.recycleFolder):
+            print("Recycling folder doesn't exist, making one now.")
+            makedirs(self.recycleFolder)
+
+        Popup(title="Changed Mode",
+              content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."),
+              pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
+        self.currentDir = self.recycleFolder
+        self.removeButtons()
+        print(self.currentDir, "current dir")
+        self.createButtons(self.List(self.currentDir))
+
+
+#######Button Creation and button functions#######
+    def createButtonsCore(self, array): # Makes each file button with it's information and adds it to the scroll view.
+        self.currentList = array
+        for item in array:
+            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
+                back = (1, 1, 1, 1)
+                if item.isDir:   # Colour folders darker than files
+                    back = (0.3, 0.3, 0.3, 1)   # Works as a tint rather than a colour.
+
+                btn = mainBtns.listButton(item, text=("    "+item.name), background_color=back)
+                info = mainBtns.infoButton(self, item, background_color=back)
+
+                btn.bind(size=btn.setter("text_size"))  # Set the text to wrap within the button
+                info.bind(size=info.setter("text_size"))
+                fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
+                fileS.bind(size=fileS.setter("text_size"))  # Wrap text in label
+                self.grid.add_widget(btn)
+                self.grid.add_widget(info)
+                self.grid.add_widget(fileS)
+
+    def createButtons(self, fileObjects, sort=True):
+        self.currentList = []
+        if sort:
+            fileObjects = self.getSortedFoldersAndFiles(fileObjects)    #Sort the list of files.
+
+        self.grid = GridLayout(cols=3, size_hint_y=None)
+        self.grid.bind(minimum_height=self.grid.setter("height"))
+        self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
+        self.scroll.add_widget(self.grid)
+
+        self.createButtonsCore(fileObjects)
+        self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
+
+
+    def traverseButton(self, fileObj):  # Function when file is clicked.
+        if self.recycleFolder not in self.currentDir:
+            if fileObj.isDir:   #If is a folder, then display files within that folder.
+                self.previousDir = self.currentDir
+                self.currentDir = fileObj.hexPath
+                self.resetButtons()
+            else:   # If is a file, decrypt the file and open it.
+                self.decrypt(fileObj)
+        else:
+            print("Recovering this file to path:", fileObj.name)
+            move(fileObj.hexPath, self.path) # Imported from shutil
+            self.refreshFiles()
+
+    def openAddFilePop(self):     # Needs to be asigned to self.smallPop because if the screen is closed with the popup open (only possible when using Bluetooth), all crucial popups need to be closed.
+        self.smallPop = mainSPops.addFilePop(self)
+        self.smallPop.open()
+
+    def openAddFolderPop(self):
+        self.smallPop = mainSPops.addNewFolderPop(self)
+        self.smallPop.open()
+
+    def onFileInfoClose(self, fileObj, _):  # _ is me discarding the popup object.
+        if os.path.exists(fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail
+            os.remove(fileObj.thumbDir)
+
+    def getFileInfo(self, fileObj):     #Get information about a file/folder.
+        fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
+
+        size = (.7, .4)  # Size of popup
+        if fileObj.extension == "png" or fileObj.extension == "jpg":
+            thumb = self.getThumbnail(fileObj)
+            size = (.8, .5)  # Increase size of popup to display image preview.
+
+        # Works as: internalLayout -> scrolView + (Image?)
+        # scrollView contains infoGrid with all of the file's information.
+        internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
+        scrolView = ScrollView()
+        self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
+        self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
+
+        infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
+        scrolView.add_widget(infoGrid)
+        internalLayout.add_widget(scrolView)
+
+        if fileObj.extension == "png" or fileObj.extension == "jpg":
+            internalLayout.add_widget(thumb)
+
+        infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
+
+        infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
+
+        infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
+
+        delText = "Delete"
+        if self.recycleFolder in self.currentDir:    # If in the recycling folder, then delete the item permanently.
+           delText = "Delete Permanently"
+
+        infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
+
+        decBtnText = "Decrypt File"
+        if fileObj.isDir:
+            decBtnText = "Decrypt Folder"
+
+        if fileObj.rawSize > 0:
+            decBtn = Button(text=decBtnText, halign="left", valign="middle")
+            decBtn.bind(on_release=partial(self.decryptFileToLoc, fileObj))
+            infoGrid.add_widget(decBtn)
+
+        self.infoPopup.open()
+
+    def makeSendFile(self, fileObj, buttonInstance=None):
+        self.sendFile = mainSPops.btTransferPop(self, fileObj)
+        self.sendFile.open()
+
+    def moveFileToRecycling(self, fileObj):
+        print("Moving", fileObj.hexPath)
+        if os.path.exists(fileObj.hexPath):
+            move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
+        else:
+            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.") # Doesn't exist, so issue with code somewhere.
+
+    def deleteFile(self, fileObj):
+        if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
+            if self.recycleFolder not in self.currentDir:   # If outside of recycling bin.
+                print("Moving", fileObj.hexPath)
+                if os.path.exists(self.recycleFolder+fileObj.hexName):
+                    if os.path.isdir(self.recycleFolder+fileObj.hexName):
+                        rmtree(self.recycleFolder+fileObj.hexName)
+                    else:
+                        os.remove(self.recycleFolder+fileObj.hexName)
+                move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
+            else:
+                print("Deleting:", fileObj.hexPath, "and checking temp.")
+                if os.path.exists(self.osTemp+"FileMate"+self.fileSep+fileObj.name):  # If removing permanently, check that the file is not decrypted in <system_temp>.
+                    os.remove(self.osTemp+"FileMate"+self.fileSep+fileObj.name)
+                if fileObj.isDir:    # Delete the file/folder
+                    rmtree(fileObj.hexPath) # Imported from shutil
+                else:
+                    os.remove(fileObj.hexPath)
+            self.refreshFiles()
+            self.infoPopup.dismiss()
+
+        else:
+            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
+
+    def goBackFolder(self):     #Go up a folder.
+        if self.currentDir != self.path:    #Can't go further past the vault dir.
+            self.previousDir = self.currentDir
+            if self.recycleFolder in self.currentDir:
+                self.goHome()
+            else:
+                self.currentDir = self.getPathBack(self.currentDir)
+            self.resetButtons()
+        else:
+            print("Can't go further up.")
+            return False
+
+    def getPathForButton(self, item):   # Get the path to the asset for each button.
+        return self.assetsPath+item
+
+    def removeButtons(self):    # Remove the list of files.
+        self.grid.clear_widgets()
+        self.scroll.clear_widgets()
+        self.remove_widget(self.scroll)
+
+    def resetButtons(self): # Goes back to self.currentDir, different to refresh.
+        self.removeButtons()
+        self.nameSort.text = "^"
+        self.sizeSort.text = ""
+        self.createButtons(self.List(self.currentDir))
+
+    def refreshFiles(self):   # Refreshes the files in the current directory
+        self.removeButtons()
+        self.createButtons(self.List(self.currentDir))
+
+    def refreshButtons(self): # Refreshes file list buttons currently displayed.
+        self.removeButtons()
+        self.createButtons(self.currentList, False)
+
+    def goHome(self):   #Takes the user back to the vault dir.
+        self.currentDir = self.path
+        self.refreshFiles()
+
+
+    def List(self, dir):    # Lists a directory, returning File objects.
+        fs = os.listdir(dir)
+        listOfFolders = []
+        listOfFiles = []
+        for item in fs:
+            if os.path.isdir(dir+item):
+                listOfFolders.append(File(self, dir+item, item, self.fileSep, isDir=True))
+            else:
+                if os.path.exists(self.currentDir+self.thumbsName+self.fileSep+item):
+                    listOfFiles.append(File(self, dir+item, item, self.fileSep, dir+self.thumbsName+self.fileSep+item))
+                else:
+                    listOfFiles.append(File(self, dir+item, item, self.fileSep))
+
+        return listOfFolders+listOfFiles
+
+    def getPathBack(self, origPath):  # Gets the path above the current folder.
+        tempDir = origPath.split(self.fileSep)
+        del tempDir[-2]
+        tempDir = self.fileSep.join(tempDir)
+        return tempDir
+
+###########Searches############
+    def findAndSortCore(self, dirName, item):
+        files = self.List(dirName)
+        for fileObj in files:
+            loc = fileObj.name.find(item) # Find where in the word the item is found, if it is a substring of the word
+
+            if fileObj.name == item:
+                self.searchResults = [fileObj] + self.searchResults
+            elif loc != -1: # If the search term is a substring of the current word
+                self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
+
+            if (fileObj.isDir and self.searchRecursively) and (fileObj.hexPath != self.recycleFolder) and (fileObj.hexName != self.thumbsName):
+                self.findAndSortCore(fileObj.hexPath, item)  # Search folder if recursive and not recycle folder or thumbnail folder.
+
+
+    def findAndSort(self, item):    #Main search function.
+        self.unsorted = []
+        self.findAndSortCore(self.currentDir, item)
+
+        if len(self.unsorted) > 0:
+            sorted = sortsCy.quickSortTuples(self.unsorted)
+            for i in sorted:
+                self.searchResults.append(i[1])
+            mainthread(self.removeButtons())
+            return mainthread(self.createButtons(self.searchResults, False))
+
+        elif len(self.searchResults) == 0:
+            pop = Popup(title="No Results", content=Label(text="No results found for:\n"+item, halign="center"), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
+            pop.open()
+
+
+    def searchForItem(self, item):
+        self.resetButtons()
+        self.searchResults = []
+        Thread(target=self.findAndSort, args=(item,), daemon=True).start()
+
+
+####Progress Bar Information####
+    def values(self, st):   # Information for space left on device.
+        values = disk_usage(self.path) # Imported from shutil
+        if st:   # Get string for text above status
+            return self.getGoodUnit(int(values[1]))+" / " + self.getGoodUnit(int(values[0])) + " used."
+        else:
+            return [values[0], values[1]]
+
+
+######Encryption Stuff + opening decrypted files######
+    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.
+        if self.fileSep == "\\":
+            progname = "AESWin.exe"
+        else:
+            progname = "AES"
+
+        goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
+        if err != None:  # AES throws error when key is invalid.
+            raise ValueError("Key not valid.")
+
+        if endOfFolderList:
+            if self.encPop != None:
+                self.encPop.dismiss()
+                self.encPop = None
+            if type == "y":
+                self.refreshFiles()
+                print("Refreshing files.")
+
+        if type == "n" and op and endOfFolderList:
+            mainthread(self.openFileTh(targetLoc, d))
+        return out
+
+    def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
+        goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+        out, err = goproc.communicate((location).encode())
+        if err != None:
+            raise ValueError(err)
+
+        return out.decode()
+
+    def getFileExtension(self, fileName):
+        return fileName.split(".")[-1].lower()
+
+    def isImage(self, fileName):  # Used to get a file extension from a given file name.
+        extension = self.getFileExtension(fileName).lower()
+        return bool(extension == "png" or extension == "jpg")
+
+    def getThumbnail(self, fileObj):
+        if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
+            if self.thumbsName not in os.listdir(self.currentDir): # Checks that there is a thumbnail folder in this directory.
+                os.makedirs(self.currentDir+self.thumbsName)
+                print("Made thumbnail directory since it wasn't there")
+
+        fileObj.thumbDir = self.currentDir+self.thumbsName+self.fileSep+fileObj.hexName
+        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail temporarily. Is deleted once program is finished displaying it.
+        thumb = Image(source=fileObj.thumbDir)
+        return thumb
+
+
+    # Handles GUI while encrypting a single file, and parses parameters to passToPipe
+    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True): # Handels passToPipe and UI while encryption/decryption happens.
+        fileName = ""
+        if type == "y":     #The file name also needs to be encrypted
+            tempDir = d.split(self.fileSep)
+            fileName = tempDir[-1]
+            targetLoc = targetLoc.split(self.fileSep)
+            #replace file name with new hex
+            targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
+            thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
+
+            popText = "Encrypting..."
+            targetLoc = self.fileSep.join(targetLoc)
+            if os.path.exists(targetLoc):
+                if os.path.isdir(targetLoc):
+                    rmtree(targetLoc) # Imported from shutil
+                else:
+                    os.remove(targetLoc)
+
+        elif type == "n":   #Need to decrypt file name if decrypting
+            tempDir = d.split(self.fileSep)
+            fileName = tempDir[-1]
+            if newName == None:
+                targetLoc = targetLoc.split(self.fileSep)
+                newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
+                targetLoc = self.fileSep.join(targetLoc)
+                fileName = newName
+            popText = "Decrypting..."
+
+        if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
+            self.encPop = mainSPops.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
+            mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
+
+        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
+            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
+            self.encryptProcess.start()
+        else:
+            print("File name too long: ", fileName)
+            print("Dismissed?")
+            lab = Label(text="File name too long, skipping:\n"+fileName)
+            lab.bind(size=info.setter("text_size")) # Wrap to label.
+            pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+            pop.open()
+
+    def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
+        Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
+
+    def openFile(self, location, startLoc):
+        locationFolder = location.split(self.fileSep)
+        nameOfOriginal = locationFolder[-1]
+        locationFolder = self.fileSep.join(locationFolder[:-1])
+        startList = os.listdir(locationFolder)
+        if self.fileSep == "\\":
+            location = location.split("\\")
+            location = "/".join(location) # Windows actually accepts forward slashes in terminal
+            command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
+        else:
+            command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
+
+        startCheckSum = self.getCheckSum(location) # Gets checksum of file before opening.
+        os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
+        # After this line, the file has been closed.
+        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted, so check it still exists.
+            endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
+            endCheckSum = self.getCheckSum(location)
+            print(startCheckSum, "START CHECK SUM")   # For debugging
+            print(endCheckSum, "END CHECK SUM")
+        else:
+            endList = []
+            endCheckSum = startCheckSum # Don't try and encrypt files that have been removed.
+
+        diffAdded = [d for d in endList if d not in startList] # Creates an array of differences between the list of files currently in the temp folder, and the original contents of the temp folder.
+        tempLoc = startLoc.split(self.fileSep)
+        for i in diffAdded:   # Encrypt any extra files in the temp folder that were not there before
+            print("Difference found:", i)
+            tempLoc = self.fileSep.join(tempLoc[:-1]) # Remove last file name
+            tempLoc += self.fileSep+i
+            self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
+
+        if nameOfOriginal in endList:
+            print("Original still here")
+            if endCheckSum != startCheckSum:
+                print("Original file has changed.")
+                self.encDecTerminal("y", location, startLoc)
+
+    def onFileDrop(self, window, filePath):  # For draging + dropping files into the window.
+        self.checkCanEncrypt(filePath.decode())
+        return "Done"
+
+    def decrypt(self, fileObj, op=True):
+        if not os.path.isdir(self.osTemp+"FileMate"+self.fileSep):
+            os.makedirs(self.osTemp+"FileMate"+self.fileSep)
+        fileLoc = self.osTemp+"FileMate"+self.fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
+        if os.path.exists(fileLoc) and op:         #Checks file exits already in temp files, so it doesn't have to decrypt again.
+            self.openFileTh(fileLoc, fileObj.hexPath)
+        else:
+            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
+
+    def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
+        if os.path.exists(dir):
+            return True
+        else:
+            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+            self.popup.open()
+            return False
+
+    def encDecDir(self, encType, d, targetLoc, op=True): # Encrypt and decrypt folders.
+        if self.encPop != None:
+            self.encPop.dismiss()
+            self.encPop = None
+
+        self.fileList = []
+        self.locList = []
+        self.encDecDirCore(encType, d, targetLoc)
+
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
+
+        self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
+        mainthread(Clock.schedule_once(self.encPop.open, -1))
+
+    def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
+        mainSPops.decryptFileToLocPop(self, fileObj).open()
+
+    def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
+        fs = os.listdir(d)
+        targetLoc = targetLoc.split(self.fileSep)
+        if encType == "y": # Decrypt folder names
+            targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
+        else:
+            targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
+        targetLoc = self.fileSep.join(targetLoc)
+        for item in fs:
+            if os.path.isdir(d+item):
+                self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
+            else:
+                if encType == "n":
+                    name = aesFName.decryptFileName(self.key, item)
+                elif encType == "y":
+                    name = aesFName.encryptFileName(self.key, item)
+                else:
+                    name = item
+                try:
+                    self.createFolders(targetLoc+self.fileSep)
+                except PermissionError:
+                    pass
+                else:
+                    self.fileList.append(d+item)
+                    self.locList.append(targetLoc+self.fileSep+name)
+
+    def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.
+        if self.checkDirExists(inp):
+            if os.path.isdir(inp):
+                if inp[-1] != self.fileSep:
+                    inp += self.fileSep
+                inpSplit = inp.split(self.fileSep)
+                self.encDecDir("y", inp, self.currentDir+inpSplit[-2])
+            else:
+                inpSplit = inp.split(self.fileSep)
+                self.encDecTerminal("y", inp, self.currentDir+inpSplit[-1])
+
+
+    def checkCanEncrypt(self, inp):  # Used for adding new files to the vault by the user.
+        if "--" in inp: # Multiple files/folders input.
+            inp = inp.split("--")
+            for d in inp:
+                self.checkCanEncryptCore(d) # Actally encrypt/decrypt it.
+        else:
+            self.checkCanEncryptCore(inp)
+
+        self.resetButtons()
+
+
+    def createFolders(self, targetLoc):   # Create a folder safely.
+        if not os.path.exists(targetLoc):
+            os.makedirs(targetLoc)
+            if self.thumbsName not in targetLoc: # If in the thumbnails folder, don't make a thumbnails folder.
+                os.makedirs(targetLoc+self.thumbsName)
+
+
+    def clearUpTempFiles(self):     # Deletes temp files when the program is locked.
+        print("Deleting temp files.")
+        try:
+            rmtree(self.osTemp+"FileMate"+self.fileSep) # Imported from shutil
+        except:
+            print("No temp files.")
+```
+
+It has a fair amount of annotation, but I will still go through a few of the more confusing functions.
+
+`findAndSort` doesn't return anything, but instead edits `self.searchResults`. This is because it was easier to do it this way than pass it in every time, when it is needed by the rest of the program anyway. I just need to make sure i set it to `self.searchResults = []` before getting new results.
+
+The `File` class (defined in `code/python-go/fileClass.py`) is an integral part of the program, as they are used throughout to handle the file's encrypted path, decrypted name and a host of other important information needed throughout the program. The `File` class has made programming other functions much easier and cleaner, due to the data already being there.
+
+The `values` function returns the values required by the progress bar showing the amount of storage space left on the current device, and can optionally return this in string form for the text above the status bar.
+
+
+Most custom child widgets that the MainScreen needs are defined in `code/python-go/kivyStuff/mainBtns.py` and `code/python-go/kivyStuff/mainSmallPops.py`, and their styling which is in `code/python-go/kivyStuff/kvFiles/mainScClasses.kv`, but I will talk more about those after I go through the styling for the MainScreen class.
+
+Here is the `.kv` file for MainScreen (`code/python-go/kivyStuff/kvFiles/mainSc.kv`):
+
+```cs
+<MainScreen>:
+    addFile: addFile
+    RelativeLayout:                 #Adds background in case fade transition breaks.
+        canvas.before:
+            Color:
+                rgba: 0,0,0,2
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    FloatLayout:
+        id: MainLayout
+
+        TextInput:
+            id: Search
+            size_hint: .52, .08
+            font_size: 22
+            hint_text: "Search:"
+            pos_hint: {"x": 0.16, "top": 1}
+            multiline: False
+            on_text_validate: root.searchForItem(self.text)
+
+        Button:
+            id: home
+            size_hint: .06, .08
+            pos_hint: {"x": 0.62, "y": 0.84}
+            on_release: root.goHome()
+            Image:
+                source: root.getPathForButton("home.png")
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
+                size: 40, 40
+                allow_stretch: True
+
+        Button:
+            id: settings
+            size_hint: .06, .08
+            pos_hint: {"x": 0.56, "y": 0.84}
+            on_release: root.manager.current = "Settings"
+            Image:
+                source: root.getPathForButton("settings.png")
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
+                size: 40, 40
+                allow_stretch: True
+
+        Button:
+            id: addFolder
+            size_hint: .06, .08
+            pos_hint: {"x": 0.5, "y": 0.84}
+            text_size: self.size
+            halign: "center"
+            valign: "center"
+            on_release: root.openAddFolderPop()
+            Image:
+                source: root.getPathForButton("newFolder.png")
+                center_x: self.parent.center_x+3 # Drop shadow
+                center_y: self.parent.center_y
+                size: 50, 50
+
+        Button:
+            id: recyclingBin
+            size_hint: .06, .08
+            pos_hint: {"x": 0.44, "y": 0.84}
+            on_release: root.openRecycling()
+            Image:
+                source: root.getPathForButton("recycling.png")
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y+3
+                size: 50, 50
+
+        ProgressBar:
+            id: pb1
+            min: 0
+            max: root.values(False)[0]
+            value: root.values(False)[1]
+            size_hint: .28, .08
+            pos_hint: {"x": 0.16, "y": 0.84}
+
+        Label:
+            pos_hint: {"x": 0.2, "y": 0.82}
+            size_hint: .16, .16
+            text: root.values(True)
+
+        Button:
+            id: LogOut
+            size_hint: .16, .16
+            pos_hint: {"x": 0, "top": 1}
+            on_release: root.lock()
+            Image:
+                source: root.getPathForButton("padlock.png")
+                center_x: self.parent.center_x
+                center_y: self.parent.center_y
+                size: 60, self.size[1]
+
+        Button:
+            id: addFile
+            size_hint: .16, .16
+            pos_hint: {"right": 1, "top": 1}
+            on_release: root.openAddFilePop()
+            Image:
+                source: root.getPathForButton("addFile.png")
+                center_x: self.parent.center_x+2 # Drop shadow
+                center_y: self.parent.center_y-5
+                size: 100, 133.54
+                allow_stretch: False
+
+        Button:
+            id: goBackFolder
+            size_hint: .16, .16
+            pos_hint: {"x": 0.68, "top": 1}
+            on_release: root.goBackFolder()
+            Image:
+                source: root.getPathForButton("backUpFolder.png")
+                center_x: self.parent.center_x+2 # Drop shadow
+                center_y: self.parent.center_y
+                size: 100, 133.54
+                allow_stretch: False
+```
+
+
+
+### Main Screen Buttons
+
+All of the custom buttons for MainScreen are defined in `code/python-go/kivyStuff/mainBtns.py`. Here is the code:
+
+```python
+from kivy.uix.button import Button
+from kivy.uix.image import Image
+
+from sortsCy import quickSortSize
+
+class listButton(Button):           #File button when using main screen.
+
+    def __init__(self, fileObj, **kwargs):
+        super(Button, self).__init__(**kwargs)
+        self.fileObj = fileObj          #The file the button corresponds to.
+
+class nameSortButton(Button):           #Sorts the listButtons alphabetically and by folders/files.
+
+    def __init__(self, mainScreen, **kwargs):
+        super(Button, self).__init__(**kwargs)   # Run kivy Button.__init__ class with it's key word arguments.
+        self.outerScreen = mainScreen
+
+    def changeSortOrder(self):
+        self.outerScreen.ascending = not self.outerScreen.ascending
+        if self.outerScreen.ascending:
+            self.text = "^"
+            self.outerScreen.removeButtons()
+            self.outerScreen.createButtons(self.outerScreen.currentList, True)
+        else:
+            self.text = "v"
+            self.outerScreen.removeButtons()
+            self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
+
+class sizeSortButton(Button):           #Sorts the files/folders by size
+
+    def __init__(self, mainScreen, **kwargs):
+        super(Button, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+        self.ascending = True
+        self.sortList = []
+
+
+    def sortBySize(self):
+        self.sortList = quickSortSize(self.outerScreen.currentList)
+        if not self.ascending:
+            self.sortList = self.sortList[::-1]    # Reverse sorted list.
+
+        self.outerScreen.removeButtons()
+        self.outerScreen.createButtons(self.sortList, False)
+
+    def changeSizeOrder(self):
+        self.ascending = not self.ascending
+        if self.ascending:
+            self.text = "v"
+        else:
+            self.text = "^"
+
+        if (self.sortList) and (self.outerScreen.previousDir == self.outerScreen.currentDir):   # Checking that the sortList is for the current directory and we haven't moved.
+            self.sortList = self.sortList[::-1]
+            self.outerScreen.currentList = self.sortList
+            self.outerScreen.removeButtons()
+            self.outerScreen.createButtons(self.sortList, False)
+        else:
+            self.outerScreen.previousDir = self.outerScreen.currentDir
+            self.sortBySize()
+
+class infoButton(Button):       #The button that displays information about the file.
+
+    def __init__(self, mainScreen, fileObj, **kwargs):
+        self.outerScreen = mainScreen
+        super(Button, self).__init__(**kwargs)
+        self.fileObj = fileObj
+
+
+class deleteButton(Button):
+
+    def __init__(self, mainScreen, fileObj, **kwargs):
+        super(Button, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+        self.fileObj = fileObj
+```
+
+The `listButton` class is just a regular `Button`, but can take a `File` class (as `fileObj`), and has a reference to the current `MainScreen` object. `listButton` has no custom methods.
+
+The `nameSortButton` class is a regular `Button`, however closely interacs with the `MainScreen` class, to change the order of items in the `ScrollView` that contains the `listButton`s on `MainScreen`. It basically handles `MainScreen`.
+
+The `sizeSortButton` class works similarly to `nameSortButton`, however it has to handle sorting the list by size.
+
+The `infoButton` and `deleteButton` classes are both similar to `listButton` in that they just have a few extra attributes.
+
+
+
+
+### Main Screen Popups (and Button styling)
+

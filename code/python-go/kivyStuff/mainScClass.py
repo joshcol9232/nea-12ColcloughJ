@@ -1,9 +1,8 @@
 import os
 from shutil import move, disk_usage, rmtree
 from threading import Thread
-from functools import partial
+from functools import partial   # For parsing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
-from time import time, sleep
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -26,10 +25,6 @@ import mainBtns
 from settingsScreen import SettingsScreen
 import mainSmallPops as mainSPops
 
-
-
-import configOperations
-
 try:
     from bluetooth import *
 except:
@@ -37,20 +32,19 @@ except:
 
 class MainScreen(Screen):
 
-    class infoLabel(Label):
+    class infoLabel(Label):   # Not a popup so only suitable place.
         pass
 
     def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, **kwargs):
         self.fileSep, self.osTemp, self.startDir, self.assetsPath, self.path, self.searchRecursively, self.useBT, self.configLoc = fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc
         super(Screen, self).__init__(**kwargs)
-        self.ascending = True
+        self.ascending = True       # Sort order
         self.key = ""
         self.encPop = None
         self.entered = False
         self.validBTKey = False
         self.useBTTemp = self.useBT
         self.previousDir = None
-        self.bubb = None                # Bubble of options given when you right click a listButton. There can only be 1 at any time so it is defined here.
         self.lastPathSent = ""
         self.recycleFolder = ""
         self.recycleName = ""
@@ -58,7 +52,6 @@ class MainScreen(Screen):
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.currentDir = self.path
-        self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0})
 
 
     def on_enter(self): # When the screen is started.
@@ -101,7 +94,7 @@ class MainScreen(Screen):
         self.remove_widget(self.scroll)
 
     def lock(self, fromRunServ=False):  # Procedure for when the program is locked. If it has been called from runServMain, then we might still be on login screen, so don't change screen to login, and restart the server.
-        self.clearUpTempFiles() #Delete all temporary files (decrypted files ready for use).
+        self.clearUpTempFiles() # Delete all temporary files (decrypted files ready for use).
         if self.useBT:
             self.manager.get_screen("Login").ids.clientLabel.text = ""
 
@@ -124,13 +117,12 @@ class MainScreen(Screen):
                               service_classes = [ uuid, SERIAL_PORT_CLASS ],
                               profiles = [ SERIAL_PORT_PROFILE ],)
         except BluetoothError as e:
-            print(e)
-            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login."), size_hint=(.4, .4), auto_dismiss=True).open()
+            Popup(title="Error", content=Label(text="Bluetooth not available.\nPlease make sure your bluetooth is on,\nor change to normal login.\n\nReason: "+str(e)), size_hint=(.4, .4), auto_dismiss=True).open()
             return
 
         print("[BT]: Waiting for connection on RFCOMM channel", self.serverSock.getsockname()[1])
 
-        self.clientSock, self.clientInfo = self.serverSock.accept()
+        self.clientSock, self.clientInfo = self.serverSock.accept()  # Wait for a connection
         print("[BT]: Accepted connection from ", self.clientInfo)
         self.manager.get_screen("Login").ids.clientLabel.text = "Connected to: "+str(self.clientInfo[0])
 
@@ -139,26 +131,26 @@ class MainScreen(Screen):
         buff = []
         backCommand = [33, 66, 65, 67, 75, 33]                                # !BACK!
         fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33]  # !FILESELECT!
-        endHeader =  [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84]            # ~!ENDSELECT!
+        endHeader =  [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33]        # ~!ENDSELECT!
 
         try:
             while len(data) > -1:
-                data = self.clientSock.recv(1024)
+                data = self.clientSock.recv(1024) # Recieve 1kb of data
                 print("[BT]: Received data.")
-                if not self.validBTKey:
+                if not self.validBTKey:                 # If the key is not valid yet, BT server has to wait for key
                     numbers.append(str(data, "utf-8"))
-                    if b"~" in data:    ##End of message
+                    if b"~" in data:    # End of key message
                         append = False
                         tempNums = "".join(numbers)
                         tempNums = tempNums.replace("#", "")
                         tempNums = tempNums.replace("~", "")
-                        if self.manager.get_screen("Login").checkKey(tempNums):
+                        if self.manager.get_screen("Login").checkKey(tempNums):   # Check the key in login.
                             numbers = []
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
                             self.sendFileList(self.getListForSend(self.path))
-                            mainthread(self.changeToMain())
+                            mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
                             numbers = []
                             self.clientSock.send("0")
@@ -178,31 +170,30 @@ class MainScreen(Screen):
                             self.sendFileList(self.getListForSend(pathBack))
                         buff = []
 
-                    elif buff[:12] == fileSelectCommand:
-                        commandParams = buff[12:]
-                        if commandParams[-11:] == endHeader:
-                            fileWantedList = commandParams[:-11]
+                    elif buff[:12] == fileSelectCommand:  # If the command is fileSelect
+                        commandParams = buff[12:]         # Get parameters (buffer will not be reset)
+                        if commandParams[-12:] == endHeader:  # If end of the buffer is the endHeader, then proceed.
+                            fileWantedList = commandParams[:-12]
                             fileWanted = ""
                             for letter in fileWantedList:
                                 fileWanted += chr(letter)
 
                             print("[BT]:", fileWanted, "fileWanted")
                             buff = []
-                            filesInPath = self.List(self.lastPathSent)
+                            filesInPath = self.List(self.lastPathSent)  # Get list of files at directory requested.
 
                             f = 0
                             fileObj = None
-                            while (f < len(filesInPath)) and (fileObj == None):
+                            while (f < len(filesInPath)) and (fileObj == None): # Searches for the file in the path
                                 if filesInPath[f].name == fileWanted:
                                     fileObj = filesInPath[f]
                                 f += 1
 
-                            if fileObj != None:
-                                if fileObj.isDir:
-                                    # Return list of that directory.
+                            if fileObj != None:    # If the file was found, then send it
+                                if fileObj.isDir:  # If it was a directory then send the list of files in that directory.
                                     self.sendFileList(self.getListForSend(fileObj.hexPath))
                                 else:
-                                    self.makeSendFile(fileObj)
+                                    self.makeSendFile(fileObj) # Otherwise send the file.
 
                             else:
                                 print("[BT]: Couldn't find that file :/")
@@ -213,9 +204,8 @@ class MainScreen(Screen):
                         buff = []
 
 
-
         except IOError as e:
-            print(e)
+            print(e)        # Will be caused when app on mobile closes.
 
         print("[BT]: Closed.")
 
@@ -224,7 +214,7 @@ class MainScreen(Screen):
         self.lock(fromRunServ=True)
 
     def sendFileList(self, fileList):
-        # File list sent like: !FILELIST!#!!--fileName1--filename2~!!ENDLIST!
+        # File list sent like: !FILELIST!--fileName1--filename2~!!ENDLIST!
         self.clientSock.send("!FILELIST!")
         print("[BT]: Sent !FILELIST!")
 
@@ -250,11 +240,11 @@ class MainScreen(Screen):
 
             self.lastPathSent = path
 
-            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)
+            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)  # Sort the list and return it
 
 
 
-##Functions for changing screen within threads
+##Functions for changing screen within threads (used to prevent segmentation faults)
     @mainthread
     def changeToMain(self):
         self.manager.current = "Main"
@@ -270,7 +260,7 @@ class MainScreen(Screen):
 
     def setupSortButtons(self):
         self.sortsGrid = GridLayout(cols=2, size_hint=(.99, .04), pos_hint={"x": .005, "y": .79})    #Make a grid of 1 row (colums=2 and i am only adding 2 widgets) to hold sort buttons.
-        self.nameSort = mainBtns.nameSortButton(self, text="^")
+        self.nameSort = mainBtns.nameSortButton(self, text="^")  # Default starts with Alphabetical sort ascending.
         self.sizeSort = mainBtns.sizeSortButton(self)
         self.sortsGrid.add_widget(self.nameSort)
         self.sortsGrid.add_widget(self.sizeSort)
@@ -288,7 +278,7 @@ class MainScreen(Screen):
 
             return ("%.2f" % bytes) + divisions[divCount]
 
-    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): #Get a sorted list of files for display.
+    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Get a sorted list of files for display. Displays all folders before files.
         folders = []
         files = []
         for i in range(len(fileObjects)):   #Separate into folders and files
@@ -306,36 +296,36 @@ class MainScreen(Screen):
 
         return foldersSort+filesSort
 
-    def openRecycling(self):
+    def openRecycling(self):  # Open the recycling folder.
         if not os.path.exists(self.recycleFolder):
             print("Recycling folder doesn't exist, making one now.")
             makedirs(self.recycleFolder)
 
-        warnPop = Popup(title="Changed Mode", content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-        warnPop.open()
+        Popup(title="Changed Mode",
+              content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."),
+              pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
         self.currentDir = self.recycleFolder
         self.removeButtons()
         print(self.currentDir, "current dir")
         self.createButtons(self.List(self.currentDir))
 
-############################################
 
 #######Button Creation and button functions#######
-    def createButtonsCore(self, array): #Makes each file button with it's information and adds it to a grid.
+    def createButtonsCore(self, array): # Makes each file button with it's information and adds it to the scroll view.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder, don't draw it.
-                if item.isDir:
-                    btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=(0.3, 0.3, 0.3, 1))
-                    info = mainBtns.infoButton(self, item, background_color=(0.3, 0.3, 0.3, 1))
-                else:
-                    btn = mainBtns.listButton(self, item, text=("    "+item.name))
-                    info = mainBtns.infoButton(self, item)
+            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
+                back = (1, 1, 1, 1)
+                if item.isDir:   # Colour folders darker than files
+                    back = (0.3, 0.3, 0.3, 1)   # Works as a tint rather than a colour.
 
-                btn.bind(size=btn.setter("text_size"))
+                btn = mainBtns.listButton(self, item, text=("    "+item.name), background_color=back)
+                info = mainBtns.infoButton(self, item, background_color=back)
+
+                btn.bind(size=btn.setter("text_size"))  # Set the text to wrap within the button
                 info.bind(size=info.setter("text_size"))
                 fileS = Label(text=" "+str(item.size), size_hint=(.1, 1), halign="left", valign="middle")
-                fileS.bind(size=fileS.setter("text_size"))
+                fileS.bind(size=fileS.setter("text_size"))  # Wrap text in label
                 self.grid.add_widget(btn)
                 self.grid.add_widget(info)
                 self.grid.add_widget(fileS)
@@ -354,29 +344,20 @@ class MainScreen(Screen):
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
 
 
-    def removeButtons(self):    #Remove the list of files.
-        self.grid.clear_widgets()
-        self.scroll.clear_widgets()
-        try:
-            self.remove_widget(self.scroll)
-        except Exception as e:
-            print(e, "Already removed?")
-
-
-    def traverseButton(self, fileObj):  #Function when file is clicked.
+    def traverseButton(self, fileObj):  # Function when file is clicked.
         if self.recycleFolder not in self.currentDir:
             if fileObj.isDir:   #If is a folder, then display files within that folder.
                 self.previousDir = self.currentDir
                 self.currentDir = fileObj.hexPath
                 self.resetButtons()
-            else:   #If is a file, decrypt the file and open it.
+            else:   # If is a file, decrypt the file and open it.
                 self.decrypt(fileObj)
         else:
             print("Recovering this file to path:", fileObj.name)
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
 
-    def openAddFilePop(self):
+    def openAddFilePop(self):     # Needs to be asigned to self.smallPop because if the screen is closed with the popup open (only possible when using Bluetooth), all crucial popups need to be closed.
         self.smallPop = mainSPops.addFilePop(self)
         self.smallPop.open()
 
@@ -385,7 +366,7 @@ class MainScreen(Screen):
         self.smallPop.open()
 
     def onFileInfoClose(self, fileObj, _):  # _ is me discarding the popup object.
-        if os.path.exists(fileObj.thumbDir):
+        if os.path.exists(fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail
             os.remove(fileObj.thumbDir)
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
@@ -394,16 +375,18 @@ class MainScreen(Screen):
         size = (.7, .4)  # Size of popup
         if fileObj.extension == "png" or fileObj.extension == "jpg":
             thumb = self.getThumbnail(fileObj)
-            size = (.8, .5)
+            size = (.8, .5)  # Increase size of popup to display image preview.
 
+        # Works as: internalLayout -> scrolView + (Image?)
+        # scrollView contains infoGrid with all of the file's information.
         internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
-        gridView = ScrollView()
+        scrolView = ScrollView()
         self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
         self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
 
         infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
-        gridView.add_widget(infoGrid)
-        internalLayout.add_widget(gridView)
+        scrolView.add_widget(infoGrid)
+        internalLayout.add_widget(scrolView)
 
         if fileObj.extension == "png" or fileObj.extension == "jpg":
             internalLayout.add_widget(thumb)
@@ -418,7 +401,7 @@ class MainScreen(Screen):
         infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
 
         delText = "Delete"
-        if self.recycleFolder in self.currentDir:
+        if self.recycleFolder in self.currentDir:    # If in the recycling folder, then delete the item permanently.
            delText = "Delete Permanently"
 
         infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
@@ -443,11 +426,11 @@ class MainScreen(Screen):
         if os.path.exists(fileObj.hexPath):
             move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
         else:
-            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.")
+            raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.") # Doesn't exist, so issue with code somewhere.
 
     def deleteFile(self, fileObj):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
-            if self.recycleFolder not in self.currentDir:
+            if self.recycleFolder not in self.currentDir:   # If outside of recycling bin.
                 print("Moving", fileObj.hexPath)
                 if os.path.exists(self.recycleFolder+fileObj.hexName):
                     if os.path.isdir(self.recycleFolder+fileObj.hexName):
@@ -457,9 +440,9 @@ class MainScreen(Screen):
                 move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
             else:
                 print("Deleting:", fileObj.hexPath, "and checking temp.")
-                if os.path.exists(self.osTemp+"FileMate"+self.fileSep+fileObj.name):
+                if os.path.exists(self.osTemp+"FileMate"+self.fileSep+fileObj.name):  # If removing permanently, check that the file is not decrypted in <system_temp>.
                     os.remove(self.osTemp+"FileMate"+self.fileSep+fileObj.name)
-                if fileObj.isDir:
+                if fileObj.isDir:    # Delete the file/folder
                     rmtree(fileObj.hexPath) # Imported from shutil
                 else:
                     os.remove(fileObj.hexPath)
@@ -472,7 +455,7 @@ class MainScreen(Screen):
     def goBackFolder(self):     #Go up a folder.
         if self.currentDir != self.path:    #Can't go further past the vault dir.
             self.previousDir = self.currentDir
-            if self.currentDir in self.recycleFolder:
+            if self.recycleFolder in self.currentDir:
                 self.goHome()
             else:
                 self.currentDir = self.getPathBack(self.currentDir)
@@ -481,35 +464,35 @@ class MainScreen(Screen):
             print("Can't go further up.")
             return False
 
-    def getPathForButton(self, item):   #Get the path to the picture for each button.
+    def getPathForButton(self, item):   # Get the path to the asset for each button.
         return self.assetsPath+item
 
-    def resetButtons(self): #Goes back to self.currentDir, different to refresh.
+    def removeButtons(self):    # Remove the list of files.
+        self.grid.clear_widgets()
+        self.scroll.clear_widgets()
+        self.remove_widget(self.scroll)
+
+    def resetButtons(self): # Goes back to self.currentDir, different to refresh.
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
         self.createButtons(self.List(self.currentDir))
 
-    def refreshFiles(self):   #Refreshes the file buttons currently on the screen in case of issues.
+    def refreshFiles(self):   # Refreshes the files in the current directory
         self.removeButtons()
         self.createButtons(self.List(self.currentDir))
 
-    def refreshButtons(self):
+    def refreshButtons(self): # Refreshes file list buttons currently displayed.
         self.removeButtons()
         self.createButtons(self.currentList, False)
 
     def goHome(self):   #Takes the user back to the vault dir.
-        self.removeButtons()
-        self.nameSort.text = "^"
-        self.sizeSort.text = ""
-        self.previousDir = self.currentDir
         self.currentDir = self.path
-        self.createButtons(self.List(self.currentDir))
+        self.refreshFiles()
 
 
-    def List(self, dir):    #Lists a directory.
+    def List(self, dir):    # Lists a directory, returning File objects.
         fs = os.listdir(dir)
-        # It is better to check for the thumbnails folder here than in createButtons (because the list would have to be remade).
         listOfFolders = []
         listOfFiles = []
         for item in fs:
@@ -523,7 +506,7 @@ class MainScreen(Screen):
 
         return listOfFolders+listOfFiles
 
-    def getPathBack(self, origPath):  #Gets the path above the current folder.
+    def getPathBack(self, origPath):  # Gets the path above the current folder.
         tempDir = origPath.split(self.fileSep)
         del tempDir[-2]
         tempDir = self.fileSep.join(tempDir)
@@ -537,27 +520,21 @@ class MainScreen(Screen):
 
             if fileObj.name == item:
                 self.searchResults = [fileObj] + self.searchResults
-                self.removeButtons()
-                self.createButtons(self.searchResults)
             elif loc != -1: # If the search term is a substring of the current word
                 self.unsorted.append((loc, fileObj))   #Adds loc found in word, so that it can be sorted by where it is found
 
             if (fileObj.isDir and self.searchRecursively) and (fileObj.hexPath != self.recycleFolder) and (fileObj.hexName != self.thumbsName):
-                self.findAndSortCore(fileObj.hexPath, item)
+                self.findAndSortCore(fileObj.hexPath, item)  # Search folder if recursive and not recycle folder or thumbnail folder.
 
 
     def findAndSort(self, item):    #Main search function.
         self.unsorted = []
-
-        start = time()
-        print("IN SORT.")
         self.findAndSortCore(self.currentDir, item)
 
         if len(self.unsorted) > 0:
             sorted = sortsCy.quickSortTuples(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i[1])
-            print("Sort took:", time()-start, "seconds.")
             mainthread(self.removeButtons())
             return mainthread(self.createButtons(self.searchResults, False))
 
@@ -573,7 +550,6 @@ class MainScreen(Screen):
 
 
 ####Progress Bar Information####
-
     def values(self, st):   #Information for space left on device.
         values = disk_usage(self.path) # Imported from shutil
         if st:
@@ -589,14 +565,11 @@ class MainScreen(Screen):
         else:
             progname = "AES"
 
-
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) #dont use d for fileNames, use targetLoc for file name and self.key for self.key
-        if err != None:
+        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
+        if err != None:  # AES throws error when key is invalid.
             raise ValueError("Key not valid.")
 
-        if self.encPop != None:
-            self.encPop.done = True
         if endOfFolderList:
             if self.encPop != None:
                 self.encPop.dismiss()
@@ -609,7 +582,7 @@ class MainScreen(Screen):
             mainthread(self.openFileTh(targetLoc, d))
         return out
 
-    def getCheckSum(self, location):
+    def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
         goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate((location).encode())
         if err != None:
@@ -618,26 +591,26 @@ class MainScreen(Screen):
         return out.decode()
 
     def getFileExtension(self, fileName):
-        extension = fileName.split(".")
-        return extension[-1].lower()
+        return fileName.split(".")[-1].lower()
 
     def isImage(self, fileName):  # Used to get a file extension from a given file name.
         extension = self.getFileExtension(fileName).lower()
         return bool(extension == "png" or extension == "jpg")
 
-    def getThumbnail(self, fileObj, asImageObj=True):
-        if self.thumbsName not in self.currentDir:    # Checks that there is a thumbnail folder in this directory.
-            if self.thumbsName not in os.listdir(self.currentDir): # Only check this when not in the recycling folder
+    def getThumbnail(self, fileObj):
+        if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
+            if self.thumbsName not in os.listdir(self.currentDir): # Checks that there is a thumbnail folder in this directory.
                 os.makedirs(self.currentDir+self.thumbsName)
                 print("Made thumbnail directory since it wasn't there")
 
         fileObj.thumbDir = self.currentDir+self.thumbsName+self.fileSep+fileObj.hexName
-        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail (abcdef) as abcdef_temp so the thumbnail does not have to be reset
+        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail temporarily. Is deleted once program is finished displaying it.
         thumb = Image(source=fileObj.thumbDir)
         return thumb
 
 
-    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True):     #Handels passToPipe and UI while encryption/decryption happens.
+    # Handles GUI while encrypting a single file, and parses parameters to passToPipe
+    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True): # Handels passToPipe and UI while encryption/decryption happens.
         fileName = ""
         if type == "y":     #The file name also needs to be encrypted
             tempDir = d.split(self.fileSep)
@@ -645,7 +618,7 @@ class MainScreen(Screen):
             targetLoc = targetLoc.split(self.fileSep)
             #replace file name with new hex
             targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
-            thumbTarget = self.fileSep.join(targetLoc[:len(targetLoc)-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
+            thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
 
             popText = "Encrypting..."
             targetLoc = self.fileSep.join(targetLoc)
@@ -654,9 +627,6 @@ class MainScreen(Screen):
                     rmtree(targetLoc) # Imported from shutil
                 else:
                     os.remove(targetLoc)
-
-            #if self.isImage(fileName):
-            #    self.makeThumbnail(d, thumbTarget)
 
         elif type == "n":   #Need to decrypt file name if decrypting
             tempDir = d.split(self.fileSep)
@@ -668,21 +638,22 @@ class MainScreen(Screen):
                 fileName = newName
             popText = "Decrypting..."
 
-        if not isPartOfFolder:
+        if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
             self.encPop = mainSPops.encPopup(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
-            mainthread(Clock.schedule_once(self.encPop.open, -1))
+            mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
         if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
             self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
             self.encryptProcess.start()
         else:
             print("File name too long: ", fileName)
-            self.encPop.dismiss()
             print("Dismissed?")
-            pop = Popup(title="Invalid file name", content=Label(text="File name too long,\nplease try again with shorter\nfile name."), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+            lab = Label(text="File name too long, skipping:\n"+fileName)
+            lab.bind(size=info.setter("text_size")) # Wrap to label.
+            pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
             pop.open()
 
-    def openFileTh(self, fileLoc, startLoc):
+    def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
         Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
 
     def openFile(self, location, startLoc):
@@ -697,34 +668,33 @@ class MainScreen(Screen):
         else:
             command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
 
-        startCheckSum = self.getCheckSum(location)
+        startCheckSum = self.getCheckSum(location) # Gets checksum of file before opening.
         os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         # After this line, the file has been closed.
-        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted.
+        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted, so check it still exists.
             endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
             endCheckSum = self.getCheckSum(location)
-            print(startCheckSum, "START CHECK SUM")
+            print(startCheckSum, "START CHECK SUM")   # For debugging
             print(endCheckSum, "END CHECK SUM")
         else:
             endList = []
             endCheckSum = startCheckSum # Don't try and encrypt files that have been removed.
-        diffAdded = [d for d in endList if d not in startList]
+
+        diffAdded = [d for d in endList if d not in startList] # Creates an array of differences between the list of files currently in the temp folder, and the original contents of the temp folder.
         tempLoc = startLoc.split(self.fileSep)
-        for i in diffAdded:
+        for i in diffAdded:   # Encrypt any extra files in the temp folder that were not there before
             print("Difference found:", i)
-            tempLoc = self.fileSep.join(tempLoc[:len(tempLoc)-1]) # Remove last file name
+            tempLoc = self.fileSep.join(tempLoc[:-1]) # Remove last file name
             tempLoc += self.fileSep+i
-            print(locationFolder+self.fileSep+i, "current dir of extra file.")
-            print(tempLoc, "current targetLoc for extra file.")
             self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
 
         if nameOfOriginal in endList:
-            print("Still here")
+            print("Original still here")
             if endCheckSum != startCheckSum:
                 print("Original file has changed.")
                 self.encDecTerminal("y", location, startLoc)
 
-    def onFileDrop(self, window, filePath):  #Drag + drop files
+    def onFileDrop(self, window, filePath):  # For draging + dropping files into the window.
         self.checkCanEncrypt(filePath.decode())
         return "Done"
 
@@ -745,7 +715,7 @@ class MainScreen(Screen):
             self.popup.open()
             return False
 
-    def encDecDir(self, encType, d, targetLoc, op=True):
+    def encDecDir(self, encType, d, targetLoc, op=True): # Encrypt and decrypt folders.
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
@@ -761,10 +731,10 @@ class MainScreen(Screen):
         self.encPop = mainSPops.encPopup(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-    def decryptFileToLoc(self, fileObj, button):
+    def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
 
-    def encDecDirCore(self, encType, d, targetLoc): #Encrypts whole directory.
+    def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
         fs = os.listdir(d)
         targetLoc = targetLoc.split(self.fileSep)
         if encType == "y": # Decrypt folder names
@@ -790,7 +760,7 @@ class MainScreen(Screen):
                     self.fileList.append(d+item)
                     self.locList.append(targetLoc+self.fileSep+name)
 
-    def checkCanEncryptCore(self, inp):
+    def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.
         if self.checkDirExists(inp):
             if os.path.isdir(inp):
                 if inp[-1] != self.fileSep:
@@ -802,25 +772,25 @@ class MainScreen(Screen):
                 self.encDecTerminal("y", inp, self.currentDir+inpSplit[-1])
 
 
-    def checkCanEncrypt(self, inp):
-        if "--" in inp: #Multiple files/folders input.
+    def checkCanEncrypt(self, inp):  # Used for adding new files to the vault by the user.
+        if "--" in inp: # Multiple files/folders input.
             inp = inp.split("--")
             for d in inp:
-                self.checkCanEncryptCore(d)
+                self.checkCanEncryptCore(d) # Actally encrypt/decrypt it.
         else:
             self.checkCanEncryptCore(inp)
 
         self.resetButtons()
 
 
-    def createFolders(self, targetLoc):
+    def createFolders(self, targetLoc):   # Create a folder safely.
         if not os.path.exists(targetLoc):
             os.makedirs(targetLoc)
             if self.thumbsName not in targetLoc: # If in the thumbnails folder, don't make a thumbnails folder.
                 os.makedirs(targetLoc+self.thumbsName)
 
 
-    def clearUpTempFiles(self):     #Deletes temp files.
+    def clearUpTempFiles(self):     # Deletes temp files when the program is locked.
         print("Deleting temp files.")
         try:
             rmtree(self.osTemp+"FileMate"+self.fileSep) # Imported from shutil

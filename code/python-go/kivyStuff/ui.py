@@ -1,9 +1,9 @@
 from tempfile import gettempdir
-import shutil
+from shutil import rmtree
 
 from kivy.config import Config
 Config.set("graphics", "resizable", True)
-Config.set("input", "mouse", "mouse,disable_multitouch")
+Config.set("input", "mouse", "mouse,disable_multitouch") # Disable multitouch features used on mobile apps.
 Config.write()
 
 from kivy.app import App
@@ -18,15 +18,6 @@ from settingsScreen import SettingsScreen
 #########Import config functions########
 import configOperations
 
-############Import SHA Module###########
-import SHA
-
-###########Import filename encryption###
-import aesFName     #AES easier to use when written in python, but slower, which isn't much of an issue for file names hence why this part is python.
-
-###########Import cython sorts##########
-import sortsCy
-
 
 def runUI():
     ui = uiApp(title="FileMate")
@@ -36,8 +27,8 @@ def runUI():
     print("Deleting temp files.")
     try:
         fSep = configOperations.getFileSep()
-        shutil.rmtree(gettempdir()+fSep+"FileMate"+fSep) # Imported from shutil
-    except:
+        rmtree(gettempdir()+fSep+"FileMate"+fSep) # Remove all temporary files.
+    except FileNotFoundError:
         print("No temp files.")
     print("App closed.")
 
@@ -46,16 +37,13 @@ class uiApp(App):
     def build(self):
         sm = ScreenManager()
 
-        sm.transition = FadeTransition()
+        sm.transition = FadeTransition() # Set transition animation when changing screens.
         fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc = configOperations.runConfigOperations()
-        print("Screen manager starting.")
         # Load kv files for each screen.
         Builder.load_file(startDir+"kivyStuff/kvFiles/mainSc.kv")     # MainScreen styling.
-        Builder.load_file(startDir+"kivyStuff/kvFiles/mainScClasses.kv") # MainScreen sub-classes styling.
         Builder.load_file(startDir+"kivyStuff/kvFiles/settingsSc.kv") # SettingsScreen styling.
 
         if useBT:
-            print("Using BT")
             Builder.load_file(startDir+"kivyStuff/kvFiles/loginScBT.kv")
             sm.add_widget(LoginScreenBT(fileSep, path, startDir, name="Login"))
         else:

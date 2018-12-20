@@ -55,7 +55,7 @@ class FileSelectionScreen(Screen, FloatLayout):
             btn.bind(size=btn.setter("text_size"))
             self.grid.add_widget(btn)
 
-        self.scroll = ScrollView(size_hint=(1, .77)) # Leaves a 0.01 gap between text input and list
+        self.scroll = ScrollView(size_hint=(1, .86))
         self.scroll.add_widget(self.grid)
         self.add_widget(self.scroll)
         print u"done creating buttons"
@@ -73,7 +73,7 @@ class FileSelectionScreen(Screen, FloatLayout):
         for letter in fileName:
             msg.append(ord(letter))
 
-        msg += [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84] # End header: ~!ENDSELECT!
+        msg += [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33] # End header: ~!ENDSELECT!
 
         self.sStream.flush() # Clear write buffer on data stream.
         print msg, "full msg to be sent."
@@ -141,7 +141,7 @@ class FileSelectionScreen(Screen, FloatLayout):
                 buff = []
                 responseFound = True
 
-            elif (buff[:11] == self.startList) and (len(buff) >= 13):
+            elif (buff[:10] == self.startList) and (len(buff) >= 10):
                 print "START OF LIST"
                 responseFound = True
                 self.fileList = recieveFileList(self.rStream, buff)
@@ -151,3 +151,4 @@ class FileSelectionScreen(Screen, FloatLayout):
             elif len(buff) >= 11:
                 print "start header not found yet :(", buff
                 buff = []
+

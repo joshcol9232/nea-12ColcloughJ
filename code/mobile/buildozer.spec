@@ -87,7 +87,7 @@ fullscreen = 0
 android.permissions = BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_PRIVILEGED
 
 # (int) Android API to use
-#android.api = 19
+#android.api = 26
 
 # (int) Minimum API required
 #android.minapi = 9
@@ -96,7 +96,7 @@ android.permissions = BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_PRIVILEGED
 #android.sdk = 20
 
 # (str) Android NDK version to use
-#android.ndk = 9c
+#android.ndk = 19
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 #android.private_storage = True
