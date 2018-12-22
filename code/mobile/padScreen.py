@@ -158,7 +158,7 @@ class PadScreen(Screen, FloatLayout):
                 pop.dismiss()
                 print u"Valid"
 
-                corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.9, .5), pos_hint={"x_center": .5, "y_center": .5})
                 Clock.schedule_once(corPop.open, -1)
 
                 # Time to recieve file names of current directory
@@ -174,7 +174,7 @@ class PadScreen(Screen, FloatLayout):
             elif data == 48: # Response sent by the PC if code is invalid.
                 print u"Invalid."
                 pop.dismiss()
-                invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.9, .5), pos_hint={"x_center": .5, "y_center": .5})
                 self.nums = []
                 self.numsString = u""
                 self.updateDisplay()

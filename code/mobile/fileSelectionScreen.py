@@ -33,6 +33,9 @@ class FileSelectionScreen(Screen, FloatLayout):
     def on_enter(self):
         self.createButtons(self.fileList)
 
+    def on_leave(self):
+        self.removeButtons()
+
     def removeButtons(self):     # Clears all the widgets off the screen
         self.grid.clear_widgets()
         self.scroll.clear_widgets()
