@@ -100,7 +100,9 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    ​	i. Using easy to access buttons in the UI.
 
-   ​	ii. Using drag and drop.
+   ​	ii. Using drag and drop from outside of the program.
+
+    iii. Decrypt to a directory specified.
 
    e. Have an options menu, including the options to:
 
@@ -114,17 +116,27 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, etc).
 
-   g. Have a secure login screen.
+   g. Have a secure login screen that:
 
    ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
    ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
+    iii. Validate all input.
+
    h. Look relatively good without being bloated.
+
+    i. Don't be costly on system resources when you are idle.
+
+    ii. Don't overdo animations.
 
    i. Allow the user to easily read file names, and easily tell folders and files apart.
 
    j. Let the user preview images without opening them (using thumbnails or an information screen).
+
+   k. Be resizeable, and all items on the screen should look ok.
+
+   l. Allow the user to switch between using Bluetooth and using regular login.
 
 2. App should:
 
@@ -1458,6 +1470,7 @@ code
     ├── AESWin.exe
     ├── BLAKE
     ├── blake.go
+    ├── BLAKEWin.exe
     ├── config.cfg
     ├── configOperations.py
     ├── fileClass.py
@@ -1665,6 +1678,9 @@ def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault
                 if inp[-1] != fileSep:
                     inp += fileSep
                 editConfTerm("vaultDir", inp, config)
+            return True
+
+    return False
 
 
 def runConfigOperations():
@@ -2416,7 +2432,13 @@ func main() {
 MixColumns is the same as in **Design**, where I explain how lookup tables can be used towards the end of the **Mix Columns** section.
 `checkKey` decrypts the first block of a file and compares it to the key. If the decrypted block is the same as the key, then the key is valid. This is because when I encrypt files, I append the encrypted key to the beggining of the new file, so that it can be checked when decrypting the file.
 
-The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, where `<field1>`is the first argument of the function you want to execute, and `<field2>` is the second argument. If there is no second argument, then this can just be set to `0`. The key is input like this: `1 2 3 4 5 6 7 8 9 10 11 12 13 14 15` (it is hashed first though), where it is then split by the space in-between each number, and each number is converted to a byte, where it can be used in the functions that need it.
+The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, where `<field1>`is the first argument of the function you want to execute, and `<field2>` is the second argument. If there is no `<field2>` argument, then this can just be set to `0`. The key is input like this: `1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16` (it is hashed first though), where it is then split by the space in-between each number, and each number is converted to a byte, where it can be used in the functions that need it.
+
+A full command to AES might look like this:
+```bash
+'y', '/home/josh/file.png', '/home/josh/temp', '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16'
+```
+This string would get passed to the standard input of the program.
 
 `aes.go` is compiled to `AES` for Linux/MacOS, and `AESWin.exe` for Windows.
 
@@ -3257,6 +3279,8 @@ It is called little-endian because the smaller (little) number is stored in the 
 
 The `get64` function turns 8 64-bit words into 1 64-bit word, or 8 bytes.
 
+The executable itself (`BLAKE` or `BLAKEWin`)
+
 
 Now similar to `aes.go`, I wrote a benchmark function for `blake.go` that looks like this:
 
@@ -3426,11 +3450,11 @@ class File:
         self.hexPath, self.hexName, self.isDir, self.fileSep, self.extension = hexPath, hexName, isDir, fileSep, extension
         self.thumbDir = ""
         self.checkSum = None
-        self.rawSize = self._getFileSize()
+        self.rawSize = self.__getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
         if path == None:
-            self.path = self._getNormDir(self.hexPath)
+            self.path = self.__getNormDir(self.hexPath)
         else:
             self.path = path
         if name == None:
@@ -3441,24 +3465,28 @@ class File:
         if extension == None:
             extension = self.path.split(".")
             self.extension = extension[-1].lower()
+        else:
+            extension = extension.lower()
 
         if self.isDir:
             self.hexPath += self.fileSep
             self.path += self.fileSep
 
+        self.relPath = self.hexPath.replace(self.outerScreen.path, "")   # Encrypted path relative to root folder of Vault
 
-    def _getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
+
+    def __getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
         hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
         for i in range(len(hexDir)):
             hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
 
         return self.fileSep.join(hexDir)
 
-    def _getFileSize(self, recurse=True):
+    def __getFileSize(self, recurse=True):
         if self.isDir:
             if recurse:
                 self._totalSize = 0
-                self._recursiveSize(self.hexPath)
+                self.__recursiveSize(self.hexPath)
                 size = self._totalSize
                 return size
             else:
@@ -3471,14 +3499,14 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
-    def _recursiveSize(self, f, encrypt=False):  #Get size of folders.
+    def __recursiveSize(self, f, encrypt=False):  #Get size of folders.
         fs = listdir(f)
         for item in fs:
             if encrypt:
                 item = aesFName.encryptFileName(self.key, item)
             if osPath.isdir(f+self.fileSep+item):
                 try:
-                    self._recursiveSize(f+self.fileSep+item)
+                    self.__recursiveSize(f+self.fileSep+item)
                 except OSError:
                     pass
             else:
@@ -3487,9 +3515,17 @@ class File:
                 except PermissionError: #Thrown when the file is owned by another user/administrator.
                     pass
 
+    def decryptRelPath(self):       # Gets relative path from root of Vault in human form
+        splitPath = self.relPath.split(self.fileSep)
+        return self.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+
     def getCheckSum(self, new=True):
         if self.checkSum == None or new:
-            goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+            if self.fileSep == "\\":
+                goproc = Popen(self.outerScreen.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
+            elif self.fileSep == "/":
+                goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+
             out, err = goproc.communicate((self.hexPath).encode())
             if err != None:
                 raise ValueError(err)
@@ -3505,7 +3541,9 @@ This is the File class talked about in the **File Storage** section of the desig
 
 Most of the variables have been kept the same, however `extension` was added for when I get the thumbnail of the file, as if the file is not a png or a jpg, then a thumbnail cannot be shown (since it isn't an image). I also have the variable `outerScreen` that holds a reference to the Kivy Screen object that created it, so it can access functions and variables from the Screen if it needs to.
 
-There are a few new functions too. `_getNormDir` gets the normal file path if path is `None` (it is also a private funtion (`_`), as it is only needed once by the object, and shouldn't be used again by anything else). `_getFileSize` gets the total size of the File object. If it is a folder (isDir) then `_recursiveSize` is called to handle it. If the size can not be read, then the function returns " -", which will display nicely in the GUI. 
+There are a few new functions too. `__getNormDir` gets the normal file path if path is `None` (it is also a private funtion (`__`), as it is only needed once by the object, and shouldn't be used again by anything else). `__getFileSize` gets the total size of the File object. If it is a folder (isDir) then `__recursiveSize` is called to handle it. If the size can not be read, then the function returns " -", which will display nicely in the GUI. `decryptRelPath` decrypts the path of the file relative to the Vault's root directory.
+
+`decryptRelPath` decrypts the relative path from the Vault so it can be read by humans.
 
 
 
@@ -3585,6 +3623,8 @@ if __name__ == "__main__":
 
 This is the program that runs the app itself. All it does is create the root App, and add the ScreenManager as the root widget, where then child widgets (in this case screens) can be added.
 
+This program is called from `code/python-go/start.py`, which is used to start the program. This file is also handy because it means that when I call `import <module>` in the `code/python-go/kivyStuff/` folder, the Python programs can import Python programs from `code/python-go/`, which is where everything non-gui related is kept.
+
 
 
 ### Login classes
@@ -3616,7 +3656,7 @@ class LoginScreen(Screen):
 
     def __init__(self, fileSep, path, startDir, **kwargs):
         self.fileSep, self.path, self.startDir = fileSep, path, startDir  # Start dir is location of running program, path is path of vault
-        super(Screen, self).__init__(**kwargs)
+        super(Screen, self).__init__(**kwargs)  # Run kivy's Screen.__init__ function with the key word arguments (such as size or position)
         self.key = ""
 
     def cancel(self):
@@ -3664,16 +3704,17 @@ class LoginScreen(Screen):
             return True
 
     def checkKey(self, inputKey):   # Handles the GUI while the key is checked, and passes key to functions to check it.
+        if len(inputKey) < 1:
+            Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains at least 1 digit."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
+            return "Login"
         try:
             int(inputKey)
         except:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-            pop.open()
+            Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
             return "Login"
         else:
             if len(str(inputKey)) > 16:
-                pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-                pop.open()
+                Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
                 return "Login"
             else:
                 inputKeyTemp = []
@@ -3688,8 +3729,7 @@ class LoginScreen(Screen):
                     self.key = key
                     return "Main"
                 else:
-                    pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-                    pop.open()
+                    Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
                     return "Login"
 
     def needToSetKey(self):      # Gets text to tell the user if they need to set a key.
@@ -3867,7 +3907,7 @@ Also, when I reference `root.something`, `root` is the root widget of this child
 
 ### Main Screen
 
-Here is the code for the MainScreen class:
+Here is the code for the MainScreen class (`code/python-go/kivyStuff/mainScClass.py`):
 
 ```python
 import os
@@ -3963,7 +4003,7 @@ class MainScreen(Screen):
             except Exception as e:
                 print(e, "Already closed?")
 
-        self.remove_widget(self.scroll)
+        self.removeButtons()
 
     def lock(self, fromRunServ=False):  # Procedure for when the program is locked. If it has been called from runServMain, then we might still be on login screen, so don't change screen to login, and restart the server.
         self.clearUpTempFiles() # Delete all temporary files (decrypted files ready for use).
@@ -4245,8 +4285,6 @@ class MainScreen(Screen):
             os.remove(fileObj.thumbDir)
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
-        fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
-
         size = (.7, .4)  # Size of popup
         if fileObj.extension == "png" or fileObj.extension == "jpg":
             thumb = self.getThumbnail(fileObj)
@@ -4270,7 +4308,7 @@ class MainScreen(Screen):
         infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
         infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileObj.decryptRelPath(), halign="left", valign="middle"))
 
         infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
         infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
@@ -4458,7 +4496,11 @@ class MainScreen(Screen):
         return out
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
-        goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+        if self.fileSep == "\\":  # If on windows
+            goproc = Popen(self.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
+        elif self.fileSep == "/":
+            goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+
         out, err = goproc.communicate((location).encode())
         if err != None:
             raise ValueError(err)
@@ -4998,7 +5040,7 @@ class encDecPop(Popup): #For single files
         self.tim = Label(text="")
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
-        self.wholePb = ProgressBar(value=0, max=self._getTotalSize(), size_hint=(.9, .2))
+        self.wholePb = ProgressBar(value=0, max=self.__getTotalSize(), size_hint=(.9, .2))
         self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -5014,13 +5056,13 @@ class encDecPop(Popup): #For single files
         self.checkThread = Thread(target=self.encDec, args=(encType, op,), daemon=True)
         self.checkThread.start()
 
-    def _getTotalSize(self):
+    def __getTotalSize(self):
         total = 0
         for file in self.fileList:
             total += os.path.getsize(file)
         return total
 
-    def _getGoodUnit(self, bps):
+    def __getGoodUnit(self, bps):
         divCount = 0
         divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
         while bps > 1000:
@@ -5029,7 +5071,7 @@ class encDecPop(Popup): #For single files
 
         return ("%.2f" % bps) + divisions[divCount]
 
-    def _getGoodUnitTime(self, time):
+    def __getGoodUnitTime(self, time):
         divCount = 0
         times = [(0.001, "Miliseconds"), (1, "Seconds"), (60, "Minutes"), (3600, "Hours"), (86400, "Days"), (604800, "Weeks"), (2419200, "Months"), (31557600, "Years")]   # 1 second, 1 minute, 1 hour, 1 day, 1 week, 1 month, 1 year in seconds
         i = 0
@@ -5041,6 +5083,9 @@ class encDecPop(Popup): #For single files
 
         return "A lot of time left."
 
+    def __getRelPathDec(self, path):   # Similar to decryptRelPath in fileClass
+        splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
+        return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
 
     def encDec(self, encType, op):
         total = 0
@@ -5063,7 +5108,7 @@ class encDecPop(Popup): #For single files
 
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
-                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, self.fileList[i].split(self.outerScreen.fileSep)[-1])
+                self.currFile.text = self.__getRelPathDec(self.fileList[i])
             else:
                 self.currFile.text = self.fileList[i]
 
@@ -5082,8 +5127,8 @@ class encDecPop(Popup): #For single files
                         speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
 
                         if speed != 0:
-                            self.tim.text = self._getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
-                            self.spd.text = self._getGoodUnit(speed)
+                            self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.spd.text = self.__getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
                         prevPer = per
@@ -5159,7 +5204,7 @@ class btTransferPop(encDecPop):
 
             self.pb.value = buffCount/fileObj.rawSize
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
-            self.spd.text = self._getGoodUnit(buffCount/(time() - start))
+            self.spd.text = self.__getGoodUnit(buffCount/(time() - start))
 
         self.outerScreen.clientSock.send("~!ENDFILE!")
         self.dismiss()
@@ -5407,7 +5452,7 @@ class SettingsScreen(Screen):
         if inp[len(inp)-1] != self.outerScreen.fileSep:
             inp += self.outerScreen.fileSep
         try:
-            changeVaultLoc(inp, self.outerScreen.fileSep, self.config)
+            worked = changeVaultLoc(inp, self.outerScreen.fileSep, self.config)
         except FileNotFoundError:
             Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
         except PermissionError as e:
@@ -5416,12 +5461,15 @@ class SettingsScreen(Screen):
             print(e)
             Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Can't make a folder here:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
         else:
-            done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-            self.outerScreen.path = inp
-            self.outerScreen.currentDir = inp
-            self.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
-            self.outerScreen.resetButtons()
-            done.open()
+            if worked:
+                done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+                self.outerScreen.path = inp
+                self.outerScreen.currentDir = inp
+                self.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
+                self.outerScreen.resetButtons()
+                done.open()
+            else:
+                Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()
 ```
 
 Here is the styling for this screen:
@@ -5839,7 +5887,7 @@ class PadScreen(Screen, FloatLayout):
                 pop.dismiss()
                 print u"Valid"
 
-                corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                corPop = Popup(title="Valid.", content=Label(text="Valid passcode!\nPlease leave the app open in the background\notherwise the vault will lock."), size_hint=(.9, .5), pos_hint={"x_center": .5, "y_center": .5})
                 Clock.schedule_once(corPop.open, -1)
 
                 # Time to recieve file names of current directory
@@ -5855,7 +5903,7 @@ class PadScreen(Screen, FloatLayout):
             elif data == 48: # Response sent by the PC if code is invalid.
                 print u"Invalid."
                 pop.dismiss()
-                invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.8, .5), pos_hint={"x_center": .5, "y_center": .5})
+                invPop = Popup(title="Invalid.", content=Label(text="Invalid passcode, please try again."), size_hint=(.9, .5), pos_hint={"x_center": .5, "y_center": .5})
                 self.nums = []
                 self.numsString = u""
                 self.updateDisplay()
@@ -6057,6 +6105,9 @@ class FileSelectionScreen(Screen, FloatLayout):
 
     def on_enter(self):
         self.createButtons(self.fileList)
+
+    def on_leave(self):
+        self.removeButtons()
 
     def removeButtons(self):     # Clears all the widgets off the screen
         self.grid.clear_widgets()
@@ -6279,8 +6330,16 @@ build_dir = /home/kivy/VMOUT/
 
 And that is all of the code.
 
-
+---
 
 # Testing
 
+
+For testing my program, I will mostly be doing black-box testing, with some white-box testing of important functions.
+
+The key for the different types of data will be:
+
+- T  =  Typical Data
+- E  =  Erroneous Data
+- B  =  Boundary Data
 

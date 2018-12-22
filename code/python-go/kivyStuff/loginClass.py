@@ -70,16 +70,17 @@ class LoginScreen(Screen):
             return True
 
     def checkKey(self, inputKey):   # Handles the GUI while the key is checked, and passes key to functions to check it.
+        if len(inputKey) < 1:
+            Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains at least 1 digit."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
+            return "Login"
         try:
             int(inputKey)
         except:
-            pop = Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-            pop.open()
+            Popup(title="Invalid", content=Label(text="Invalid key, valid key\ncontains no letters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
             return "Login"
         else:
             if len(str(inputKey)) > 16:
-                pop = Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-                pop.open()
+                Popup(title="Invalid", content=Label(text="Invalid key, longer than\n 16 characters."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
                 return "Login"
             else:
                 inputKeyTemp = []
@@ -94,8 +95,7 @@ class LoginScreen(Screen):
                     self.key = key
                     return "Main"
                 else:
-                    pop = Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4))
-                    pop.open()
+                    Popup(title="Invalid", content=Label(text="Invalid key."), pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
                     return "Login"
 
     def needToSetKey(self):      # Gets text to tell the user if they need to set a key.
