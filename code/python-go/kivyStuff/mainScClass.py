@@ -91,7 +91,7 @@ class MainScreen(Screen):
             except Exception as e:
                 print(e, "Already closed?")
 
-        self.remove_widget(self.scroll)
+        self.removeButtons()
 
     def lock(self, fromRunServ=False):  # Procedure for when the program is locked. If it has been called from runServMain, then we might still be on login screen, so don't change screen to login, and restart the server.
         self.clearUpTempFiles() # Delete all temporary files (decrypted files ready for use).
@@ -373,8 +373,6 @@ class MainScreen(Screen):
             os.remove(fileObj.thumbDir)
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
-        fileViewDir = fileObj.path.replace(self.path, "")   #Remove the vault path from the file's path so that it displays nicely.
-
         size = (.7, .4)  # Size of popup
         if fileObj.extension == "png" or fileObj.extension == "jpg":
             thumb = self.getThumbnail(fileObj)
@@ -398,7 +396,7 @@ class MainScreen(Screen):
         infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
         infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileViewDir, halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileObj.decryptRelPath(), halign="left", valign="middle"))
 
         infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
         infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
@@ -586,7 +584,11 @@ class MainScreen(Screen):
         return out
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
-        goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+        if self.fileSep == "\\":  # If on windows
+            goproc = Popen(self.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
+        elif self.fileSep == "/":
+            goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+
         out, err = goproc.communicate((location).encode())
         if err != None:
             raise ValueError(err)

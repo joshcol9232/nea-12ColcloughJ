@@ -40,7 +40,7 @@ class encDecPop(Popup): #For single files
         self.tim = Label(text="")
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
-        self.wholePb = ProgressBar(value=0, max=self._getTotalSize(), size_hint=(.9, .2))
+        self.wholePb = ProgressBar(value=0, max=self.__getTotalSize(), size_hint=(.9, .2))
         self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -56,13 +56,13 @@ class encDecPop(Popup): #For single files
         self.checkThread = Thread(target=self.encDec, args=(encType, op,), daemon=True)
         self.checkThread.start()
 
-    def _getTotalSize(self):
+    def __getTotalSize(self):
         total = 0
         for file in self.fileList:
             total += os.path.getsize(file)
         return total
 
-    def _getGoodUnit(self, bps):
+    def __getGoodUnit(self, bps):
         divCount = 0
         divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
         while bps > 1000:
@@ -71,7 +71,7 @@ class encDecPop(Popup): #For single files
 
         return ("%.2f" % bps) + divisions[divCount]
 
-    def _getGoodUnitTime(self, time):
+    def __getGoodUnitTime(self, time):
         divCount = 0
         times = [(0.001, "Miliseconds"), (1, "Seconds"), (60, "Minutes"), (3600, "Hours"), (86400, "Days"), (604800, "Weeks"), (2419200, "Months"), (31557600, "Years")]   # 1 second, 1 minute, 1 hour, 1 day, 1 week, 1 month, 1 year in seconds
         i = 0
@@ -83,6 +83,9 @@ class encDecPop(Popup): #For single files
 
         return "A lot of time left."
 
+    def __getRelPathDec(self, path):   # Similar to decryptRelPath in fileClass
+        splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
+        return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
 
     def encDec(self, encType, op):
         total = 0
@@ -105,7 +108,7 @@ class encDecPop(Popup): #For single files
 
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
-                self.currFile.text = aesFName.decryptFileName(self.outerScreen.key, self.fileList[i].split(self.outerScreen.fileSep)[-1])
+                self.currFile.text = self.__getRelPathDec(self.fileList[i])
             else:
                 self.currFile.text = self.fileList[i]
 
@@ -124,8 +127,8 @@ class encDecPop(Popup): #For single files
                         speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
 
                         if speed != 0:
-                            self.tim.text = self._getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
-                            self.spd.text = self._getGoodUnit(speed)
+                            self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.spd.text = self.__getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
                         prevPer = per
@@ -201,7 +204,7 @@ class btTransferPop(encDecPop):
 
             self.pb.value = buffCount/fileObj.rawSize
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
-            self.spd.text = self._getGoodUnit(buffCount/(time() - start))
+            self.spd.text = self.__getGoodUnit(buffCount/(time() - start))
 
         self.outerScreen.clientSock.send("~!ENDFILE!")
         self.dismiss()
