@@ -39,8 +39,7 @@ class SettingsScreen(Screen):
                 done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                 self.outerScreen.path = inp
                 self.outerScreen.currentDir = inp
-                self.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
-                self.outerScreen.resetButtons()
+                self.outerScreen.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
                 done.open()
             else:
                 Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()

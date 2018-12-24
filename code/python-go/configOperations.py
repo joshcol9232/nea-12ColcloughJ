@@ -115,6 +115,7 @@ def changeVaultLoc(inp, fileSep, config):      #Sorts out the UI while the vault
                 if inp[-1] != fileSep:
                     inp += fileSep
                 editConfTerm("vaultDir", inp, config)
+
             return True
 
     return False

@@ -519,11 +519,20 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
 
 // BENCHMARK
 func BenchmarkEncryptFile(b *testing.B) {
-  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"
+  f := "/home/josh/GentooMin.iso"
   w := "/home/josh/temp"
   key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
   for n := 0; n < b.N; n++ {
     encryptFile(key, f, w)
+  }
+}
+
+func BenchmarkDecryptFile(b *testing.B) {
+  f := "/home/josh/temp"
+  w := "/home/josh/decTemp.iso"
+  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
+  for n := 0; n < b.N; n++ {
+    decryptFile(key, f, w)
   }
 }
 

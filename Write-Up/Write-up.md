@@ -116,7 +116,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, etc).
 
-   g. Have a secure login screen that:
+   g. Have a secure login screen.
 
    ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
@@ -138,6 +138,21 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    l. Allow the user to switch between using Bluetooth and using regular login.
 
+   m. Make it easy for the user to return to the root folder of the Vault in case they get lost (a "panic" button).
+
+   n. Give the user statistics during files being enc/decrypted, including:
+
+    i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
+
+    ii. The current speed of enc/decryption.
+
+    iii. An estimate of how long it should take to finish enc/decryption.
+
+    iv. If part of a folder then show the progress of the current file.
+
+  o. Allow the user to sort the files by name or by size.
+
+
 2. App should:
 
    a. Be easy to use.
@@ -158,7 +173,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    b. Encrypt and decrypt relatively quickly, while still being secure.
 
-   c. When the Bluetooth device goes out of range (if using Bluetooth),  encrypt all decrypted files and lock the program until the pin code is input correctly again.
+   c. When the Bluetooth device goes out of range or disconnects (if using Bluetooth),  encrypt all decrypted files and lock the program until the pin code is input correctly again.
 
    e. Have a recycling bin so that the user can recover their files.
 
@@ -5062,7 +5077,7 @@ class encDecPop(Popup): #For single files
             total += os.path.getsize(file)
         return total
 
-    def __getGoodUnit(self, bps):
+    def getGoodUnit(self, bps):
         divCount = 0
         divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
         while bps > 1000:
@@ -5128,7 +5143,7 @@ class encDecPop(Popup): #For single files
 
                         if speed != 0:
                             self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
-                            self.spd.text = self.__getGoodUnit(speed)
+                            self.spd.text = self.getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
                         prevPer = per
@@ -5204,7 +5219,7 @@ class btTransferPop(encDecPop):
 
             self.pb.value = buffCount/fileObj.rawSize
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
-            self.spd.text = self.__getGoodUnit(buffCount/(time() - start))
+            self.spd.text = self.getGoodUnit(buffCount/(time() - start))
 
         self.outerScreen.clientSock.send("~!ENDFILE!")
         self.dismiss()
@@ -5465,8 +5480,7 @@ class SettingsScreen(Screen):
                 done = Popup(title="Done", content=self.outerScreen.infoLabel(text="Changed Vault Location to:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
                 self.outerScreen.path = inp
                 self.outerScreen.currentDir = inp
-                self.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
-                self.outerScreen.resetButtons()
+                self.outerScreen.recycleFolder = self.outerScreen.path+self.outerScreen.recycleName+self.outerScreen.fileSep
                 done.open()
             else:
                 Popup(title="Invalid", content=self.outerScreen.infoLabel(text="Directory not valid:\n"+inp), size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5}).open()

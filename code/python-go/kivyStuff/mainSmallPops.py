@@ -62,7 +62,7 @@ class encDecPop(Popup): #For single files
             total += os.path.getsize(file)
         return total
 
-    def __getGoodUnit(self, bps):
+    def getGoodUnit(self, bps):
         divCount = 0
         divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
         while bps > 1000:
@@ -128,7 +128,7 @@ class encDecPop(Popup): #For single files
 
                         if speed != 0:
                             self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
-                            self.spd.text = self.__getGoodUnit(speed)
+                            self.spd.text = self.getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
                         prevPer = per
@@ -204,7 +204,7 @@ class btTransferPop(encDecPop):
 
             self.pb.value = buffCount/fileObj.rawSize
             self.per.text = "{0:.2f}%".format(self.pb.value*100)
-            self.spd.text = self.__getGoodUnit(buffCount/(time() - start))
+            self.spd.text = self.getGoodUnit(buffCount/(time() - start))
 
         self.outerScreen.clientSock.send("~!ENDFILE!")
         self.dismiss()
