@@ -4,9 +4,10 @@ import (
   "fmt"       // For sending output on stout
   "os"        // For opening files
   "io"        // For reading files
-  "io/ioutil" // ^
+  //"io/ioutil" // ^
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
+	"runtime"
 )
 
 // Global lookup tables.
@@ -337,6 +338,15 @@ func check(e error) {     // Used for checking errors when reading/writing to fi
   }
 }
 
+func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
+  maxProcs := runtime.GOMAXPROCS(0)
+  numCPU := runtime.NumCPU()
+  if maxProcs < numCPU {
+    return maxProcs
+  }
+  return numCPU
+}
+
 func compareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
   if len(slice1) != len(slice2) {
     return false
@@ -349,6 +359,39 @@ func compareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
   }
   return true
 }
+
+type work struct {
+	buff []byte
+	offset int64
+}
+
+func encryptBlock(results chan<- work, expandedKeys [176]byte, offset int64, bufferSize int, a, e *os.File) {
+	buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+	a.Seek(offset-16, 0)
+	_, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+																 // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+	check(err)
+
+	if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
+		var extraNeeded int
+		var l int = len(buff)
+		for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
+			l++
+			extraNeeded++
+		}
+
+		for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
+			buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
+		} // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
+  }
+	var encBuff []byte    // Make a buffer to hold encrypted data.
+	for i := 0; i < bufferSize; i += 16 {
+		encBuff = append(encBuff, encrypt(buff[i:i+16], expandedKeys, 9)...)
+	}
+
+	results <- encBuff
+}
+
 
 func encryptFile(key []byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics
@@ -379,38 +422,21 @@ func encryptFile(key []byte, f, w string) {
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
   e.Write(encrypt(key, expandedKeys, 9))
   e.Seek(16, 0) // Move where we are writing to past the key.
+	offset := 16
 
   for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
     if bufferSize > (fileSize - buffCount) {
       bufferSize = fileSize - buffCount    // If this is the last block, read the amount of data left in the file.
     }
 
-    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
-    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
-                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
-    check(err)
+		go encryptBlock(expandedKeys, int64(offset), bufferSize, a, e)
 
-    if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
-      var extraNeeded int
-      var l int = len(buff)
-      for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
-        l++
-        extraNeeded++
-      }
+		if buffCount % coreNum == 
 
-      for i := 0; i < extraNeeded; i++{                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
-        buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
-      } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
-    }
-
-    var encBuff []byte    // Make a buffer to hold encrypted data.
-    for i := 0; i < bufferSize; i += 16 {
-      encBuff = append(encBuff, encrypt(buff[i:i+16], expandedKeys, 9)...)
-    }
-    e.Write(encBuff)  // Buffer is used because accessing the file every 16 bytes slows down the process a lot.
-
+		offset += bufferSize
     buffCount += bufferSize
   }
+	fmt.Scanln()
   a.Close()  // Close the files used.
   e.Close()
 }
@@ -518,30 +544,36 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
 
 
 func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)
-  check(err)
-  fields := strings.Split(string(bytes), ", ")
-  keyString := strings.Split(string(fields[3]), " ")
+  //bytes, err := ioutil.ReadAll(os.Stdin)
+  //check(err)
+  //fields := strings.Split(string(bytes), ", ")
+  //keyString := strings.Split(string(fields[3]), " ")
 
-  var key []byte
-  for i := 0; i < len(keyString); i++ {
-    a, err := strToInt(keyString[i])
-    check(err)
-    key = append(key, byte(a))
-  }
+  //var key []byte
+  //for i := 0; i < len(keyString); i++ {
+  //  a, err := strToInt(keyString[i])
+  //  check(err)
+  //  key = append(key, byte(a))
+  //}
 
-  if string(fields[0]) == "y" {
-    encryptFile(key, string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "n" {
-    decryptFile(key, string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "test" {
-    valid := checkKey(key, string(fields[1]))
-    if valid {
-      fmt.Println("-Valid-")
-    } else {
-      fmt.Println("-NotValid-")
-    }
-  } else {
-    panic("Invalid options.")
-  }
+  //if string(fields[0]) == "y" {
+  //  encryptFile(key, string(fields[1]), string(fields[2]))
+  //} else if string(fields[0]) == "n" {
+  //  decryptFile(key, string(fields[1]), string(fields[2]))
+  //} else if string(fields[0]) == "test" {
+  //  valid := checkKey(key, string(fields[1]))
+  //  if valid {
+  //    fmt.Println("-Valid-")
+  //  } else {
+  //    fmt.Println("-NotValid-")
+  //  }
+  //} else {
+  //  panic("Invalid options.")
+  //}
+
+	f := "/home/josh/8k.png"
+	w := "/home/josh/temp8k"
+	a := "/home/josh/8kdec.png"
+  encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
+	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
 }
