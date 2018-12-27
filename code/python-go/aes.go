@@ -365,32 +365,19 @@ type work struct {
 	offset int64
 }
 
-func encryptBlock(results chan<- work, expandedKeys [176]byte, offset int64, bufferSize int, a, e *os.File) {
-	buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
-	a.Seek(offset-16, 0)
-	_, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
-																 // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
-	check(err)
-
-	if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
-		var extraNeeded int
-		var l int = len(buff)
-		for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
-			l++
-			extraNeeded++
+func worker(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
+	for job := range jobs {
+		var encBuff []byte    // Make a buffer to hold encrypted data.
+		for i := 0; i < len(job.buff); i += 16 {
+			encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
 		}
 
-		for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
-			buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
-		} // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
-  }
-	var encBuff []byte    // Make a buffer to hold encrypted data.
-	for i := 0; i < bufferSize; i += 16 {
-		encBuff = append(encBuff, encrypt(buff[i:i+16], expandedKeys, 9)...)
+		results<- work{buff: encBuff, offset: job.offset}
 	}
 
-	results <- encBuff
+	fmt.Println("ROUTINE CLOSED")
 }
+
 
 
 func encryptFile(key []byte, f, w string) {
@@ -408,7 +395,19 @@ func encryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 32768  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
+	var coreNum int = getNumOfCores()
+	var workingWorkers int = 0
+	var workerNum int = coreNum-1
+	if workerNum == 0 { workerNum = 1 }
+
+	jobs := make(chan work, )
+	results := make(chan work)
+
+	for i := 0; i < workerNum; i++ { // Use all cores bar one
+		go worker(jobs, results, expandedKeys)
+	}
+
+  var bufferSize int = 16384  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
@@ -416,12 +415,11 @@ func encryptFile(key []byte, f, w string) {
 
   var buffCount int = 0   // Keeps track of how far through the file we are
 
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) // Open file for appending.
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file for appending.
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
   e.Write(encrypt(key, expandedKeys, 9))
-  e.Seek(16, 0) // Move where we are writing to past the key.
 	offset := 16
 
   for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
@@ -429,14 +427,52 @@ func encryptFile(key []byte, f, w string) {
       bufferSize = fileSize - buffCount    // If this is the last block, read the amount of data left in the file.
     }
 
-		go encryptBlock(expandedKeys, int64(offset), bufferSize, a, e)
+		buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+		_, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+																	 // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+		check(err)
 
-		if buffCount % coreNum == 
+		if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
+			var extraNeeded int
+			var l int = len(buff)
+			for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
+				l++
+				extraNeeded++
+			}
+
+			for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
+				buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
+			} // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
+		}
+
+		jobs <- work{buff: buff, offset: int64(offset)}
+		workingWorkers++
+
+		if workingWorkers == workerNum {
+			workingWorkers = 0
+			for i := 0; i < workerNum; i++ {
+				wk := <-results
+				e.WriteAt(wk.buff, wk.offset)
+			}
+		}
 
 		offset += bufferSize
     buffCount += bufferSize
   }
-	fmt.Scanln()
+
+	if workingWorkers != 0 {
+		for i := 0; i < workingWorkers; i++ {
+			wk := <-results
+			e.WriteAt(wk.buff, wk.offset)
+			fmt.Println("In second, writing to", wk.offset, fileSize, bufferSize)
+		}
+	}
+
+	fmt.Println("Finito")
+
+	close(jobs)
+	close(results)
+
   a.Close()  // Close the files used.
   e.Close()
 }
@@ -458,7 +494,7 @@ func decryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 32768
+  var bufferSize int = 16384 //32768
 
   if fileSize < bufferSize {
     bufferSize = fileSize
@@ -495,7 +531,7 @@ func decryptFile(key []byte, f, w string) {
           var focusCount int = 0
 
           if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-            for j := 15; int(decrypted[j]) == focus; j-- {
+            for j := 16; int(decrypted[j]) == focus; j-- {
               if int(decrypted[j]) == focus {focusCount++}
             }
             if focus == focusCount {
@@ -571,9 +607,9 @@ func main() {
   //  panic("Invalid options.")
   //}
 
-	f := "/home/josh/8k.png"
-	w := "/home/josh/temp8k"
-	a := "/home/josh/8kdec.png"
+	f := "/home/josh/GentooMin.iso"
+	w := "/home/josh/temp"
+	a := "/home/josh/helloDec.iso"
   encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
 	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
 }
