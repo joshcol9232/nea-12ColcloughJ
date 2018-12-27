@@ -416,8 +416,7 @@ func encryptFile(key []byte, f, w string) {
   }
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()-1
-  if workerNum == 0 { workerNum = 1 }
+  var workerNum int = getNumOfCores()
 
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
@@ -520,8 +519,7 @@ func decryptFile(key []byte, f, w string) {
   var bufferSize int = 16384
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()-1
-  if workerNum == 0 { workerNum = 1 }
+  var workerNum int = getNumOfCores()
 
   jobs := make(chan work, )
   results := make(chan work)
