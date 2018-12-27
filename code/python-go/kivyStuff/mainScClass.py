@@ -645,11 +645,11 @@ class MainScreen(Screen):
 
         if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
             self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
-            mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
+            return mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
-        elif len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
+        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
             self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
-            self.encryptProcess.start()
+            return self.encryptProcess.start()
         else:
             print("File name too long: ", fileName)
             print("Dismissed?")
