@@ -1,11 +1,11 @@
 package main
 
 import (
-  "fmt"
   "math"
   "os"
   "io"
-  "io/ioutil"
+	"io/ioutil"
+	"fmt"
 )
 
 
@@ -44,7 +44,7 @@ func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
 }
 
-func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
+func mix(v []uint64, a, b, c, d int, x, y uint64) {
   v[a] = v[a] + v[b] + x
   v[d] = rotR64((v[d] ^ v[a]), 32)
 
@@ -56,8 +56,6 @@ func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
 
   v[c] = v[c] + v[d]
   v[b] = rotR64((v[b] ^ v[c]), 63)
-
-  return v
 }
 
 func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64-bit bytes.
@@ -66,7 +64,7 @@ func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64
 
 
 func blakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
-  var v = [16]uint64{} // Current vector
+  v := make([]uint64, 16) // Current vector as a slice. This allows you to pass by reference
   for i := 0; i < 8; i++ {
     v[i] = h[i]
     v[i+8] = k[i]
@@ -84,15 +82,15 @@ func blakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64
   }
   for i := 0; i < 12; i++ {
     // Mix
-    v = mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
-    v = mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
-    v = mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
-    v = mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
+    mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
+    mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
+    mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
+    mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
 
-    v = mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
-    v = mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
-    v = mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
-    v = mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
+    mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
+    mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
+    mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
+    mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
   }
 
   for i := 0; i < 8; i++ {
@@ -170,9 +168,9 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
 }
 
 func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
+	bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
   check(err)
   f := string(bytes)
 
-  fmt.Printf("%x", BLAKEchecksum(f, 64))
+	fmt.Printf("%x", BLAKEchecksum(f, 64))
 }

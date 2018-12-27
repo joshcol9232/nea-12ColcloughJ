@@ -138,7 +138,7 @@ class encDecPop(Popup): #For single files
                 if self.pb.value >= self.pb.max-32 or self.pb.value_normalized == 1:  # -32 is due to padding.
                     done = True
                 else:
-                    sleep(0.005) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
+                    sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 
             self.pb.value = self.pb.max
             totalPer += 100

@@ -647,7 +647,7 @@ class MainScreen(Screen):
             self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
             mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
-        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
+        elif len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
             self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
             self.encryptProcess.start()
         else:
