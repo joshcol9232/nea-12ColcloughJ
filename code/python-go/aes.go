@@ -365,7 +365,7 @@ type work struct {
 	offset int64
 }
 
-func worker(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
+func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
 	for job := range jobs {
 		var encBuff []byte    // Make a buffer to hold encrypted data.
 		for i := 0; i < len(job.buff); i += 16 {
@@ -376,6 +376,34 @@ func worker(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
 	}
 
 	fmt.Println("ROUTINE CLOSED")
+}
+
+func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fileSize int) {
+	for job := range jobs {
+		var decBuff []byte
+		for i := 0; i < len(job.buff); i += 16 {
+			if fileSize - i == 16 {     // If on the last block of whole file
+				var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
+				// Store in variable as we are going to change it.
+				var focus int = int(decrypted[len(decrypted)-1])
+				var focusCount int = 0
+
+				if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
+					for j := 16; int(decrypted[j]) == focus; j-- {
+						if int(decrypted[j]) == focus {focusCount++}
+					}
+					if focus == focusCount {
+						decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+					}
+				}
+				decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
+			} else {
+				decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
+			}
+		}
+	}
+
+	fmt.Println("ROUTINE CLOSED, DEC")
 }
 
 
@@ -404,7 +432,7 @@ func encryptFile(key []byte, f, w string) {
 	results := make(chan work)
 
 	for i := 0; i < workerNum; i++ { // Use all cores bar one
-		go worker(jobs, results, expandedKeys)
+		go workerEnc(jobs, results, expandedKeys)
 	}
 
   var bufferSize int = 16384  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
@@ -496,6 +524,18 @@ func decryptFile(key []byte, f, w string) {
 
   var bufferSize int = 16384 //32768
 
+	var coreNum int = getNumOfCores()
+	var workingWorkers int = 0
+	var workerNum int = coreNum-1
+	if workerNum == 0 { workerNum = 1 }
+
+	jobs := make(chan work, )
+	results := make(chan work)
+
+	for i := 0; i < workerNum; i++ { // Use all cores bar one
+		go workerDec(jobs, results, expandedKeys, fileSize)
+	}
+
   if fileSize < bufferSize {
     bufferSize = fileSize
   }
@@ -511,8 +551,9 @@ func decryptFile(key []byte, f, w string) {
   check(er)
   decFirst := decrypt(firstBlock, expandedKeys, 9)
 
-  if compareSlices(key, decFirst) {
-    a.Seek(16, 0)               // Move read head 16 bytes into the file
+  if compareSlices(key, decFirst) { // If key is valid
+    offset := 0
+		a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
@@ -522,31 +563,32 @@ func decryptFile(key []byte, f, w string) {
       _, err := io.ReadFull(a, buff)  // Ignore the number of bytes read (_)
       check(err)
 
-      var decBuff []byte
-      for i := 0; i < bufferSize; i += 16 {
-        if fileSize - i == 16 {     // If on the last block of whole file
-          var decrypted []byte = decrypt(buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
-          // Store in variable as we are going to change it.
-          var focus int = int(decrypted[len(decrypted)-1])
-          var focusCount int = 0
+			jobs<- work{buff: buff, offset: int64(offset)}
+			workingWorkers++
 
-          if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-            for j := 16; int(decrypted[j]) == focus; j-- {
-              if int(decrypted[j]) == focus {focusCount++}
-            }
-            if focus == focusCount {
-              decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-            }
-          }
-          decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
-        } else {
-          decBuff = append(decBuff, decrypt(buff[i:i+16], expandedKeys, 9)...)
-        }
-      }
-      e.Write(decBuff)
+			if workingWorkers == workerNum {
+				workingWorkers = 0
+				for i := 0; i < workerNum; i++ {
+					wk := <-results
+					e.WriteAt(wk.buff, wk.offset)
+				}
+			}
 
-      buffCount += bufferSize
-    }
+			offset += bufferSize
+			buffCount += bufferSize
+		}
+		if workingWorkers != 0 {
+			for i := 0; i < workingWorkers; i++ {
+				wk := <-results
+				e.WriteAt(wk.buff, wk.offset)
+				fmt.Println("In second, writing to", wk.offset, fileSize, bufferSize)
+			}
+		}
+		fmt.Println("Finito")
+
+		close(jobs)
+		close(results)
+
   } else {
     panic("Invalid Key")  // If first block is not equal to the key, then do not bother trying to decrypt the file.
   }
@@ -607,9 +649,9 @@ func main() {
   //  panic("Invalid options.")
   //}
 
-	f := "/home/josh/GentooMin.iso"
+	f := "/home/josh/test.jpg"
 	w := "/home/josh/temp"
-	a := "/home/josh/helloDec.iso"
+	a := "/home/josh/helloDec.jpg"
   encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
 	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
 }
