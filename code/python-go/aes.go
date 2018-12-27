@@ -10,6 +10,8 @@ import (
   "runtime"   // For getting CPU core count
 )
 
+const DEFAULT_BUFFER_SIZE = 32768  // Define the default buffer size for enc/decrypt
+
 // Global lookup tables.
 var sBox = [256]byte {0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
                       0xCA,0x82,0xC9,0x7D,0xFA,0x59,0x47,0xF0,0xAD,0xD4,0xA2,0xAF,0x9C,0xA4,0x72,0xC0,
@@ -417,7 +419,7 @@ func encryptFile(key []byte, f, w string) {
   }
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()
+  var workerNum int = getNumOfCores()*2  // 2 go routines per core got the most performance (didn't want usage above 90%)
 
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
@@ -433,7 +435,7 @@ func encryptFile(key []byte, f, w string) {
     go workerEnc(jobs, results, expandedKeys)
   }
 
-  var bufferSize int = 16384  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
+  var bufferSize int = DEFAULT_BUFFER_SIZE
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
     bufferSize = fileSize
@@ -517,10 +519,10 @@ func decryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 16384
+  var bufferSize int = DEFAULT_BUFFER_SIZE
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()
+  var workerNum int = getNumOfCores()*2
 
   jobs := make(chan work, )
   results := make(chan work)
