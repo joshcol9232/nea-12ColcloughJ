@@ -127,7 +127,7 @@ class encDecPop(Popup): #For single files
                         speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
 
                         if speed != 0:
-                            self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.tim.text = self.__getGoodUnitTime((100 - (self.wholePb.value_normalized*100))/(perDelta/timeDelta))
                             self.spd.text = self.getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
