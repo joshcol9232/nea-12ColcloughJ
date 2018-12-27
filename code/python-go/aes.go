@@ -5,7 +5,7 @@ import (
   "os"        // For opening files
   "io"        // For reading files
   "encoding/hex"
-  "io/ioutil" // For reading from stdin
+  //"io/ioutil" // For reading from stdin
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
   "runtime"   // For getting CPU core count
@@ -583,61 +583,61 @@ func decryptFile(expandedKeys [176]byte, f, w string) {
   e.Close()
 }
 
-func encryptFileName(expandedKeys [176]byte, name string) string {
+func padSlice(slice []byte, factor int) ([]byte) {
+  for (len(slice) % factor != 0) {
+    slice = append(slice, byte(0))
+  }
+  return slice
+}
+
+func encryptFileName(key []byte, name string) (string) {
+  fmt.Println("Inputs:", key, name)
   var byteName = []byte(name)
 
-  for len(byteName) % 16  != 0 {   // Pad with 0s
-    byteName = append(byteName, 0)
-  }
-  var encName []byte
+  var expandedKeys [176]byte
+  expandedKeys = expandKey(key)
 
-  for i := 0; i < len(byteName); i += 16 {
-    encName = append(encName, encrypt(byteName[i:i+16], expandedKeys, 9)...)
-  }
-  fmt.Println(encName, "encName")
-
-  return hex.EncodeToString(encName)
-}
-
-func decryptFileName(expandedKeys [176]byte, hexName string) string {
-  byteName, err := hex.DecodeString(hexName)
-  check(err)
-
-  var decName []byte
+  //fmt.Println("byteName", byteName)
+  byteName = padSlice(byteName, 16)
+  //fmt.Println("padded", byteName)
 
   for i := 0; i < len(byteName)/16; i++ {
-    decBlock := decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
-    for _, element := range decBlock {
-      decName = append(decName, element)
-    }
+    encrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
   }
-  decName = checkForPadding(decName)
 
-  return string(decName[:len(decName)])
+  //fmt.Println("encName at ln436", encName)
+  out := hex.EncodeToString(byteName)
+
+  return out
 }
 
-func checkForPadding(input []byte) []byte {   // For file names
+func checkForPadding(input []byte) ([]byte) {
   var newBytes []byte
   for _, element := range input {
-    if (element > 31) && (element < 127) {    // If a character
+    if (element > 31) && (element < 127) {    //If a character
       newBytes = append(newBytes, element)
     }
   }
   return newBytes
 }
 
-func encryptDir(expandedKeys [176]byte, dir, target string) {
-  list, err := ioutil.ReadDir(dir)
+func decryptFileName(key []byte, hexName string) (string) {
+  //fmt.Println(hexName, "input of dec")
+  byteName, err := hex.DecodeString(hexName)
   check(err)
-  for i := range list {
-    if list[i].IsDir() {
-      folder := target+encryptFileName(expandedKeys, list[i].Name())+"/"
-      os.MkdirAll(folder, os.ModePerm)
-      encryptDir(expandedKeys, dir+list[i].Name()+"/", folder) // Go treats "/" as the file separator for all platforms
-    } else {
-      encryptFile(expandedKeys, dir+list[i].Name(), target+encryptFileName(expandedKeys, list[i].Name()))
-    }
+  var expandedKeys [176]byte
+  expandedKeys = expandKey(key)
+
+  //fmt.Println("byteName", byteName)
+
+  for i := 0; i < len(byteName)/16; i++ {
+    fmt.Println(byteName[(i*16):((i+1)*16)], i)
+    decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
   }
+  fmt.Println(len(byteName), byteName, "decname")
+  checkForPadding(byteName)
+
+  return string(byteName[:])
 }
 
 
@@ -695,7 +695,13 @@ func main() {
   // } else {
   //   panic("Invalid options.")
   // }
-  out := encryptFileName(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), "my name is jeff lol what this should be longer than 16 in length")
+  f := "/home/josh/egg.txt"
+  w := "/home/josh/eggTemp"
+  a := "/home/josh/eggDec.txt"
+  encryptFile(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), f, w)
+  decryptFile(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), w, a)
+
+  out := encryptFileName([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, "egg")
   fmt.Println(out)
-  fmt.Println(decryptFileName(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), out))
+  fmt.Println(decryptFileName([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, out))
 }

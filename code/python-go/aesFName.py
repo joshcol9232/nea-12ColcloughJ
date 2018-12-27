@@ -324,7 +324,9 @@ def encryptFileName(key, name):
     encName = []
 
     for i in range(len(byteName)//16):
+        print("BLOCK:", [int(x) for x in byteName[(i*16):((i+1)*16)]])
         encBlock = encrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
+        print("ENC BLOCK:", [int(x) for x in encBlock])
         for element in encBlock:
             encName.append(element)
 
@@ -348,7 +350,6 @@ def decryptFileName(key, hexIn):
     expandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     expandedKeys = expandKey(key, expandedKeys)
 
-    byteName = padArray(byteName, 16)
     encName = []
     for i in range(len(byteName)//16):
         encBlock = decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
@@ -368,7 +369,7 @@ def test(singleInput=False):
     key = "0 11 22 29 44 39 58 49 88 83 78 69 116 127 98 105"
 
     if singleInput:
-        test = "my name is jeff lol what this should be longer than 16 in length"
+        test = "egg"
 
         start = time()
         enc = encryptFileName(key, test)
