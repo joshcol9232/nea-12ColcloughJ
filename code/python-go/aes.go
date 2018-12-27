@@ -360,7 +360,7 @@ func compareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
   return true
 }
 
-type work struct {
+type work struct {   // For holding the buffer to do and the offset together.
 	buff []byte
 	offset int64
 }
@@ -371,11 +371,8 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
 		for i := 0; i < len(job.buff); i += 16 {
 			encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
 		}
-
 		results<- work{buff: encBuff, offset: job.offset}
 	}
-
-	fmt.Println("ROUTINE CLOSED")
 }
 
 func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fileSize int) {
@@ -389,8 +386,8 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
 				var focusCount int = 0
 
 				if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-					for j := 15; int(decrypted[j]) == focus; j-- {
-						if int(decrypted[j]) == focus {focusCount++}
+					for j := 15; (int(decrypted[j]) == focus) && (j > 0); j-- {
+						if int(decrypted[j]) == focus { focusCount++ }
 					}
 					if focus == focusCount {
 						decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
@@ -403,11 +400,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
 		}
 		results<- work{buff: decBuff, offset: job.offset}
 	}
-
-	fmt.Println("ROUTINE CLOSED, DEC")
 }
-
-
 
 func encryptFile(key []byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics
@@ -470,6 +463,7 @@ func encryptFile(key []byte, f, w string) {
 
 			for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
 				buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
+				fmt.Println(extraNeeded, "EXTRA NEEDED")
 			} // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
 		}
 
@@ -647,9 +641,10 @@ func main() {
   //  panic("Invalid options.")
   //}
 
-	f := "/home/josh/theLads.png"
+	//f := "/home/josh/theLads.png"
+	f := "/home/josh/GentooMin.iso"
 	w := "/home/josh/temp"
-	a := "/home/josh/helloDec.png"
+	a := "/home/josh/helloDec.iso"
   encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
 	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
 }
