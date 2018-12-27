@@ -87,63 +87,10 @@ class encDecPop(Popup): #For single files
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
         return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
 
+
     def encDec(self, encType, op):
-        total = 0
-        totalPer = 0
-        factor = 0.5
-        timeLast = 0
-        lastSize = 0
-        timeDelta = 0
-        perDelta = 0
-        per = 0
-        prevPer = 0
-        for i in range(len(self.fileList)):
-            self.done = False
-            self.pb.value = 0
-            self.pb.max = os.path.getsize(self.fileList[i])
-            if i == len(self.fileList)-1:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
-            else:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
+        self.outerScreen.passToPipe(encType, ",,".join(self.fileList), ",,".join(self.locList), op=bool(len(self.fileList)==1))
 
-            self.outOf.text = str(i)+"/"+str(len(self.fileList))
-            if encType == "n":
-                self.currFile.text = self.__getRelPathDec(self.fileList[i])
-            else:
-                self.currFile.text = self.fileList[i]
-
-            while not self.done: # Padding can cause issues as original size is not known.
-                if os.path.exists(self.locList[i]):
-                    self.pb.value = os.path.getsize(self.locList[i])
-                    self.wholePb.value = total + self.pb.value
-                    per = self.wholePb.value_normalized*100
-
-                    a = time()   # Temporary variable to hold the time
-                    timeDelta = a - timeLast     # Get time difference
-                    if timeDelta >= 0.5:  # Update every 0.5 seconds
-                        perDelta = per - prevPer   # Change in percentage in that time.
-                        timeLast = a
-                        sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
-                        speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
-
-                        if speed != 0:
-                            self.tim.text = self.__getGoodUnitTime((100 - (self.wholePb.value_normalized*100))/(perDelta/timeDelta))
-                            self.spd.text = self.getGoodUnit(speed)
-
-                        lastSize = self.wholePb.value
-                        prevPer = per
-
-                    self.per.text = "{0:.2f}%".format(per)
-
-                if self.pb.value >= self.pb.max-64:  # -64 is due to padding and key.
-                    self.done = True
-                else:
-                    sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
-
-            print("DONE in while loop", len(self.fileList))
-            self.pb.value = self.pb.max
-            totalPer += 100
-            total += self.pb.max
 
         mainthread(Clock.schedule_once(self.dismiss, -1))
 
@@ -224,13 +171,13 @@ class decryptFileToLocPop(Popup): # Input box for location of where directory is
                 if not os.path.exists(inp):
                     os.makedirs(inp)
                 if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
             else:
                 if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
                     if not os.path.exists(inp):
                         os.makedirs(inp)
                     inp += self.fileObj.name
-                self.outerScreen.encDecTerminal("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
 
     def getTitle(self):
         if self.fileObj.isDir:

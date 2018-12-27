@@ -560,7 +560,7 @@ class MainScreen(Screen):
 
 
 ######Encryption Stuff + opening decrypted files######
-    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.
+    def passToPipe(self, type, d, targetLoc, op=True):     #Passes parameters to AES written in go.
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
@@ -571,22 +571,21 @@ class MainScreen(Screen):
         if err != None:  # AES throws error when key is invalid.
             raise ValueError("Key not valid.")
 
-        if endOfFolderList:
-            if self.encPop != None:
-                self.encPop.dismiss()
-                self.encPop = None
-            if type == "y":
-                self.refreshFiles()
-                print("Refreshing files.")
+        # if endOfFolderList:
+        #     if self.encPop != None:
+        #         self.encPop.dismiss()
+        #         self.encPop = None
+        #     if type == "y":
+        #         self.refreshFiles()
+        #         print("Refreshing files.")
 
-        if type == "n" and op and endOfFolderList:
-            mainthread(self.openFileTh(targetLoc, d))
+        if type == "n" and op:
+             mainthread(self.openFileTh(targetLoc, d))
 
-        if self.encPop != None:
-            self.encPop.done = True
-            print("Done")
+        # if self.encPop != None:
+        #     self.encPop.done = True
 
-        return out
+        # return out
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
         if self.fileSep == "\\":  # If on windows
@@ -619,49 +618,49 @@ class MainScreen(Screen):
         return thumb
 
 
-    # Handles GUI while encrypting a single file, and parses parameters to passToPipe
-    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True): # Handels passToPipe and UI while encryption/decryption happens.
-        fileName = ""
-        if type == "y":     #The file name also needs to be encrypted
-            tempDir = d.split(self.fileSep)
-            fileName = tempDir[-1]
-            targetLoc = targetLoc.split(self.fileSep)
-            #replace file name with new hex
-            targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
-            thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
+    # # Handles GUI while encrypting a single file, and parses parameters to passToPipe
+    # def encDecTerminal(self, type, d, targetLoc, op=True): # Handels passToPipe and UI while encryption/decryption happens.
+    #     fileName = ""
+    #     if type == "y":     #The file name also needs to be encrypted
+    #         tempDir = d.split(self.fileSep)
+    #         fileName = tempDir[-1]
+    #         targetLoc = targetLoc.split(self.fileSep)
+    #         #replace file name with new hex
+    #         targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
+    #         thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
 
-            popText = "Encrypting..."
-            targetLoc = self.fileSep.join(targetLoc)
-            if os.path.exists(targetLoc):
-                if os.path.isdir(targetLoc):
-                    rmtree(targetLoc) # Imported from shutil
-                else:
-                    os.remove(targetLoc)
+    #         popText = "Encrypting..."
+    #         targetLoc = self.fileSep.join(targetLoc)
+    #         if os.path.exists(targetLoc):
+    #             if os.path.isdir(targetLoc):
+    #                 rmtree(targetLoc) # Imported from shutil
+    #             else:
+    #                 os.remove(targetLoc)
 
-        elif type == "n":   #Need to decrypt file name if decrypting
-            tempDir = d.split(self.fileSep)
-            fileName = tempDir[-1]
-            if newName == None:
-                targetLoc = targetLoc.split(self.fileSep)
-                newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
-                targetLoc = self.fileSep.join(targetLoc)
-                fileName = newName
-            popText = "Decrypting..."
+    #     elif type == "n":   #Need to decrypt file name if decrypting
+    #         tempDir = d.split(self.fileSep)
+    #         fileName = tempDir[-1]
+    #         if newName == None:
+    #             targetLoc = targetLoc.split(self.fileSep)
+    #             newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
+    #             targetLoc = self.fileSep.join(targetLoc)
+    #             fileName = newName
+    #         popText = "Decrypting..."
 
-        if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
-            self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
-            return mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
+    #     if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
+    #         self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
+    #         return mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
 
-        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
-            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
-            return self.encryptProcess.start()
-        else:
-            print("File name too long: ", fileName)
-            print("Dismissed?")
-            lab = Label(text="File name too long, skipping:\n"+fileName)
-            lab.bind(size=info.setter("text_size")) # Wrap to label.
-            pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-            pop.open()
+    #     if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
+    #         self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, op,), daemon=True)
+    #         return self.encryptProcess.start()
+    #     else:
+    #         print("File name too long: ", fileName)
+    #         print("Dismissed?")
+    #         lab = Label(text="File name too long, skipping:\n"+fileName)
+    #         lab.bind(size=info.setter("text_size")) # Wrap to label.
+    #         pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
+    #         pop.open()
 
     def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
         Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
@@ -696,26 +695,26 @@ class MainScreen(Screen):
             print("Difference found:", i)
             tempLoc = self.fileSep.join(tempLoc[:-1]) # Remove last file name
             tempLoc += self.fileSep+i
-            self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
+            self.encDec("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
 
         if nameOfOriginal in endList:
             print("Original still here")
             if endCheckSum != startCheckSum:
                 print("Original file has changed.")
-                self.encDecTerminal("y", location, startLoc)
+                self.encDec("y", location, startLoc)
 
     def onFileDrop(self, window, filePath):  # For draging + dropping files into the window.
         self.checkCanEncrypt(filePath.decode())
         return "Done"
 
-    def decrypt(self, fileObj, op=True):
+    def decrypt(self, fileObj, op=True): # Default decrypt
         if not os.path.isdir(self.osTemp+"FileMate"+self.fileSep):
             os.makedirs(self.osTemp+"FileMate"+self.fileSep)
         fileLoc = self.osTemp+"FileMate"+self.fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
         if os.path.exists(fileLoc) and op:         #Checks file exits already in temp files, so it doesn't have to decrypt again.
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
-            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
+            self.encDec("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
 
     def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
         if os.path.exists(dir):
@@ -725,17 +724,21 @@ class MainScreen(Screen):
             self.popup.open()
             return False
 
-    def encDecDir(self, encType, d, targetLoc, op=True): # Encrypt and decrypt folders.
+    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
+        print(d, targetLoc, "LOCS")
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
 
         self.fileList = []
         self.locList = []
-        self.encDecDirCore(encType, d, targetLoc)
+        if os.path.isdir(d):
+            self.passToPipe(encType+"Dir", d, targetLoc, op=False)
+        else:
+            self.passToPipe(encType, d, targetLoc, op=False)
 
         if len(self.fileList) < 1:
-            return Popup(title="Empty", content=Label(text="This folder is empty..."), size_hint=(.4, .3)).open()
+            return Popup(title="Empty", content=Label(text="No files to enc/decrypt."), size_hint=(.4, .3)).open()
 
         labText = "Encrypting..."
         if encType == "n":
@@ -744,45 +747,25 @@ class MainScreen(Screen):
         self.encPop = mainSPops.encDecPop(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
         mainthread(Clock.schedule_once(self.encPop.open, -1))
 
+
+
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
 
-    def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
-        fs = os.listdir(d)
-        targetLoc = targetLoc.split(self.fileSep)
-        if encType == "y": # Decrypt folder names
-            targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
-        else:
-            targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
-        targetLoc = self.fileSep.join(targetLoc)
-        for item in fs:
-            if os.path.isdir(d+item):
-                self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
-            else:
-                if encType == "n":
-                    name = aesFName.decryptFileName(self.key, item)
-                elif encType == "y":
-                    name = aesFName.encryptFileName(self.key, item)
-                else:
-                    name = item
-                try:
-                    self.createFolders(targetLoc+self.fileSep)
-                except PermissionError:
-                    pass
-                else:
-                    self.fileList.append(d+item)
-                    self.locList.append(targetLoc+self.fileSep+name)
 
     def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.
         if self.checkDirExists(inp):
+            inpSplit = inp.split(self.fileSep)
+
             if os.path.isdir(inp):
-                if inp[-1] != self.fileSep:
-                    inp += self.fileSep
-                inpSplit = inp.split(self.fileSep)
-                self.encDecDir("y", inp, self.currentDir+inpSplit[-2])
+                if inpSplit[-1][-1] == self.fileSep:
+                    inpSplit[-1] = inpSplit[-1][:-1]
+                targ = self.currentDir+aesFName.encryptFileName(self.key, inpSplit[-1])+self.fileSep
+                inp = self.fileSep.join(inpSplit)+self.fileSep
             else:
-                inpSplit = inp.split(self.fileSep)
-                self.encDecTerminal("y", inp, self.currentDir+inpSplit[-1])
+                targ = self.currentDir+aesFName.encryptFileName(self.key, inpSplit[-1])
+                inp = self.fileSep.join(inpSplit)
+            self.encDec("y", inp, targ)
 
 
     def checkCanEncrypt(self, inp):  # Used for adding new files to the vault by the user.

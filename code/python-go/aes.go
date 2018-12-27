@@ -4,6 +4,7 @@ import (
   "fmt"       // For sending output on stout
   "os"        // For opening files
   "io"        // For reading files
+  "encoding/hex"
   "io/ioutil" // For reading from stdin
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
@@ -403,16 +404,13 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
   }
 }
 
-func encryptFile(key []byte, f, w string) {
+func encryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
   check(err)
 
   fileSize := int(aInfo.Size()) // Get size of original file
-
-  var expandedKeys [176]byte
-  expandedKeys = expandKey(key) // Expand the key for each round
 
   if _, err := os.Stat(w); err == nil { // If file already exists, delete it
     os.Remove(w)
@@ -447,7 +445,7 @@ func encryptFile(key []byte, f, w string) {
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  e.Write(encrypt(key, expandedKeys, 9))
+  e.Write(encrypt(expandedKeys[:16], expandedKeys, 9))
   offset := 16
 
   for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
@@ -503,17 +501,13 @@ func encryptFile(key []byte, f, w string) {
 }
 
 
-func decryptFile(key []byte, f, w string) {
+func decryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
   check(err)
 
   fileSize := int(aInfo.Size())-16 // Take away length of added key for checksum
-
-  var expandedKeys [176]byte
-
-  expandedKeys = expandKey(key)
 
   if _, err := os.Stat(w); err == nil { // If file exists, delete it
     os.Remove(w)
@@ -546,7 +540,7 @@ func decryptFile(key []byte, f, w string) {
   check(er)
   decFirst := decrypt(firstBlock, expandedKeys, 9)
 
-  if compareSlices(key, decFirst) { // If key is valid
+  if compareSlices(expandedKeys[:16], decFirst) { // If key is valid
     offset := 0
     a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
@@ -589,8 +583,65 @@ func decryptFile(key []byte, f, w string) {
   e.Close()
 }
 
+func encryptFileName(expandedKeys [176]byte, name string) string {
+  var byteName = []byte(name)
 
-func checkKey(key []byte, f string)  bool{
+  for len(byteName) % 16  != 0 {   // Pad with 0s
+    byteName = append(byteName, 0)
+  }
+  var encName []byte
+
+  for i := 0; i < len(byteName); i += 16 {
+    encName = append(encName, encrypt(byteName[i:i+16], expandedKeys, 9)...)
+  }
+  fmt.Println(encName, "encName")
+
+  return hex.EncodeToString(encName)
+}
+
+func decryptFileName(expandedKeys [176]byte, hexName string) string {
+  byteName, err := hex.DecodeString(hexName)
+  check(err)
+
+  var decName []byte
+
+  for i := 0; i < len(byteName)/16; i++ {
+    decBlock := decrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
+    for _, element := range decBlock {
+      decName = append(decName, element)
+    }
+  }
+  decName = checkForPadding(decName)
+
+  return string(decName[:len(decName)])
+}
+
+func checkForPadding(input []byte) []byte {   // For file names
+  var newBytes []byte
+  for _, element := range input {
+    if (element > 31) && (element < 127) {    // If a character
+      newBytes = append(newBytes, element)
+    }
+  }
+  return newBytes
+}
+
+func encryptDir(expandedKeys [176]byte, dir, target string) {
+  list, err := ioutil.ReadDir(dir)
+  check(err)
+  for i := range list {
+    if list[i].IsDir() {
+      folder := target+encryptFileName(expandedKeys, list[i].Name())+"/"
+      os.MkdirAll(folder, os.ModePerm)
+      encryptDir(expandedKeys, dir+list[i].Name()+"/", folder) // Go treats "/" as the file separator for all platforms
+    } else {
+      encryptFile(expandedKeys, dir+list[i].Name(), target+encryptFileName(expandedKeys, list[i].Name()))
+    }
+  }
+}
+
+
+func checkKey(key []byte, f string) bool {
   a, err := os.Open(f)    // Open an encrypted file to check first block against key
   check(err)
 
@@ -614,31 +665,37 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
 }
 
 
+
 func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)
-  check(err)
-  fields := strings.Split(string(bytes), ", ")
-  keyString := strings.Split(string(fields[3]), " ")
+  // bytes, err := ioutil.ReadAll(os.Stdin)
+  // check(err)
+  // fields := strings.Split(string(bytes), ", ")
+  // keyString := strings.Split(string(fields[3]), " ")
 
-  var key []byte
-  for i := 0; i < len(keyString); i++ {
-    a, err := strToInt(keyString[i])
-    check(err)
-    key = append(key, byte(a))
-  }
+  // var key []byte
+  // for i := 0; i < len(keyString); i++ {
+  //   a, err := strToInt(keyString[i])
+  //   check(err)
+  //   key = append(key, byte(a))
+  // }
 
-  if string(fields[0]) == "y" {
-    encryptFile(key, string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "n" {
-    decryptFile(key, string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "test" {
-    valid := checkKey(key, string(fields[1]))
-    if valid {
-      fmt.Println("-Valid-")
-    } else {
-      fmt.Println("-NotValid-")
-    }
-  } else {
-    panic("Invalid options.")
-  }
+  // if string(fields[0]) == "y" {
+  //   encryptFile(expandKey(key), string(fields[1]), string(fields[2]))
+  // } else if string(fields[0]) == "n" {
+  //   decryptFile(expandKey(key), string(fields[1]), string(fields[2]))
+  // } else if string(fields[0]) == "yDir" {
+  //   encryptDir(expandKey(key), string(fields[1]), string(fields[2]))
+  // } else if string(fields[0]) == "test" {
+  //   valid := checkKey(key, string(fields[1]))
+  //   if valid {
+  //     fmt.Println("-Valid-")
+  //   } else {
+  //     fmt.Println("-NotValid-")
+  //   }
+  // } else {
+  //   panic("Invalid options.")
+  // }
+  out := encryptFileName(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), "my name is jeff lol what this should be longer than 16 in length")
+  fmt.Println(out)
+  fmt.Println(decryptFileName(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), out))
 }

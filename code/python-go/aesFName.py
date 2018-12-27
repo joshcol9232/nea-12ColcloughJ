@@ -316,7 +316,6 @@ def encryptFileName(key, name):
     key = key.split(" ")
     for j in range(len(key)):
         key[j] = int(key[j])
-    key = padKey(key)
     byteName = bytearray(name.encode())
     expandedKeys = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     expandedKeys = expandKey(key, expandedKeys)
@@ -331,6 +330,7 @@ def encryptFileName(key, name):
 
     outString = ""
     for number in encName:
+        print(number, "number")
         if number <= 15:
             outString += "0"+hex(number).replace("0x", "")
         else:
@@ -364,10 +364,11 @@ def test(singleInput=False):
     from random import randint
     from time import time
 
-    key = "150 154 68 138 165 123 85 25 232 13 24 221 53 157 182 147"
+    #key = [0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69]
+    key = "0 11 22 29 44 39 58 49 88 83 78 69 116 127 98 105"
 
     if singleInput:
-        test = "'test string' sounded too boring so I put this in instead."
+        test = "my name is jeff lol what this should be longer than 16 in length"
 
         start = time()
         enc = encryptFileName(key, test)
