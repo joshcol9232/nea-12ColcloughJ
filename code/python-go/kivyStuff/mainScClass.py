@@ -584,6 +584,7 @@ class MainScreen(Screen):
 
         if self.encPop != None:
             self.encPop.done = True
+            print("Done")
 
         return out
 
@@ -732,6 +733,9 @@ class MainScreen(Screen):
         self.fileList = []
         self.locList = []
         self.encDecDirCore(encType, d, targetLoc)
+
+        if len(self.fileList) < 1:
+            return Popup(title="Empty", content=Label(text="This folder is empty..."), size_hint=(.4, .3)).open()
 
         labText = "Encrypting..."
         if encType == "n":
