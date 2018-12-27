@@ -98,7 +98,7 @@ class encDecPop(Popup): #For single files
         per = 0
         prevPer = 0
         for i in range(len(self.fileList)):
-            done = False
+            self.done = False
             self.pb.value = 0
             self.pb.max = os.path.getsize(self.fileList[i])
             if i == len(self.fileList)-1:
@@ -112,7 +112,7 @@ class encDecPop(Popup): #For single files
             else:
                 self.currFile.text = self.fileList[i]
 
-            while not done: # Padding can cause issues as original size is not known.
+            while not self.done: # Padding can cause issues as original size is not known.
                 if os.path.exists(self.locList[i]):
                     self.pb.value = os.path.getsize(self.locList[i])
                     self.wholePb.value = total + self.pb.value
@@ -136,7 +136,7 @@ class encDecPop(Popup): #For single files
                     self.per.text = "{0:.2f}%".format(per)
 
                 if self.pb.value >= self.pb.max-32 or self.pb.value_normalized == 1:  # -32 is due to padding.
-                    done = True
+                    self.done = True
                 else:
                     sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 

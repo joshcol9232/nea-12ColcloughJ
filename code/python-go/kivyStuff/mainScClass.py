@@ -581,6 +581,10 @@ class MainScreen(Screen):
 
         if type == "n" and op and endOfFolderList:
             mainthread(self.openFileTh(targetLoc, d))
+
+        if self.encPop != None:
+            self.encPop.done = True
+
         return out
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.

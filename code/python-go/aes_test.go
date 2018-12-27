@@ -1,14 +1,14 @@
 package main
 
 import (
-  "fmt"       // For sending output on stout
+  //"fmt"       // For sending output on stout
   "os"        // For opening files
   "io"        // For reading files
-  //"io/ioutil" // ^
+  //"io/ioutil" // For reading from stdin
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
-  "runtime"
-	"testing"
+  "runtime"   // For getting CPU core count
+  "testing"
 )
 
 // Global lookup tables.
@@ -166,7 +166,7 @@ var mul14 = [256]byte {0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x
                        0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d}
 
 
-func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
+func keyExpansionCore(inp [4]byte, i int) [4]byte {
   // Shift the inp left by moving the first byte to the end (rotate).
   inp[0], inp[1], inp[2], inp[3] = inp[1], inp[2], inp[3], inp[0]
 
@@ -179,7 +179,7 @@ func keyExpansionCore(inp [4]byte, i int) ([4]byte) {
   return inp
 }
 
-func expandKey(inputKey []byte) ([176]byte) {
+func expandKey(inputKey []byte) [176]byte {
   var expandedKeys [176]byte
   // first 16 bytes of the expandedkeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
@@ -226,72 +226,73 @@ func invSubBytes(state []byte) {
 }
 
 func shiftRows(state []byte) {
-	state = []byte{state[ 0], state[ 5], state[10], state[15],
-                state[ 4], state[ 9], state[14], state[ 3],
-                state[ 8], state[13], state[ 2], state[ 7],
-                state[12], state[ 1], state[ 6], state[11]}
+  state = []byte{state[ 0], state[ 5], state[10], state[15],
+                 state[ 4], state[ 9], state[14], state[ 3],
+                 state[ 8], state[13], state[ 2], state[ 7],
+                 state[12], state[ 1], state[ 6], state[11]}
+}
   //  Shifts it like this:
   // 
   //  0  4  8 12         0  4  8 12   Shifted left by 0
   //  1  5  9 13  ---->  5  9 13  1   Shifted left by 1
   //  2  6 10 14  ----> 10 14  2  6   Shifted left by 2
   //  3  7 11 15        15  3  7 11   Shifted left by 3
-}
+
 
 func invShiftRows(state []byte) {
   state = []byte{state[ 0], state[13], state[10], state[ 7],
-                state[ 4], state[ 1], state[14], state[11],
-                state[ 8], state[ 5], state[ 2], state[15],
-                state[12], state[ 9], state[ 6], state[ 3]}
-
+                 state[ 4], state[ 1], state[14], state[11],
+                 state[ 8], state[ 5], state[ 2], state[15],
+                 state[12], state[ 9], state[ 6], state[ 3]}
+}
   //   0  4  8 12         0  4  8 12   Shifted right by 0
   //   5  9 13  1  ---->  1  5  9 13   Shifted right by 1
   //  10 14  2  6  ---->  2  6 10 14   Shifted right by 2
   //  15  3  7 11         3  7 11 15   Shifted right by 3
-}
+
 
 func mixColumns(state []byte) {
-  state = []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
-                state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
-                state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
-                mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]],
+  state = []byte{mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
+                 state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
+                 state[ 0] ^ state[ 1] ^ mul2[state[ 2]] ^ mul3[state[ 3]],
+                 mul3[state[ 0]] ^ state[ 1] ^ state[ 2] ^ mul2[state[ 3]],
 
-                mul2[state[4]] ^ mul3[state[5]] ^ state[6] ^ state[7],
-                state[4] ^ mul2[state[5]] ^ mul3[state[6]] ^ state[7],
-                state[4] ^ state[5] ^ mul2[state[6]] ^ mul3[state[7]],
-                mul3[state[4]] ^ state[5] ^ state[6] ^ mul2[state[7]],
+                 mul2[state[ 4]] ^ mul3[state[ 5]] ^ state[ 6] ^ state[ 7],
+                 state[ 4] ^ mul2[state [5]] ^ mul3[state[ 6]] ^ state[ 7],
+                 state[ 4] ^ state[ 5] ^ mul2[state[ 6]] ^ mul3[state[ 7]],
+                 mul3[state[ 4]] ^ state[ 5] ^ state[ 6] ^ mul2[state[ 7]],
 
-              mul2[state[8]] ^ mul3[state[9]] ^ state[10] ^ state[11],
-              state[8] ^ mul2[state[9]] ^ mul3[state[10]] ^ state[11],
-              state[8] ^ state[9] ^ mul2[state[10]] ^ mul3[state[11]],
-              mul3[state[8]] ^ state[9] ^ state[10] ^ mul2[state[11]],
+                 mul2[state[ 8]] ^ mul3[state[ 9]] ^ state[10] ^ state[11],
+                 state[ 8] ^ mul2[state[ 9]] ^ mul3[state[10]] ^ state[11],
+                 state[ 8] ^ state[ 9] ^ mul2[state[10]] ^ mul3[state[11]],
+                 mul3[state[ 8]] ^ state[ 9] ^ state[10] ^ mul2[state[11]],
 
-            mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
-            state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
-            state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
-            mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
+                 mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
+                 state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+                 state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+                 mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
 }
 
 func invMixColumns(state []byte) {
-  state = []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],
-                mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
-                mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
-                mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
+  state = []byte{mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
+                 mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
+                 mul13[state[ 0]] ^ mul9[state[ 1]] ^ mul14[state[ 2]] ^ mul11[state[ 3]],
+                 mul11[state[ 0]] ^ mul13[state[ 1]] ^ mul9[state[ 2]] ^ mul14[state[ 3]],
 
-                mul14[state[4]] ^ mul11[state[5]] ^ mul13[state[6]] ^ mul9[state[7]],
-                mul9[state[4]] ^ mul14[state[5]] ^ mul11[state[6]] ^ mul13[state[7]],
-                mul13[state[4]] ^ mul9[state[5]] ^ mul14[state[6]] ^ mul11[state[7]],
-                mul11[state[4]] ^ mul13[state[5]] ^ mul9[state[6]] ^ mul14[state[7]],
+                 mul14[state[ 4]] ^ mul11[state[ 5]] ^ mul13[state[ 6]] ^ mul9[state[ 7]],
+                 mul9[state[ 4]] ^ mul14[state[ 5]] ^ mul11[state[ 6]] ^ mul13[state[ 7]],
+                 mul13[state[ 4]] ^ mul9[state[ 5]] ^ mul14[state[ 6]] ^ mul11[state[ 7]],
+                 mul11[state[ 4]] ^ mul13[state[ 5]] ^ mul9[state[ 6]] ^ mul14[state[ 7]],
 
-              mul14[state[8]] ^ mul11[state[9]] ^ mul13[state[10]] ^ mul9[state[11]],
-              mul9[state[8]] ^ mul14[state[9]] ^ mul11[state[10]] ^ mul13[state[11]],
-              mul13[state[8]] ^ mul9[state[9]] ^ mul14[state[10]] ^ mul11[state[11]],
-              mul11[state[8]] ^ mul13[state[9]] ^ mul9[state[10]] ^ mul14[state[11]],
+                 mul14[state[ 8]] ^ mul11[state[ 9]] ^ mul13[state[10]] ^ mul9[state[11]],
+                 mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
+                 mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
+                 mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
 
-            mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
-            mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
-            mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
-            mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]}
+                 mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+                 mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+                 mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+                 mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]}
 }
 
 
@@ -417,7 +418,7 @@ func encryptFile(key []byte, f, w string) {
   }
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()
+  var workerNum int = getNumOfCores()*4
 
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
@@ -492,8 +493,6 @@ func encryptFile(key []byte, f, w string) {
       e.WriteAt(wk.buff, wk.offset)
     }
   }
-
-  fmt.Println("Finito")
 
   close(jobs)
   close(results)
@@ -579,8 +578,6 @@ func decryptFile(key []byte, f, w string) {
         e.WriteAt(wk.buff, wk.offset)
       }
     }
-    fmt.Println("Finito")
-
     close(jobs)
     close(results)
 
@@ -614,7 +611,6 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
     n := strings.Split(str, ".")    // Splits by decimal point
     return strconv.Atoi(n[0])       // Returns integer of whole number
 }
-
 
 // BENCHMARK
 func BenchmarkEncryptFile(b *testing.B) {
