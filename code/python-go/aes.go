@@ -382,14 +382,14 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
 	for job := range jobs {
 		var decBuff []byte
 		for i := 0; i < len(job.buff); i += 16 {
-			if fileSize - i == 16 {     // If on the last block of whole file
+			if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
 				var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
 				// Store in variable as we are going to change it.
 				var focus int = int(decrypted[len(decrypted)-1])
 				var focusCount int = 0
 
 				if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-					for j := 16; int(decrypted[j]) == focus; j-- {
+					for j := 15; int(decrypted[j]) == focus; j-- {
 						if int(decrypted[j]) == focus {focusCount++}
 					}
 					if focus == focusCount {
@@ -401,6 +401,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
 				decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
 			}
 		}
+		results<- work{buff: decBuff, offset: job.offset}
 	}
 
 	fmt.Println("ROUTINE CLOSED, DEC")
@@ -423,9 +424,8 @@ func encryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-	var coreNum int = getNumOfCores()
 	var workingWorkers int = 0
-	var workerNum int = coreNum-1
+	var workerNum int = getNumOfCores()-1
 	if workerNum == 0 { workerNum = 1 }
 
 	jobs := make(chan work, )
@@ -492,7 +492,6 @@ func encryptFile(key []byte, f, w string) {
 		for i := 0; i < workingWorkers; i++ {
 			wk := <-results
 			e.WriteAt(wk.buff, wk.offset)
-			fmt.Println("In second, writing to", wk.offset, fileSize, bufferSize)
 		}
 	}
 
@@ -524,9 +523,8 @@ func decryptFile(key []byte, f, w string) {
 
   var bufferSize int = 16384 //32768
 
-	var coreNum int = getNumOfCores()
 	var workingWorkers int = 0
-	var workerNum int = coreNum-1
+	var workerNum int = getNumOfCores()-1
 	if workerNum == 0 { workerNum = 1 }
 
 	jobs := make(chan work, )
@@ -542,7 +540,7 @@ func decryptFile(key []byte, f, w string) {
 
   var buffCount int = 0
 
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) // Open file for appending.
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file
   check(err)
 
   // Check first block is key
@@ -577,11 +575,11 @@ func decryptFile(key []byte, f, w string) {
 			offset += bufferSize
 			buffCount += bufferSize
 		}
+
 		if workingWorkers != 0 {
 			for i := 0; i < workingWorkers; i++ {
 				wk := <-results
 				e.WriteAt(wk.buff, wk.offset)
-				fmt.Println("In second, writing to", wk.offset, fileSize, bufferSize)
 			}
 		}
 		fmt.Println("Finito")
@@ -649,9 +647,9 @@ func main() {
   //  panic("Invalid options.")
   //}
 
-	f := "/home/josh/test.jpg"
+	f := "/home/josh/theLads.png"
 	w := "/home/josh/temp"
-	a := "/home/josh/helloDec.jpg"
+	a := "/home/josh/helloDec.png"
   encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
 	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
 }
