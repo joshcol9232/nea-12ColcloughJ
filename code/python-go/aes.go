@@ -4,10 +4,10 @@ import (
   "fmt"       // For sending output on stout
   "os"        // For opening files
   "io"        // For reading files
-  //"io/ioutil" // ^
+  "io/ioutil" // ^
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
-	"runtime"
+  "runtime"
 )
 
 // Global lookup tables.
@@ -206,29 +206,26 @@ func expandKey(inputKey []byte) ([176]byte) {
   return expandedKeys
 }
 
-func addRoundKey(state []byte, roundKey []byte) ([]byte) {       // Add round key is also it's own inverse
+func addRoundKey(state []byte, roundKey []byte) {       // Add round key is also it's own inverse
   for i := 0; i < 16; i++ {
     state[i] ^= roundKey[i] // XOR each byte of the key with each byte of the state.
   }
-  return state
 }
 
-func subBytes(state []byte) []byte {
+func subBytes(state []byte) {
   for i := 0; i < 16; i++ {
     state[i] = sBox[state[i]]
   }
-  return state
 }
 
-func invSubBytes(state []byte) []byte {
+func invSubBytes(state []byte) {
   for i := 0; i < 16; i++ {
     state[i] = invSBox[state[i]]
   }
-  return state
 }
 
-func shiftRows(state []byte) ([]byte) {
-  return []byte{state[ 0], state[ 5], state[10], state[15],
+func shiftRows(state []byte) {
+	state = []byte{state[ 0], state[ 5], state[10], state[15],
                 state[ 4], state[ 9], state[14], state[ 3],
                 state[ 8], state[13], state[ 2], state[ 7],
                 state[12], state[ 1], state[ 6], state[11]}
@@ -240,8 +237,8 @@ func shiftRows(state []byte) ([]byte) {
   //  3  7 11 15        15  3  7 11   Shifted left by 3
 }
 
-func invShiftRows(state []byte) ([]byte) {
-  return []byte{state[ 0], state[13], state[10], state[ 7],
+func invShiftRows(state []byte) {
+  state = []byte{state[ 0], state[13], state[10], state[ 7],
                 state[ 4], state[ 1], state[14], state[11],
                 state[ 8], state[ 5], state[ 2], state[15],
                 state[12], state[ 9], state[ 6], state[ 3]}
@@ -252,8 +249,8 @@ func invShiftRows(state []byte) ([]byte) {
   //  15  3  7 11         3  7 11 15   Shifted right by 3
 }
 
-func mixColumns(state []byte) ([]byte) {
-  return []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
+func mixColumns(state []byte) {
+  state = []byte{mul2[state[0]] ^ mul3[state[1]] ^ state[2] ^ state[3],
                 state[0] ^ mul2[state[1]] ^ mul3[state[2]] ^ state[3],
                 state[0] ^ state[1] ^ mul2[state[2]] ^ mul3[state[3]],
                 mul3[state[0]] ^ state[1] ^ state[2] ^ mul2[state[3]],
@@ -274,8 +271,8 @@ func mixColumns(state []byte) ([]byte) {
             mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
 }
 
-func invMixColumns(state []byte) ([]byte) {
-  return []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],
+func invMixColumns(state []byte) {
+  state = []byte{mul14[state[0]] ^ mul11[state[1]] ^ mul13[state[2]] ^ mul9[state[3]],
                 mul9[state[0]] ^ mul14[state[1]] ^ mul11[state[2]] ^ mul13[state[3]],
                 mul13[state[0]] ^ mul9[state[1]] ^ mul14[state[2]] ^ mul11[state[3]],
                 mul11[state[0]] ^ mul13[state[1]] ^ mul9[state[2]] ^ mul14[state[3]],
@@ -298,35 +295,35 @@ func invMixColumns(state []byte) ([]byte) {
 
 
 func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
-  state = addRoundKey(state, expandedKeys[:16])
+  addRoundKey(state, expandedKeys[:16])
 
   for i := 0; i < regularRounds; i++ {
-    state = subBytes(state)
-    state = shiftRows(state)
-    state = mixColumns(state)
-    state = addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
+    subBytes(state)
+    shiftRows(state)
+    mixColumns(state)
+    addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
   }
   // Last round
-  state = subBytes(state)
-  state = shiftRows(state)
-  state = addRoundKey(state, expandedKeys[160:])
+  subBytes(state)
+  shiftRows(state)
+  addRoundKey(state, expandedKeys[160:])
 
   return state
 }
 
 func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
-  state = addRoundKey(state, expandedKeys[160:])
-  state = invShiftRows(state)
-  state = invSubBytes(state)
+  addRoundKey(state, expandedKeys[160:])
+  invShiftRows(state)
+  invSubBytes(state)
 
   for i := regularRounds; i != 0; i-- {
-    state = addRoundKey(state, expandedKeys[(16 * (i)):(16 * (i+1))])
-    state = invMixColumns(state)
-    state = invShiftRows(state)
-    state = invSubBytes(state)
+    addRoundKey(state, expandedKeys[(16 * (i)):(16 * (i+1))])
+    invMixColumns(state)
+    invShiftRows(state)
+    invSubBytes(state)
   }
   // Last round
-  state = addRoundKey(state, expandedKeys[:16])
+  addRoundKey(state, expandedKeys[:16])
 
   return state
 }
@@ -360,50 +357,51 @@ func compareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
   return true
 }
 
-type work struct {   // For holding the buffer to do and the offset together.
-	buff []byte
-	offset int64
+// For holding the buffer to be worked on and the offset together, so it can be written to the file in the correct place at the end.
+type work struct {
+  buff []byte
+  offset int64
 }
 
-func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {
-	for job := range jobs {
-		var encBuff []byte    // Make a buffer to hold encrypted data.
-		for i := 0; i < len(job.buff); i += 16 {
-			encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
-		}
-		results<- work{buff: encBuff, offset: job.offset}
-	}
+func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
+  for job := range jobs {
+    var encBuff []byte    // Make a buffer to hold encrypted data.
+    for i := 0; i < len(job.buff); i += 16 {
+      encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
+    }
+    results<- work{buff: encBuff, offset: job.offset}
+  }
 }
 
 func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fileSize int) {
-	for job := range jobs {
-		var decBuff []byte
-		for i := 0; i < len(job.buff); i += 16 {
-			if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-				var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
-				// Store in variable as we are going to change it.
-				var focus int = int(decrypted[len(decrypted)-1])
-				var focusCount int = 0
+  for job := range jobs {
+    var decBuff []byte
+    for i := 0; i < len(job.buff); i += 16 {
+      if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
+        var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
+        // Store in variable as we are going to change it.
+        var focus int = int(decrypted[len(decrypted)-1])
+        var focusCount int = 0
 
-				if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-					for j := 15; (int(decrypted[j]) == focus) && (j > 0); j-- {
-						if int(decrypted[j]) == focus { focusCount++ }
-					}
-					if focus == focusCount {
-						decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-					}
-				}
-				decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
-			} else {
-				decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
-			}
-		}
-		results<- work{buff: decBuff, offset: job.offset}
-	}
+        if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
+          for j := 15; (int(decrypted[j]) == focus) && (j > 0); j-- {
+            if int(decrypted[j]) == focus { focusCount++ }
+          }
+          if focus == focusCount {
+            decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+          }
+        }
+        decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
+      } else {
+        decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
+      }
+    }
+    results<- work{buff: decBuff, offset: job.offset}
+  }
 }
 
 func encryptFile(key []byte, f, w string) {
-  a, err := os.Open(f)    // Open original file to get statistics
+  a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
   check(err)
@@ -417,16 +415,23 @@ func encryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-	var workingWorkers int = 0
-	var workerNum int = getNumOfCores()-1
-	if workerNum == 0 { workerNum = 1 }
+  var workingWorkers int = 0
+  var workerNum int = getNumOfCores()-1
+  if workerNum == 0 { workerNum = 1 }
 
-	jobs := make(chan work, )
-	results := make(chan work)
+  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
+  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
-	for i := 0; i < workerNum; i++ { // Use all cores bar one
-		go workerEnc(jobs, results, expandedKeys)
-	}
+  /* 
+  Each go routine will be given access to the job queue, where each worker then waits to complete the job.
+  Once the job is completed, the go routine pushes the result onto the result queue, where the result can be
+  recieved by the main routine. The results are read once all of the go routines are busy, or if the file
+  is completed, then the remaining workers still working are asked for their results.
+  */
+
+  for i := 0; i < workerNum; i++ { // Use all cores bar one
+    go workerEnc(jobs, results, expandedKeys)
+  }
 
   var bufferSize int = 16384  // The buffer size is 2^15 (I went up powers of 2 to find best performance)
 
@@ -441,58 +446,55 @@ func encryptFile(key []byte, f, w string) {
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
   e.Write(encrypt(key, expandedKeys, 9))
-	offset := 16
+  offset := 16
 
   for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
     if bufferSize > (fileSize - buffCount) {
       bufferSize = fileSize - buffCount    // If this is the last block, read the amount of data left in the file.
     }
 
-		buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
-		_, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
-																	 // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
-		check(err)
+    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
+    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
+                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
+    check(err)
 
-		if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
-			var extraNeeded int
-			var l int = len(buff)
-			for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
-				l++
-				extraNeeded++
-			}
+    if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
+      var extraNeeded int
+      var l int = len(buff)
+      for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
+        l++
+        extraNeeded++
+      }
 
-			for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
-				buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
-				fmt.Println(extraNeeded, "EXTRA NEEDED")
-			} // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
-		}
+      for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
+        buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
+      } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
+    }
 
-		jobs <- work{buff: buff, offset: int64(offset)}
-		workingWorkers++
+    jobs <- work{buff: buff, offset: int64(offset)}
+    workingWorkers++
 
-		if workingWorkers == workerNum {
-			workingWorkers = 0
-			for i := 0; i < workerNum; i++ {
-				wk := <-results
-				e.WriteAt(wk.buff, wk.offset)
-			}
-		}
+    if workingWorkers == workerNum {
+      workingWorkers = 0
+      for i := 0; i < workerNum; i++ {
+        wk := <-results
+        e.WriteAt(wk.buff, wk.offset)
+      }
+    }
 
-		offset += bufferSize
+    offset += bufferSize
     buffCount += bufferSize
   }
 
-	if workingWorkers != 0 {
-		for i := 0; i < workingWorkers; i++ {
-			wk := <-results
-			e.WriteAt(wk.buff, wk.offset)
-		}
-	}
+  if workingWorkers != 0 {
+    for i := 0; i < workingWorkers; i++ {
+      wk := <-results
+      e.WriteAt(wk.buff, wk.offset)
+    }
+  }
 
-	fmt.Println("Finito")
-
-	close(jobs)
-	close(results)
+  close(jobs)
+  close(results)
 
   a.Close()  // Close the files used.
   e.Close()
@@ -515,18 +517,18 @@ func decryptFile(key []byte, f, w string) {
     os.Remove(w)
   }
 
-  var bufferSize int = 16384 //32768
+  var bufferSize int = 16384
 
-	var workingWorkers int = 0
-	var workerNum int = getNumOfCores()-1
-	if workerNum == 0 { workerNum = 1 }
+  var workingWorkers int = 0
+  var workerNum int = getNumOfCores()-1
+  if workerNum == 0 { workerNum = 1 }
 
-	jobs := make(chan work, )
-	results := make(chan work)
+  jobs := make(chan work, )
+  results := make(chan work)
 
-	for i := 0; i < workerNum; i++ { // Use all cores bar one
-		go workerDec(jobs, results, expandedKeys, fileSize)
-	}
+  for i := 0; i < workerNum; i++ { // Use all cores bar one
+    go workerDec(jobs, results, expandedKeys, fileSize)
+  }
 
   if fileSize < bufferSize {
     bufferSize = fileSize
@@ -545,7 +547,7 @@ func decryptFile(key []byte, f, w string) {
 
   if compareSlices(key, decFirst) { // If key is valid
     offset := 0
-		a.Seek(16, 0) // Move past key
+    a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
@@ -555,31 +557,29 @@ func decryptFile(key []byte, f, w string) {
       _, err := io.ReadFull(a, buff)  // Ignore the number of bytes read (_)
       check(err)
 
-			jobs<- work{buff: buff, offset: int64(offset)}
-			workingWorkers++
+      jobs<- work{buff: buff, offset: int64(offset)}
+      workingWorkers++
 
-			if workingWorkers == workerNum {
-				workingWorkers = 0
-				for i := 0; i < workerNum; i++ {
-					wk := <-results
-					e.WriteAt(wk.buff, wk.offset)
-				}
-			}
+      if workingWorkers == workerNum {
+        workingWorkers = 0
+        for i := 0; i < workerNum; i++ {
+          wk := <-results
+          e.WriteAt(wk.buff, wk.offset)
+        }
+      }
 
-			offset += bufferSize
-			buffCount += bufferSize
-		}
+      offset += bufferSize
+      buffCount += bufferSize
+    }
 
-		if workingWorkers != 0 {
-			for i := 0; i < workingWorkers; i++ {
-				wk := <-results
-				e.WriteAt(wk.buff, wk.offset)
-			}
-		}
-		fmt.Println("Finito")
-
-		close(jobs)
-		close(results)
+    if workingWorkers != 0 {
+      for i := 0; i < workingWorkers; i++ {
+        wk := <-results
+        e.WriteAt(wk.buff, wk.offset)
+      }
+    }
+    close(jobs)
+    close(results)
 
   } else {
     panic("Invalid Key")  // If first block is not equal to the key, then do not bother trying to decrypt the file.
@@ -614,37 +614,30 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
 
 
 func main() {
-  //bytes, err := ioutil.ReadAll(os.Stdin)
-  //check(err)
-  //fields := strings.Split(string(bytes), ", ")
-  //keyString := strings.Split(string(fields[3]), " ")
+  bytes, err := ioutil.ReadAll(os.Stdin)
+  check(err)
+  fields := strings.Split(string(bytes), ", ")
+  keyString := strings.Split(string(fields[3]), " ")
 
-  //var key []byte
-  //for i := 0; i < len(keyString); i++ {
-  //  a, err := strToInt(keyString[i])
-  //  check(err)
-  //  key = append(key, byte(a))
-  //}
+  var key []byte
+  for i := 0; i < len(keyString); i++ {
+    a, err := strToInt(keyString[i])
+    check(err)
+    key = append(key, byte(a))
+  }
 
-  //if string(fields[0]) == "y" {
-  //  encryptFile(key, string(fields[1]), string(fields[2]))
-  //} else if string(fields[0]) == "n" {
-  //  decryptFile(key, string(fields[1]), string(fields[2]))
-  //} else if string(fields[0]) == "test" {
-  //  valid := checkKey(key, string(fields[1]))
-  //  if valid {
-  //    fmt.Println("-Valid-")
-  //  } else {
-  //    fmt.Println("-NotValid-")
-  //  }
-  //} else {
-  //  panic("Invalid options.")
-  //}
-
-	//f := "/home/josh/theLads.png"
-	f := "/home/josh/GentooMin.iso"
-	w := "/home/josh/temp"
-	a := "/home/josh/helloDec.iso"
-  encryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, f, w)
-	decryptFile([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, w, a)
+  if string(fields[0]) == "y" {
+    encryptFile(key, string(fields[1]), string(fields[2]))
+  } else if string(fields[0]) == "n" {
+    decryptFile(key, string(fields[1]), string(fields[2]))
+  } else if string(fields[0]) == "test" {
+    valid := checkKey(key, string(fields[1]))
+    if valid {
+      fmt.Println("-Valid-")
+    } else {
+      fmt.Println("-NotValid-")
+    }
+  } else {
+    panic("Invalid options.")
+  }
 }
