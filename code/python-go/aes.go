@@ -3,7 +3,8 @@ package main
 import (
   "fmt"       // For sending output on stout
   "os"        // For opening files
-  "io"        // For reading files=
+  "log"
+  "io"        // For reading files
   "io/ioutil" // For reading from stdin
   "encoding/hex" // For enc/decoding encrypted string
   "strings"   // For converting string key to an array of bytes
@@ -12,6 +13,10 @@ import (
 )
 
 const DEFAULT_BUFFER_SIZE = 32768  // Define the default buffer size for enc/decrypt
+
+var (
+  osTemp = os.TempDir()+"/" // Go treats all file separators as "/" regardless of OS
+)
 
 // Global lookup tables.
 var sBox = [256]byte {0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
@@ -183,7 +188,7 @@ func keyExpansionCore(inp [4]byte, i int) [4]byte {
 
 func expandKey(inputKey []byte) [176]byte {
   var expandedKeys [176]byte
-  // first 16 bytes of the expandedkeys should be the same 16 as the original key
+  // first 16 bytes of the expandedKeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
     expandedKeys[i] = inputKey[i]
   }
@@ -213,7 +218,7 @@ func addRoundKey(state []byte, roundKey []byte) {       // Add round key is also
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   state[ 0]^roundKey[ 0], state[ 1]^roundKey[ 1], state[ 2]^roundKey[ 2], state[ 3]^roundKey[ 3],
   state[ 4]^roundKey[ 4], state[ 5]^roundKey[ 5], state[ 6]^roundKey[ 6], state[ 7]^roundKey[ 7],
@@ -225,7 +230,7 @@ func subBytes(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   sBox[state[ 0]], sBox[state[ 1]], sBox[state[ 2]], sBox[state[ 3]],
   sBox[state[ 4]], sBox[state[ 5]], sBox[state[ 6]], sBox[state[ 7]],
@@ -237,7 +242,7 @@ func invSubBytes(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   invSBox[state[ 0]], invSBox[state[ 1]], invSBox[state[ 2]], invSBox[state[ 3]],
   invSBox[state[ 4]], invSBox[state[ 5]], invSBox[state[ 6]], invSBox[state[ 7]],
@@ -249,7 +254,7 @@ func shiftRows(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   state[ 0], state[ 5], state[10], state[15],
   state[ 4], state[ 9], state[14], state[ 3],
@@ -257,7 +262,7 @@ func shiftRows(state []byte) {
   state[12], state[ 1], state[ 6], state[11]
 }
   //  Shifts it like this:
-  // 
+  //
   //  0  4  8 12         0  4  8 12   Shifted left by 0
   //  1  5  9 13  ---->  5  9 13  1   Shifted left by 1
   //  2  6 10 14  ----> 10 14  2  6   Shifted left by 2
@@ -268,7 +273,7 @@ func invShiftRows(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   state[ 0], state[13], state[10], state[ 7],
   state[ 4], state[ 1], state[14], state[11],
@@ -285,7 +290,7 @@ func mixColumns(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
   state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
@@ -312,7 +317,7 @@ func invMixColumns(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
   state[ 8], state[ 9], state[10], state[11],
-  state[12], state[13], state[14], state[15] = 
+  state[12], state[13], state[14], state[15] =
 
   mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
   mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
@@ -328,7 +333,7 @@ func invMixColumns(state []byte) {
   mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
   mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
   mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
- 
+
   mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
   mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
   mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
@@ -453,7 +458,7 @@ func encryptFile(expandedKeys [176]byte, f, w string) {
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
-  /* 
+  /*
   Each go routine will be given access to the job queue, where each worker then waits to complete the job.
   Once the job is completed, the go routine pushes the result onto the result queue, where the result can be
   recieved by the main routine. The results are read once all of the go routines are busy, or if the file
@@ -472,7 +477,7 @@ func encryptFile(expandedKeys [176]byte, f, w string) {
 
   var buffCount int = 0   // Keeps track of how far through the file we are
 
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file for appending.
+  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file for writing.
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
@@ -616,6 +621,40 @@ func decryptFile(expandedKeys [176]byte, f, w string) {
   e.Close()
 }
 
+func encryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
+  if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
+  for i := range fileList {
+    encryptFile(expandedKeys, fileList[i], targetList[i])
+  }
+}
+
+func decryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
+  if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
+  for i := range fileList {
+    decryptFile(expandedKeys, fileList[i], targetList[i])
+  }
+}
+
+func getTargetList(expandedKeys [176]byte, fileList, targetList []string, folder, target string) []string { // Also makes the folders required
+  log.Output(0, folder)
+  list, err := ioutil.ReadDir(folder)
+  check(err)
+  for i := range list {
+    if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
+      if list[i].IsDir() {
+        target = target+encryptFileName(expandedKeys, list[i].Name())+"/"
+        os.Mkdir(target, os.ModePerm)
+        targetList = getTargetList(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target)
+      } else {
+        targetList = append(targetList, target+encryptFileName(expandedKeys, list[i].Name()))
+      }
+    } else {
+      log.Output(0, "Name too long: "+list[i].Name())
+    }
+  }
+  return targetList
+}
+
 func encryptFileName(expandedKeys [176]byte, name string) string {
   var byteName = []byte(name)
 
@@ -623,8 +662,8 @@ func encryptFileName(expandedKeys [176]byte, name string) string {
     byteName = append(byteName, 0)
   }
 
-  for i := 0; i < len(byteName)/16; i++ {
-    encrypt(byteName[(i*16):((i+1)*16)], expandedKeys)
+  for i := 0; i < len(byteName); i += 16 {
+    encrypt(byteName[i:i+16], expandedKeys)  // Done by reference so does not need to be assigned
   }
 
   return hex.EncodeToString(byteName)
@@ -634,8 +673,8 @@ func decryptFileName(expandedKeys [176]byte, hexName string) string {
   byteName, err := hex.DecodeString(hexName)
   check(err)
 
-  for i := 0; i < len(byteName)/16; i++ {
-    decrypt(byteName[(i*16):((i+1)*16)], expandedKeys)
+  for i := 0; i < len(byteName); i += 16 {
+    decrypt(byteName[i:i+16], expandedKeys)
   }
   checkForPadding(byteName)
   return string(byteName[:])
@@ -647,6 +686,20 @@ func checkForPadding(input []byte) {    // Checks for 0s in decrypted string (si
       input = append(input[:i], input[i+1:]...)
     }
   }
+}
+
+func encryptListOfString(expandedKeys [176]byte, l []string) []string {
+  for i := range l {
+    l[i] = encryptFileName(expandedKeys, l[i])
+  }
+  return l
+}
+
+func decryptListOfString(expandedKeys [176]byte, l []string) []string {
+  for i := range l {
+    l[i] = decryptFileName(expandedKeys, l[i])
+  }
+  return l
 }
 
 
@@ -686,14 +739,20 @@ func main() {
     check(err)
     key = append(key, byte(a))
   }
+  request := string(fields[0])
 
-  if string(fields[0]) == "y" {
+  if request == "y" {
     encryptFile(expandKey(key), string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "n" {
+  } else if request == "n" {
     decryptFile(expandKey(key), string(fields[1]), string(fields[2]))
-  //} else if string(fields[0]) == "yDir" {
-    //encryptDir(expandKey(key), string(fields[1]), string(fields[2]))
-  } else if string(fields[0]) == "test" {
+  } else if request == "yDir" {
+    encryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+  } else if request == "nDir" {
+    decryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+  } else if request == "targList" {
+    l := strings.Split(string(fields[1]), "\n")
+    fmt.Printf("%v", getTargetList(expandKey(key), l[:len(l)-1], []string{}, l[0], string(fields[2])))
+  } else if request == "test" {
     valid := checkKey(key, string(fields[1]))
     if valid {
       fmt.Println("-Valid-")
@@ -704,7 +763,7 @@ func main() {
     panic("Invalid options.")
   }
 
-//   out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "egg")
-//   fmt.Println(out)
-//   fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
+   // out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "12345678901234567")
+   // fmt.Println(out, len(out))
+   // fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
 }

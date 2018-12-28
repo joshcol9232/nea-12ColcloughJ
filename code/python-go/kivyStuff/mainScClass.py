@@ -150,7 +150,7 @@ class MainScreen(Screen):
                             print("[BT]: Send true.")
                             self.validBTKey = True
                             self.recycleName = aesFName.encryptFileName(self.key, ".$recycling") # Set so that file list can be sent
-                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   
+                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -560,6 +560,50 @@ class MainScreen(Screen):
 
 
 ######Encryption Stuff + opening decrypted files######
+    def getFileList(self, d, fileList):
+        fs = os.listdir(d)
+        for item in fs:
+            if os.path.isdir(d+item):
+                fileList = self.getFileList(d+item+"/", fileList) #Recursive
+            else:
+                fileList.append(d+item)
+
+        return fileList
+
+    def getTargetList(self, root, targ):  # Communicates with AES to get list of target folders.
+        out = self.passToPipe("targList", "\n".join([root]+self.fileList), targ).decode()
+        #print(out, "OUT")
+        out = out.replace("[", "")
+        out = out.replace("]", "")
+        return out.split(" ")
+
+    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
+        #print("TARGET L0C:", targetLoc)
+        if self.encPop != None:
+            self.encPop.dismiss()
+            self.encPop = None
+
+        if os.path.isdir(d):
+            self.createFolders(targetLoc)
+            self.fileList = self.getFileList(d, [])  # Initialize target list ([])
+            self.locList = self.getTargetList(d, targetLoc)
+            #print(self.locList[0], "FILES")
+            #print("LISTS:", self.fileList, self.locList)
+            #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
+            #mainthread(Clock.schedule_once(self.encPop.open, -1))
+            self.passToPipe(encType+"Dir", "\n".join(self.fileList), "\n".join(self.locList), op=False)
+        else:
+            #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
+            #mainthread(Clock.schedule_once(self.encPop.open, -1))
+            self.passToPipe(encType, d, targetLoc, op=False)
+
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
+
+        #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op) #self, labText, fileList, locList, **kwargs
+        #mainthread(Clock.schedule_once(self.encPop.open, -1))
+
     def passToPipe(self, type, d, targetLoc, op=True):     #Passes parameters to AES written in go.
         if self.fileSep == "\\":
             progname = "AESWin.exe"
@@ -567,9 +611,8 @@ class MainScreen(Screen):
             progname = "AES"
 
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
-        if err != None:  # AES throws error when key is invalid.
-            raise ValueError("Key not valid.")
+        out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
+        return out
 
         # if endOfFolderList:
         #     if self.encPop != None:
@@ -579,13 +622,12 @@ class MainScreen(Screen):
         #         self.refreshFiles()
         #         print("Refreshing files.")
 
-        if type == "n" and op:
-             mainthread(self.openFileTh(targetLoc, d))
+        # if type == "n" and op:
+        #      mainthread(self.openFileTh(targetLoc, d))
 
         # if self.encPop != None:
         #     self.encPop.done = True
 
-        # return out
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
         if self.fileSep == "\\":  # If on windows
@@ -724,30 +766,6 @@ class MainScreen(Screen):
             self.popup.open()
             return False
 
-    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
-        print(d, targetLoc, "LOCS")
-        if self.encPop != None:
-            self.encPop.dismiss()
-            self.encPop = None
-
-        self.fileList = []
-        self.locList = []
-        if os.path.isdir(d):
-            self.passToPipe(encType+"Dir", d, targetLoc, op=False)
-        else:
-            self.passToPipe(encType, d, targetLoc, op=False)
-
-        if len(self.fileList) < 1:
-            return Popup(title="Empty", content=Label(text="No files to enc/decrypt."), size_hint=(.4, .3)).open()
-
-        labText = "Encrypting..."
-        if encType == "n":
-            labText = "Decrypting..."
-
-        self.encPop = mainSPops.encDecPop(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
-        mainthread(Clock.schedule_once(self.encPop.open, -1))
-
-
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
@@ -782,8 +800,6 @@ class MainScreen(Screen):
     def createFolders(self, targetLoc):   # Create a folder safely.
         if not os.path.exists(targetLoc):
             os.makedirs(targetLoc)
-            if self.thumbsName not in targetLoc: # If in the thumbnails folder, don't make a thumbnails folder.
-                os.makedirs(targetLoc+self.thumbsName)
 
 
     def clearUpTempFiles(self):     # Deletes temp files when the program is locked.
