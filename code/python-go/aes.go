@@ -210,28 +210,51 @@ func expandKey(inputKey []byte) [176]byte {
 }
 
 func addRoundKey(state []byte, roundKey []byte) {       // Add round key is also it's own inverse
-  for i := 0; i < 16; i++ {
-    state[i] ^= roundKey[i] // XOR each byte of the key with each byte of the state.
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
+
+  state[ 0]^roundKey[ 0], state[ 1]^roundKey[ 1], state[ 2]^roundKey[ 2], state[ 3]^roundKey[ 3],
+  state[ 4]^roundKey[ 4], state[ 5]^roundKey[ 5], state[ 6]^roundKey[ 6], state[ 7]^roundKey[ 7],
+  state[ 8]^roundKey[ 8], state[ 9]^roundKey[ 9], state[10]^roundKey[10], state[11]^roundKey[11],
+  state[12]^roundKey[12], state[13]^roundKey[13], state[14]^roundKey[14], state[15]^roundKey[15]
 }
 
 func subBytes(state []byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = sBox[state[i]]
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
+
+  sBox[state[ 0]], sBox[state[ 1]], sBox[state[ 2]], sBox[state[ 3]],
+  sBox[state[ 4]], sBox[state[ 5]], sBox[state[ 6]], sBox[state[ 7]],
+  sBox[state[ 8]], sBox[state[ 9]], sBox[state[10]], sBox[state[11]],
+  sBox[state[12]], sBox[state[13]], sBox[state[14]], sBox[state[15]]
 }
 
 func invSubBytes(state []byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = invSBox[state[i]]
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
+
+  invSBox[state[ 0]], invSBox[state[ 1]], invSBox[state[ 2]], invSBox[state[ 3]],
+  invSBox[state[ 4]], invSBox[state[ 5]], invSBox[state[ 6]], invSBox[state[ 7]],
+  invSBox[state[ 8]], invSBox[state[ 9]], invSBox[state[10]], invSBox[state[11]],
+  invSBox[state[12]], invSBox[state[13]], invSBox[state[14]], invSBox[state[15]]
 }
 
 func shiftRows(state []byte) {
-	state = []byte{state[ 0], state[ 5], state[10], state[15],
-								 state[ 4], state[ 9], state[14], state[ 3],
-                 state[ 8], state[13], state[ 2], state[ 7],
-                 state[12], state[ 1], state[ 6], state[11]}
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
+
+  state[ 0], state[ 5], state[10], state[15],
+  state[ 4], state[ 9], state[14], state[ 3],
+  state[ 8], state[13], state[ 2], state[ 7],
+  state[12], state[ 1], state[ 6], state[11]
 }
   //  Shifts it like this:
   // 
@@ -242,10 +265,15 @@ func shiftRows(state []byte) {
 
 
 func invShiftRows(state []byte) {
-  state = []byte{state[ 0], state[13], state[10], state[ 7],
-                 state[ 4], state[ 1], state[14], state[11],
-                 state[ 8], state[ 5], state[ 2], state[15],
-                 state[12], state[ 9], state[ 6], state[ 3]}
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
+
+  state[ 0], state[13], state[10], state[ 7],
+  state[ 4], state[ 1], state[14], state[11],
+  state[ 8], state[ 5], state[ 2], state[15],
+  state[12], state[ 9], state[ 6], state[ 3]
 }
   //   0  4  8 12         0  4  8 12   Shifted right by 0
   //   5  9 13  1  ---->  1  5  9 13   Shifted right by 1
@@ -254,47 +282,57 @@ func invShiftRows(state []byte) {
 
 
 func mixColumns(state []byte) {
-  state = []byte{mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
-                 state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
-                 state[ 0] ^ state[ 1] ^ mul2[state[ 2]] ^ mul3[state[ 3]],
-                 mul3[state[ 0]] ^ state[ 1] ^ state[ 2] ^ mul2[state[ 3]],
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
 
-                 mul2[state[ 4]] ^ mul3[state[ 5]] ^ state[ 6] ^ state[ 7],
-                 state[ 4] ^ mul2[state [5]] ^ mul3[state[ 6]] ^ state[ 7],
-                 state[ 4] ^ state[ 5] ^ mul2[state[ 6]] ^ mul3[state[ 7]],
-                 mul3[state[ 4]] ^ state[ 5] ^ state[ 6] ^ mul2[state[ 7]],
+  mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
+  state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
+  state[ 0] ^ state[ 1] ^ mul2[state[ 2]] ^ mul3[state[ 3]],
+  mul3[state[ 0]] ^ state[ 1] ^ state[ 2] ^ mul2[state[ 3]],
 
-								 mul2[state[ 8]] ^ mul3[state[ 9]] ^ state[10] ^ state[11],
-								 state[ 8] ^ mul2[state[ 9]] ^ mul3[state[10]] ^ state[11],
-								 state[ 8] ^ state[ 9] ^ mul2[state[10]] ^ mul3[state[11]],
-								 mul3[state[ 8]] ^ state[ 9] ^ state[10] ^ mul2[state[11]],
+  mul2[state[ 4]] ^ mul3[state[ 5]] ^ state[ 6] ^ state[ 7],
+  state[ 4] ^ mul2[state [5]] ^ mul3[state[ 6]] ^ state[ 7],
+  state[ 4] ^ state[ 5] ^ mul2[state[ 6]] ^ mul3[state[ 7]],
+  mul3[state[ 4]] ^ state[ 5] ^ state[ 6] ^ mul2[state[ 7]],
 
-								 mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
-								 state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
-								 state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
-								 mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
+  mul2[state[ 8]] ^ mul3[state[ 9]] ^ state[10] ^ state[11],
+  state[ 8] ^ mul2[state[ 9]] ^ mul3[state[10]] ^ state[11],
+  state[ 8] ^ state[ 9] ^ mul2[state[10]] ^ mul3[state[11]],
+  mul3[state[ 8]] ^ state[ 9] ^ state[10] ^ mul2[state[11]],
+
+  mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
+  state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+  state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+  mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]
 }
 
 func invMixColumns(state []byte) {
-  state = []byte{mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
-                 mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
-                 mul13[state[ 0]] ^ mul9[state[ 1]] ^ mul14[state[ 2]] ^ mul11[state[ 3]],
-                 mul11[state[ 0]] ^ mul13[state[ 1]] ^ mul9[state[ 2]] ^ mul14[state[ 3]],
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] = 
 
-                 mul14[state[ 4]] ^ mul11[state[ 5]] ^ mul13[state[ 6]] ^ mul9[state[ 7]],
-                 mul9[state[ 4]] ^ mul14[state[ 5]] ^ mul11[state[ 6]] ^ mul13[state[ 7]],
-                 mul13[state[ 4]] ^ mul9[state[ 5]] ^ mul14[state[ 6]] ^ mul11[state[ 7]],
-                 mul11[state[ 4]] ^ mul13[state[ 5]] ^ mul9[state[ 6]] ^ mul14[state[ 7]],
+  mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
+  mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
+  mul13[state[ 0]] ^ mul9[state[ 1]] ^ mul14[state[ 2]] ^ mul11[state[ 3]],
+  mul11[state[ 0]] ^ mul13[state[ 1]] ^ mul9[state[ 2]] ^ mul14[state[ 3]],
 
-								 mul14[state[ 8]] ^ mul11[state[ 9]] ^ mul13[state[10]] ^ mul9[state[11]],
-								 mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
-								 mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
-								 mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
+  mul14[state[ 4]] ^ mul11[state[ 5]] ^ mul13[state[ 6]] ^ mul9[state[ 7]],
+  mul9[state[ 4]] ^ mul14[state[ 5]] ^ mul11[state[ 6]] ^ mul13[state[ 7]],
+  mul13[state[ 4]] ^ mul9[state[ 5]] ^ mul14[state[ 6]] ^ mul11[state[ 7]],
+  mul11[state[ 4]] ^ mul13[state[ 5]] ^ mul9[state[ 6]] ^ mul14[state[ 7]],
 
-								 mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
-								 mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
-								 mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
-								 mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]}
+  mul14[state[ 8]] ^ mul11[state[ 9]] ^ mul13[state[10]] ^ mul9[state[11]],
+  mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
+  mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
+  mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
+ 
+  mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+  mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+  mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+  mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
 }
 
 
@@ -698,10 +736,10 @@ func main() {
   f := "/home/josh/egg.txt"
   w := "/home/josh/eggTemp"
   a := "/home/josh/eggDec.txt"
-  encryptFile(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), f, w)
-  decryptFile(expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}), w, a)
+  encryptFile(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), f, w)
+  decryptFile(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), w, a)
 
-  out := encryptFileName([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, "egg")
+  out := encryptFileName([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}, "egg")
   fmt.Println(out)
-  fmt.Println(decryptFileName([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}, out))
+  fmt.Println(decryptFileName([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}, out))
 }
