@@ -324,15 +324,12 @@ def encryptFileName(key, name):
     encName = []
 
     for i in range(len(byteName)//16):
-        print("BLOCK:", [int(x) for x in byteName[(i*16):((i+1)*16)]])
         encBlock = encrypt(byteName[(i*16):((i+1)*16)], expandedKeys, 9)
-        print("ENC BLOCK:", [int(x) for x in encBlock])
         for element in encBlock:
             encName.append(element)
 
     outString = ""
     for number in encName:
-        print(number, "number")
         if number <= 15:
             outString += "0"+hex(number).replace("0x", "")
         else:
@@ -366,7 +363,8 @@ def test(singleInput=False):
     from time import time
 
     #key = [0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69]
-    key = "0 11 22 29 44 39 58 49 88 83 78 69 116 127 98 105"
+    #key = "0 11 22 29 44 39 58 49 88 83 78 69 116 127 98 105"
+    key = "49 50 51 52 53 54 55 56 57 48 49 50 51 52 53 54"
 
     if singleInput:
         test = "egg"

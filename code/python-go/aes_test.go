@@ -1,9 +1,10 @@
 package main
 
 import (
-  //"fmt"       // For sending output on stout
+  "fmt"       // For sending output on stout
   "os"        // For opening files
   "io"        // For reading files
+  "encoding/hex"
   //"io/ioutil" // For reading from stdin
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
@@ -336,38 +337,34 @@ func invMixColumns(state []byte) {
 }
 
 
-func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) []byte {
+func encrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[:16])
 
-  for i := 0; i < regularRounds; i++ {
+  for i := 0; i < 144; i += 16 {    // 9 regular rounds * 16 = 144
     subBytes(state)
     shiftRows(state)
     mixColumns(state)
-    addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
+    addRoundKey(state, expandedKeys[i+16:i+32])
   }
   // Last round
   subBytes(state)
   shiftRows(state)
   addRoundKey(state, expandedKeys[160:])
-
-  return state
 }
 
-func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) []byte {
+func decrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[160:])
   invShiftRows(state)
   invSubBytes(state)
 
-  for i := regularRounds; i != 0; i-- {
-    addRoundKey(state, expandedKeys[(16 * (i)):(16 * (i+1))])
+  for i := 144; i != 0; i -= 16 {
+    addRoundKey(state, expandedKeys[i:i+16])
     invMixColumns(state)
     invShiftRows(state)
     invSubBytes(state)
   }
   // Last round
   addRoundKey(state, expandedKeys[:16])
-
-  return state
 }
 
 
@@ -408,7 +405,7 @@ type work struct {
 func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
-			encrypt(job.buff[i:i+16], expandedKeys, 9)
+      encrypt(job.buff[i:i+16], expandedKeys)
     }
     results<- work{buff: job.buff, offset: job.offset}
   }
@@ -418,7 +415,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
+        decrypt(job.buff[i:i+16], expandedKeys)   // Decrypt 128 bit chunk of buffer
         // Store in variable as we are going to change it.
         var focus int = int(job.buff[i+15])
         var focusCount int = 0
@@ -432,14 +429,14 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
           }
         }
       } else {
-        decrypt(job.buff[i:i+16], expandedKeys, 9)
+        decrypt(job.buff[i:i+16], expandedKeys)
       }
     }
     results<- work{buff: job.buff, offset: job.offset}
   }
 }
 
-func encryptFile(key []byte, f, w string) {
+func encryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
@@ -447,15 +444,12 @@ func encryptFile(key []byte, f, w string) {
 
   fileSize := int(aInfo.Size()) // Get size of original file
 
-  var expandedKeys [176]byte
-  expandedKeys = expandKey(key) // Expand the key for each round
-
   if _, err := os.Stat(w); err == nil { // If file already exists, delete it
     os.Remove(w)
   }
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()*2
+  var workerNum int = getNumOfCores()*2  // 2 go routines per core got the most performance (didn't want usage above 90%)
 
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
@@ -483,7 +477,9 @@ func encryptFile(key []byte, f, w string) {
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  e.Write(encrypt(key, expandedKeys, 9))
+  var originalKey = expandedKeys[:16]
+  encrypt(originalKey, expandedKeys)
+  e.Write(originalKey)
   offset := 16
 
   for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
@@ -539,17 +535,13 @@ func encryptFile(key []byte, f, w string) {
 }
 
 
-func decryptFile(key []byte, f, w string) {
+func decryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
   check(err)
 
   fileSize := int(aInfo.Size())-16 // Take away length of added key for checksum
-
-  var expandedKeys [176]byte
-
-  expandedKeys = expandKey(key)
 
   if _, err := os.Stat(w); err == nil { // If file exists, delete it
     os.Remove(w)
@@ -580,9 +572,9 @@ func decryptFile(key []byte, f, w string) {
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
-  decFirst := decrypt(firstBlock, expandedKeys, 9)
+  decrypt(firstBlock, expandedKeys)
 
-  if compareSlices(key, decFirst) { // If key is valid
+  if compareSlices(expandedKeys[:16], firstBlock) { // If key is valid
     offset := 0
     a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
@@ -625,8 +617,65 @@ func decryptFile(key []byte, f, w string) {
   e.Close()
 }
 
+func padSlice(slice []byte, factor int) ([]byte) {
+  for (len(slice) % factor != 0) {
+    slice = append(slice, byte(0))
+  }
+  return slice
+}
 
-func checkKey(key []byte, f string)  bool{
+func encryptFileName(key []byte, name string) (string) {
+  fmt.Println("Inputs:", key, name)
+  var byteName = []byte(name)
+
+  var expandedKeys [176]byte
+  expandedKeys = expandKey(key)
+
+  //fmt.Println("byteName", byteName)
+  byteName = padSlice(byteName, 16)
+  //fmt.Println("padded", byteName)
+
+  for i := 0; i < len(byteName)/16; i++ {
+    encrypt(byteName[(i*16):((i+1)*16)], expandedKeys)
+  }
+
+  //fmt.Println("encName at ln436", encName)
+  out := hex.EncodeToString(byteName)
+
+  return out
+}
+
+func checkForPadding(input []byte) ([]byte) {
+  var newBytes []byte
+  for _, element := range input {
+    if (element > 31) && (element < 127) {    //If a character
+      newBytes = append(newBytes, element)
+    }
+  }
+  return newBytes
+}
+
+func decryptFileName(key []byte, hexName string) (string) {
+  //fmt.Println(hexName, "input of dec")
+  byteName, err := hex.DecodeString(hexName)
+  check(err)
+  var expandedKeys [176]byte
+  expandedKeys = expandKey(key)
+
+  //fmt.Println("byteName", byteName)
+
+  for i := 0; i < len(byteName)/16; i++ {
+    fmt.Println(byteName[(i*16):((i+1)*16)], i)
+    decrypt(byteName[(i*16):((i+1)*16)], expandedKeys)
+  }
+  fmt.Println(len(byteName), byteName, "decname")
+  checkForPadding(byteName)
+
+  return string(byteName[:])
+}
+
+
+func checkKey(key []byte, f string) bool {
   a, err := os.Open(f)    // Open an encrypted file to check first block against key
   check(err)
 
@@ -638,10 +687,10 @@ func checkKey(key []byte, f string)  bool{
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
   check(er)
-  firstDecrypted := decrypt(firstBlock, expandedKeys, 9)    // Decrypt first block
+  decrypt(firstBlock, expandedKeys)    // Decrypt first block
 
   a.Close()
-  return compareSlices(key, firstDecrypted) // Compare decrypted first block with the key.
+  return compareSlices(key, firstBlock) // Compare decrypted first block with the key.
 }
 
 func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
@@ -649,22 +698,23 @@ func strToInt(str string) (int, error) {    // Used for converting string to int
     return strconv.Atoi(n[0])       // Returns integer of whole number
 }
 
+
 // BENCHMARK
 func BenchmarkEncryptFile(b *testing.B) {
   f := "/home/josh/GentooMin.iso"
   w := "/home/josh/temp"
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
+  expandedKeys := expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69})
   for n := 0; n < b.N; n++ {
-    encryptFile(key, f, w)
+    encryptFile(expandedKeys, f, w)
   }
 }
 
 func BenchmarkDecryptFile(b *testing.B) {
   f := "/home/josh/temp"
   w := "/home/josh/decTemp.iso"
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
+  expandedKeys := expandKey([]byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69})
   for n := 0; n < b.N; n++ {
-    decryptFile(key, f, w)
+    decryptFile(expandedKeys, f, w)
   }
 }
 
