@@ -635,6 +635,33 @@ func decryptList(expandedKeys [176]byte, fileList []string, targetList []string)
   }
 }
 
+// def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
+//     fs = os.listdir(d)
+//     targetLoc = targetLoc.split(self.fileSep)
+//     if encType == "y": # Decrypt folder names
+//         targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
+//     else:
+//         targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
+//     targetLoc = self.fileSep.join(targetLoc)
+//     for item in fs:
+//         if os.path.isdir(d+item):
+//             self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
+//         else:
+//             if encType == "n":
+//                 name = aesFName.decryptFileName(self.key, item)
+//             elif encType == "y":
+//                 name = aesFName.encryptFileName(self.key, item)
+//             else:
+//                 name = item
+//             try:
+//                 self.createFolders(targetLoc+self.fileSep)
+//             except PermissionError:
+//                 pass
+//             else:
+//                 self.fileList.append(d+item)
+//                 self.locList.append(targetLoc+self.fileSep+name)
+
+
 func getTargetList(expandedKeys [176]byte, fileList, targetList []string, folder, target string) []string { // Also makes the folders required
   log.Output(0, folder)
   list, err := ioutil.ReadDir(folder)
@@ -642,7 +669,7 @@ func getTargetList(expandedKeys [176]byte, fileList, targetList []string, folder
   for i := range list {
     if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
       if list[i].IsDir() {
-        target = target+encryptFileName(expandedKeys, list[i].Name())+"/"
+        target = target+"/"+encryptFileName(expandedKeys, list[i].Name())
         os.Mkdir(target, os.ModePerm)
         targetList = getTargetList(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target)
       } else {
