@@ -298,7 +298,7 @@ func invMixColumns(state []byte) {
 }
 
 
-func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
+func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) []byte {
   addRoundKey(state, expandedKeys[:16])
 
   for i := 0; i < regularRounds; i++ {
@@ -315,7 +315,7 @@ func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
   return state
 }
 
-func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
+func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) []byte {
   addRoundKey(state, expandedKeys[160:])
   invShiftRows(state)
   invSubBytes(state)
@@ -369,38 +369,35 @@ type work struct {
 
 func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
   for job := range jobs {
-    var encBuff []byte    // Make a buffer to hold encrypted data.
     for i := 0; i < len(job.buff); i += 16 {
-      encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
+			encrypt(job.buff[i:i+16], expandedKeys, 9)
     }
-    results<- work{buff: encBuff, offset: job.offset}
+    results<- work{buff: job.buff, offset: job.offset}
   }
 }
 
 func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fileSize int) {
   for job := range jobs {
-    var decBuff []byte
     for i := 0; i < len(job.buff); i += 16 {
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
+        decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
         // Store in variable as we are going to change it.
-        var focus int = int(decrypted[len(decrypted)-1])
+        var focus int = int(job.buff[i+15])
         var focusCount int = 0
 
         if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-          for j := 15; (int(decrypted[j]) == focus) && (j > 0); j-- {
-            if int(decrypted[j]) == focus { focusCount++ }
+          for j := 15; (int(job.buff[i+j]) == focus) && (j > 0); j-- {
+            if int(job.buff[i+j]) == focus { focusCount++ }
           }
           if focus == focusCount {
-            decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+            job.buff = append(job.buff[:(i+16-focus)], job.buff[i+16:]...)  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
           }
         }
-        decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
       } else {
-        decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
+        decrypt(job.buff[i:i+16], expandedKeys, 9)
       }
     }
-    results<- work{buff: decBuff, offset: job.offset}
+    results<- work{buff: job.buff, offset: job.offset}
   }
 }
 
