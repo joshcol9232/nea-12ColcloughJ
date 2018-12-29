@@ -1,14 +1,11 @@
-package main
+package AES
 
 import (
-  "fmt"       // For sending output on stout
   "os"        // For opening files
   "log"
   "io"        // For reading files
-  "io/ioutil" // For reading from stdin
+  "io/ioutil"
   "encoding/hex" // For enc/decoding encrypted string
-  "strings"   // For converting string key to an array of bytes
-  "strconv"   // ^
   "runtime"   // For getting CPU core count
 )
 
@@ -182,7 +179,7 @@ func keyExpansionCore(inp [4]byte, i int) [4]byte {
   return inp
 }
 
-func expandKey(inputKey []byte) [176]byte {
+func ExpandKey(inputKey []byte) [176]byte {
   var expandedKeys [176]byte
   // first 16 bytes of the expandedKeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
@@ -337,7 +334,7 @@ func invMixColumns(state []byte) {
 }
 
 
-func encrypt(state []byte, expandedKeys [176]byte) {
+func Encrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[:16])
 
   for i := 0; i < 144; i += 16 {    // 9 regular rounds * 16 = 144
@@ -352,7 +349,7 @@ func encrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[160:])
 }
 
-func decrypt(state []byte, expandedKeys [176]byte) {
+func Decrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[160:])
   invShiftRows(state)
   invSubBytes(state)
@@ -405,7 +402,7 @@ type work struct {
 func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
-      encrypt(job.buff[i:i+16], expandedKeys)
+      Encrypt(job.buff[i:i+16], expandedKeys)
     }
     results<- work{buff: job.buff, offset: job.offset}
   }
@@ -415,7 +412,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        decrypt(job.buff[i:i+16], expandedKeys)   // Decrypt 128 bit chunk of buffer
+        Decrypt(job.buff[i:i+16], expandedKeys)   // Decrypt 128 bit chunk of buffer
         // Store in variable as we are going to change it.
         var focus int = int(job.buff[i+15])
         var focusCount int = 0
@@ -429,14 +426,14 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fi
           }
         }
       } else {
-        decrypt(job.buff[i:i+16], expandedKeys)
+        Decrypt(job.buff[i:i+16], expandedKeys)
       }
     }
     results<- work{buff: job.buff, offset: job.offset}
   }
 }
 
-func encryptFile(expandedKeys [176]byte, f, w string) {
+func EncryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
@@ -478,7 +475,7 @@ func encryptFile(expandedKeys [176]byte, f, w string) {
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
   var originalKey = expandedKeys[:16]
-  encrypt(originalKey, expandedKeys)
+  Encrypt(originalKey, expandedKeys)
   e.Write(originalKey)
   offset := 16
 
@@ -535,7 +532,7 @@ func encryptFile(expandedKeys [176]byte, f, w string) {
 }
 
 
-func decryptFile(expandedKeys [176]byte, f, w string) {
+func DecryptFile(expandedKeys [176]byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -572,7 +569,7 @@ func decryptFile(expandedKeys [176]byte, f, w string) {
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
-  decrypt(firstBlock, expandedKeys)
+  Decrypt(firstBlock, expandedKeys)
 
   if compareSlices(expandedKeys[:16], firstBlock) { // If key is valid
     offset := 0
@@ -617,32 +614,32 @@ func decryptFile(expandedKeys [176]byte, f, w string) {
   e.Close()
 }
 
-func encryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
+func EncryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
     log.Output(0, fileList[i]+" FILE")
-    encryptFile(expandedKeys, fileList[i], targetList[i])
+    EncryptFile(expandedKeys, fileList[i], targetList[i])
   }
 }
 
-func decryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
+func DecryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
-    decryptFile(expandedKeys, fileList[i], targetList[i])
+    DecryptFile(expandedKeys, fileList[i], targetList[i])
   }
 }
 
-func getLists(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
+func GetLists(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   check(err)
   for i := range list {
     if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
       if list[i].IsDir() {
-        fileList, targetList = getLists(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+encryptFileName(expandedKeys, list[i].Name())+"/")
+        fileList, targetList = GetLists(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
       } else {
         fileList   = append(fileList, folder+list[i].Name())
-        targetList = append(targetList, target+encryptFileName(expandedKeys, list[i].Name()))
+        targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
       }
     } else {
       log.Output(0, "Name too long: "+list[i].Name())
@@ -651,7 +648,7 @@ func getLists(expandedKeys [176]byte, fileList, targetList []string, folder, tar
   return fileList, targetList
 }
 
-func encryptFileName(expandedKeys [176]byte, name string) string {
+func EncryptFileName(expandedKeys [176]byte, name string) string {
   var byteName = []byte(name)
 
   for len(byteName) % 16 != 0 {   // Pad with 0's
@@ -659,18 +656,18 @@ func encryptFileName(expandedKeys [176]byte, name string) string {
   }
 
   for i := 0; i < len(byteName); i += 16 {
-    encrypt(byteName[i:i+16], expandedKeys)  // Done by reference so does not need to be assigned
+    Encrypt(byteName[i:i+16], expandedKeys)  // Done by reference so does not need to be assigned
   }
 
   return hex.EncodeToString(byteName)
 }
 
-func decryptFileName(expandedKeys [176]byte, hexName string) string {
+func DecryptFileName(expandedKeys [176]byte, hexName string) string {
   byteName, err := hex.DecodeString(hexName)
   check(err)
 
   for i := 0; i < len(byteName); i += 16 {
-    decrypt(byteName[i:i+16], expandedKeys)
+    Decrypt(byteName[i:i+16], expandedKeys)
   }
   checkForPadding(byteName)
   return string(byteName[:])
@@ -684,83 +681,35 @@ func checkForPadding(input []byte) {    // Checks for 0s in decrypted string (si
   }
 }
 
-func encryptListOfString(expandedKeys [176]byte, l []string) []string {
+func EncryptListOfString(expandedKeys [176]byte, l []string) []string {
   for i := range l {
-    l[i] = encryptFileName(expandedKeys, l[i])
+    l[i] = EncryptFileName(expandedKeys, l[i])
   }
   return l
 }
 
-func decryptListOfString(expandedKeys [176]byte, l []string) []string {
+func DecryptListOfString(expandedKeys [176]byte, l []string) []string {
   for i := range l {
-    l[i] = decryptFileName(expandedKeys, l[i])
+    l[i] = DecryptFileName(expandedKeys, l[i])
   }
   return l
 }
 
 
-func checkKey(key []byte, f string) bool {
+func CheckKey(key []byte, f string) bool {
   a, err := os.Open(f)    // Open an encrypted file to check first block against key
   check(err)
 
   var expandedKeys [176]byte
 
-  expandedKeys = expandKey(key) // Expand the key
+  expandedKeys = ExpandKey(key) // Expand the key
 
   // Check first block is key
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
   check(er)
-  decrypt(firstBlock, expandedKeys)    // Decrypt first block
+  Decrypt(firstBlock, expandedKeys)    // Decrypt first block
 
   a.Close()
   return compareSlices(key, firstBlock) // Compare decrypted first block with the key.
-}
-
-func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
-    n := strings.Split(str, ".")    // Splits by decimal point
-    return strconv.Atoi(n[0])       // Returns integer of whole number
-}
-
-
-func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)
-  check(err)
-  fields := strings.Split(string(bytes), ", ")
-  keyString := strings.Split(string(fields[3]), " ")
-
-  var key []byte
-  for i := 0; i < len(keyString); i++ {
-    a, err := strToInt(keyString[i])
-    check(err)
-    key = append(key, byte(a))
-  }
-  request := string(fields[0])
-
-  if request == "y" {
-    encryptFile(expandKey(key), string(fields[1]), string(fields[2]))
-  } else if request == "n" {
-    decryptFile(expandKey(key), string(fields[1]), string(fields[2]))
-  } else if request == "yDir" {
-    encryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
-  } else if request == "nDir" {
-    decryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
-  } else if request == "dirList" {
-    fileList, targList := getLists(expandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
-    fmt.Print(strings.Join(fileList, ",,")+"--!--")
-    fmt.Print(strings.Join(targList, ",,"))
-  } else if request == "test" {
-    valid := checkKey(key, string(fields[1]))
-    if valid {
-      fmt.Println("-Valid-")
-    } else {
-      fmt.Println("-NotValid-")
-    }
-  } else {
-    panic("Invalid options.")
-  }
-
-   // out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "12345678901234567")
-   // fmt.Println(out, len(out))
-   // fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
 }
