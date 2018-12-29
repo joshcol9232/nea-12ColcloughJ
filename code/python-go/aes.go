@@ -14,10 +14,6 @@ import (
 
 const DEFAULT_BUFFER_SIZE = 32768  // Define the default buffer size for enc/decrypt
 
-var (
-  osTemp = os.TempDir()+"/" // Go treats all file separators as "/" regardless of OS
-)
-
 // Global lookup tables.
 var sBox = [256]byte {0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
                       0xCA,0x82,0xC9,0x7D,0xFA,0x59,0x47,0xF0,0xAD,0xD4,0xA2,0xAF,0x9C,0xA4,0x72,0xC0,
@@ -635,43 +631,15 @@ func decryptList(expandedKeys [176]byte, fileList []string, targetList []string)
   }
 }
 
-// def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
-//     fs = os.listdir(d)
-//     targetLoc = targetLoc.split(self.fileSep)
-//     if encType == "y": # Decrypt folder names
-//         targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
-//     else:
-//         targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
-//     targetLoc = self.fileSep.join(targetLoc)
-//     for item in fs:
-//         if os.path.isdir(d+item):
-//             self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
-//         else:
-//             if encType == "n":
-//                 name = aesFName.decryptFileName(self.key, item)
-//             elif encType == "y":
-//                 name = aesFName.encryptFileName(self.key, item)
-//             else:
-//                 name = item
-//             try:
-//                 self.createFolders(targetLoc+self.fileSep)
-//             except PermissionError:
-//                 pass
-//             else:
-//                 self.fileList.append(d+item)
-//                 self.locList.append(targetLoc+self.fileSep+name)
-
-
 func getTargetList(expandedKeys [176]byte, fileList, targetList []string, folder, target string) []string { // Also makes the folders required
+  os.Mkdir(target, os.ModePerm)
   log.Output(0, folder)
   list, err := ioutil.ReadDir(folder)
   check(err)
   for i := range list {
     if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
       if list[i].IsDir() {
-        target = target+"/"+encryptFileName(expandedKeys, list[i].Name())
-        os.Mkdir(target, os.ModePerm)
-        targetList = getTargetList(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target)
+        targetList = getTargetList(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+encryptFileName(expandedKeys, list[i].Name())+"/")
       } else {
         targetList = append(targetList, target+encryptFileName(expandedKeys, list[i].Name()))
       }
