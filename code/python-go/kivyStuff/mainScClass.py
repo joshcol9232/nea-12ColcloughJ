@@ -583,7 +583,10 @@ class MainScreen(Screen):
             Thread(target=self.passToPipe, args=(encType, d, targetLoc,)).start()
             self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
 
-        if op
+        if op and encType == "n":
+            self.openFileTh(targetLoc, d)
+        elif type == "y":
+            self.refreshFiles()
 
         #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op) #self, labText, fileList, locList, **kwargs
         #mainthread(Clock.schedule_once(self.encPop.open, -1))
@@ -592,7 +595,7 @@ class MainScreen(Screen):
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
-            progname = "AES"
+            progname = "AES/AES"
 
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
@@ -636,7 +639,6 @@ class MainScreen(Screen):
         locationFolder = location.split(self.fileSep)
         nameOfOriginal = locationFolder[-1]
         locationFolder = self.fileSep.join(locationFolder[:-1])
-        startList = os.listdir(locationFolder)
         if self.fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) # Windows actually accepts forward slashes in terminal
@@ -647,26 +649,9 @@ class MainScreen(Screen):
         startCheckSum = self.getCheckSum(location) # Gets checksum of file before opening.
         os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         # After this line, the file has been closed.
-        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted, so check it still exists.
-            endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
-            endCheckSum = self.getCheckSum(location)
-            print(startCheckSum, "START CHECK SUM")   # For debugging
-            print(endCheckSum, "END CHECK SUM")
-        else:
-            endList = []
-            endCheckSum = startCheckSum # Don't try and encrypt files that have been removed.
-
-        diffAdded = [d for d in endList if d not in startList] # Creates an array of differences between the list of files currently in the temp folder, and the original contents of the temp folder.
-        tempLoc = startLoc.split(self.fileSep)
-        for i in diffAdded:   # Encrypt any extra files in the temp folder that were not there before
-            print("Difference found:", i)
-            tempLoc = self.fileSep.join(tempLoc[:-1]) # Remove last file name
-            tempLoc += self.fileSep+i
-            self.encDec("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
-
-        if nameOfOriginal in endList:
+        if os.path.exists(locationFolder) and nameOfOriginal in os.listdir(locationFolder):
             print("Original still here")
-            if endCheckSum != startCheckSum:
+            if self.getCheckSum(location) != startCheckSum:
                 print("Original file has changed.")
                 self.encDec("y", location, startLoc)
 

@@ -143,7 +143,6 @@ class encDecPop(Popup): #For single files
             totalPer += 100
             total += self.pb.max
 
-        mainthread(Clock.schedule_once(self.outerScreen.resetButtons, -1))
         mainthread(Clock.schedule_once(self.dismiss, -1))
 
 

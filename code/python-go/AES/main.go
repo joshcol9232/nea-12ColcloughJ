@@ -2,11 +2,14 @@ package main
 
 import (
   "fmt"       // For sending output on stout
-  "os"
+  "os"        // Gets stdin
   "io/ioutil" // For reading from stdin
   "strings"   // For converting string key to an array of bytes
   "strconv"   // ^
   "AES"
+  "AES/AESfiles"
+  "AES/AESstring"
+  "AES/AEScheckKey"
 )
 
 func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
@@ -29,19 +32,19 @@ func main() {
   request := string(fields[0])
 
   if request == "y" {
-    AES.EncryptFile(AES.ExpandKey(key), string(fields[1]), string(fields[2]))
+    AESfiles.EncryptFile(AES.ExpandKey(key), string(fields[1]), string(fields[2]))
   } else if request == "n" {
-    AES.DecryptFile(AES.ExpandKey(key), string(fields[1]), string(fields[2]))
+    AESfiles.DecryptFile(AES.ExpandKey(key), string(fields[1]), string(fields[2]))
   } else if request == "yDir" {
-    AES.EncryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+    AESfiles.EncryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
   } else if request == "nDir" {
-    AES.DecryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+    AESfiles.DecryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
   } else if request == "dirList" {
-    fileList, targList := AES.GetLists(AES.ExpandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
+    fileList, targList := AESstring.GetLists(AES.ExpandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
     fmt.Print(strings.Join(fileList, ",,")+"--!--")
     fmt.Print(strings.Join(targList, ",,"))
   } else if request == "test" {
-    valid := AES.CheckKey(key, string(fields[1]))
+    valid := AEScheckKey.CheckKeyOfFile(key, string(fields[1]))
     if valid {
       fmt.Println("-Valid-")
     } else {
