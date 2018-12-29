@@ -620,6 +620,7 @@ func decryptFile(expandedKeys [176]byte, f, w string) {
 func encryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
+    log.Output(0, fileList[i]+" FILE")
     encryptFile(expandedKeys, fileList[i], targetList[i])
   }
 }
@@ -631,23 +632,23 @@ func decryptList(expandedKeys [176]byte, fileList []string, targetList []string)
   }
 }
 
-func getTargetList(expandedKeys [176]byte, fileList, targetList []string, folder, target string) []string { // Also makes the folders required
+func getLists(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
   os.Mkdir(target, os.ModePerm)
-  log.Output(0, folder)
   list, err := ioutil.ReadDir(folder)
   check(err)
   for i := range list {
     if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
       if list[i].IsDir() {
-        targetList = getTargetList(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+encryptFileName(expandedKeys, list[i].Name())+"/")
+        fileList, targetList = getLists(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+encryptFileName(expandedKeys, list[i].Name())+"/")
       } else {
+        fileList   = append(fileList, folder+list[i].Name())
         targetList = append(targetList, target+encryptFileName(expandedKeys, list[i].Name()))
       }
     } else {
       log.Output(0, "Name too long: "+list[i].Name())
     }
   }
-  return targetList
+  return fileList, targetList
 }
 
 func encryptFileName(expandedKeys [176]byte, name string) string {
@@ -744,9 +745,10 @@ func main() {
     encryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
   } else if request == "nDir" {
     decryptList(expandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
-  } else if request == "targList" {
-    l := strings.Split(string(fields[1]), "\n")
-    fmt.Printf("%v", getTargetList(expandKey(key), l[:len(l)-1], []string{}, l[0], string(fields[2])))
+  } else if request == "dirList" {
+    fileList, targList := getLists(expandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
+    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(targList, ",,"))
   } else if request == "test" {
     valid := checkKey(key, string(fields[1]))
     if valid {

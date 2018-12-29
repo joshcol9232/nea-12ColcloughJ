@@ -18,12 +18,11 @@ from configOperations import dirInputValid
 
 class encDecPop(Popup): #For single files
 
-    def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+    def __init__(self, outerScreen, encType, fileList, locList, op=True, **kwargs):
         super(Popup, self).__init__(**kwargs)
         self.outerScreen = outerScreen
         self.fileList = fileList
         self.locList = locList
-        self.done = False
 
         # Kivy stuff
         self.title = "Please wait..."
@@ -41,6 +40,9 @@ class encDecPop(Popup): #For single files
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
         self.wholePb = ProgressBar(value=0, max=self.__getTotalSize(), size_hint=(.9, .2))
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
         self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -87,11 +89,61 @@ class encDecPop(Popup): #For single files
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
         return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
 
-
     def encDec(self, encType, op):
-        self.outerScreen.passToPipe(encType, ",,".join(self.fileList), ",,".join(self.locList), op=bool(len(self.fileList)==1))
+        total = 0
+        totalPer = 0
+        factor = 0.5
+        timeLast = 0
+        lastSize = 0
+        timeDelta = 0
+        perDelta = 0
+        per = 0
+        prevPer = 0
+        for i in range(len(self.fileList)):
+            done = False
+            self.pb.value = 0
+            self.pb.max = os.path.getsize(self.fileList[i])
 
+            self.outOf.text = str(i)+"/"+str(len(self.fileList))
+            if encType == "n":
+                self.currFile.text = self.__getRelPathDec(self.fileList[i])
+            else:
+                self.currFile.text = self.fileList[i]
 
+            while not done: # Padding can cause issues as original size is not known.
+                if os.path.exists(self.locList[i]):
+                    self.pb.value = os.path.getsize(self.locList[i])
+                    self.wholePb.value = total + self.pb.value
+                    per = self.wholePb.value_normalized*100
+
+                    a = time()   # Temporary variable to hold the time
+                    timeDelta = a - timeLast     # Get time difference
+                    if timeDelta >= 0.1:  # Update every 0.1 seconds
+                        perDelta = per - prevPer   # Change in percentage in that time.
+                        timeLast = a
+                        sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
+                        speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
+
+                        if speed != 0:
+                            self.tim.text = self.__getGoodUnitTime((100 - (self.wholePb.value_normalized*100))/(perDelta/timeDelta))
+                            self.spd.text = self.getGoodUnit(speed)
+
+                        lastSize = self.wholePb.value
+                        prevPer = per
+
+                    self.per.text = "{0:.2f}%".format(per)
+
+                if self.pb.value >= self.pb.max-64:  # -64 is due to padding and key.
+                    done = True
+                else:
+                    sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
+
+            print("DONE in while loop", len(self.fileList))
+            self.pb.value = self.pb.max
+            totalPer += 100
+            total += self.pb.max
+
+        mainthread(Clock.schedule_once(self.outerScreen.resetButtons, -1))
         mainthread(Clock.schedule_once(self.dismiss, -1))
 
 

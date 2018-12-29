@@ -560,22 +560,10 @@ class MainScreen(Screen):
 
 
 ######Encryption Stuff + opening decrypted files######
-    def getFileList(self, d, fileList):
-        fs = os.listdir(d)
-        for item in fs:
-            if os.path.isdir(d+item):
-                fileList = self.getFileList(d+item+"/", fileList) #Recursive
-            else:
-                fileList.append(d+item)
-
-        return fileList
-
-    def getTargetList(self, root, targ):  # Communicates with AES to get list of target folders.
-        out = self.passToPipe("targList", "\n".join([root]+self.fileList), targ).decode()
-        #print(out, "OUT")
-        out = out.replace("[", "")
-        out = out.replace("]", "")
-        return out.split(" ")
+    def getDirLists(self, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
+        out = self.passToPipe("dirList", root, targ).decode()
+        out = out.split("--!--") # Separator
+        return out[0].split(",,"), out[1].split(",,")
 
     def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
         #print("TARGET L0C:", targetLoc)
@@ -585,26 +573,22 @@ class MainScreen(Screen):
 
         if os.path.isdir(d):
             self.createFolders(targetLoc)
-            self.fileList = self.getFileList(d, [])  # Initialize target list ([])
-            self.locList = self.getTargetList(d, targetLoc)
-            #print(self.locList[0], "FILES")
-            #print("LISTS:", self.fileList, self.locList)
-            #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
-            #mainthread(Clock.schedule_once(self.encPop.open, -1))
-            self.passToPipe(encType+"Dir", "\n".join(self.fileList), "\n".join(self.locList), op=False)
+            fileList, locList = self.getDirLists(d, targetLoc)
+            self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+            Thread(target=self.passToPipe, args=(encType+"Dir", "\n".join(fileList), "\n".join(locList),)).start()
+            self.encPop.open()
         else:
             #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
             #mainthread(Clock.schedule_once(self.encPop.open, -1))
-            self.passToPipe(encType, d, targetLoc, op=False)
+            Thread(target=self.passToPipe, args=(encType, d, targetLoc,)).start()
+            self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
 
-        labText = "Encrypting..."
-        if encType == "n":
-            labText = "Decrypting..."
+        if op
 
         #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op) #self, labText, fileList, locList, **kwargs
         #mainthread(Clock.schedule_once(self.encPop.open, -1))
 
-    def passToPipe(self, type, d, targetLoc, op=True):     #Passes parameters to AES written in go.
+    def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
@@ -613,20 +597,6 @@ class MainScreen(Screen):
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
         return out
-
-        # if endOfFolderList:
-        #     if self.encPop != None:
-        #         self.encPop.dismiss()
-        #         self.encPop = None
-        #     if type == "y":
-        #         self.refreshFiles()
-        #         print("Refreshing files.")
-
-        # if type == "n" and op:
-        #      mainthread(self.openFileTh(targetLoc, d))
-
-        # if self.encPop != None:
-        #     self.encPop.done = True
 
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
@@ -658,51 +628,6 @@ class MainScreen(Screen):
         self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail temporarily. Is deleted once program is finished displaying it.
         thumb = Image(source=fileObj.thumbDir)
         return thumb
-
-
-    # # Handles GUI while encrypting a single file, and parses parameters to passToPipe
-    # def encDecTerminal(self, type, d, targetLoc, op=True): # Handels passToPipe and UI while encryption/decryption happens.
-    #     fileName = ""
-    #     if type == "y":     #The file name also needs to be encrypted
-    #         tempDir = d.split(self.fileSep)
-    #         fileName = tempDir[-1]
-    #         targetLoc = targetLoc.split(self.fileSep)
-    #         #replace file name with new hex
-    #         targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
-    #         thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
-
-    #         popText = "Encrypting..."
-    #         targetLoc = self.fileSep.join(targetLoc)
-    #         if os.path.exists(targetLoc):
-    #             if os.path.isdir(targetLoc):
-    #                 rmtree(targetLoc) # Imported from shutil
-    #             else:
-    #                 os.remove(targetLoc)
-
-    #     elif type == "n":   #Need to decrypt file name if decrypting
-    #         tempDir = d.split(self.fileSep)
-    #         fileName = tempDir[-1]
-    #         if newName == None:
-    #             targetLoc = targetLoc.split(self.fileSep)
-    #             newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
-    #             targetLoc = self.fileSep.join(targetLoc)
-    #             fileName = newName
-    #         popText = "Decrypting..."
-
-    #     if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
-    #         self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
-    #         return mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
-
-    #     if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
-    #         self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, op,), daemon=True)
-    #         return self.encryptProcess.start()
-    #     else:
-    #         print("File name too long: ", fileName)
-    #         print("Dismissed?")
-    #         lab = Label(text="File name too long, skipping:\n"+fileName)
-    #         lab.bind(size=info.setter("text_size")) # Wrap to label.
-    #         pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-    #         pop.open()
 
     def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
         Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
@@ -769,7 +694,6 @@ class MainScreen(Screen):
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
-
 
     def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.
         if self.checkDirExists(inp):
