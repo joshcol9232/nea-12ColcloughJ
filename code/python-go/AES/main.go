@@ -48,8 +48,12 @@ func main() {
     fmt.Print(strings.Join(AESstring.EncryptListOfString(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n")), ",,"))
   } else if request == "decList" {
     fmt.Print(strings.Join(AESstring.DecryptListOfString(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n")), ",,"))
-  } else if request == "getLists" {
-    fileList, targList := AESstring.GetLists(AES.ExpandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
+  } else if request == "getListsy" {
+    fileList, targList := AESstring.GetListsEnc(AES.ExpandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
+    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(targList, ",,"))
+  } else if request == "getListsn" {
+    fileList, targList := AESstring.GetListsDec(AES.ExpandKey(key), []string{}, []string{}, string(fields[1]), string(fields[2]))
     fmt.Print(strings.Join(fileList, ",,")+"--!--")
     fmt.Print(strings.Join(targList, ",,"))
   } else if request == "listDir" {

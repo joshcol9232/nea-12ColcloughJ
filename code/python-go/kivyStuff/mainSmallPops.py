@@ -137,7 +137,6 @@ class encDecPop(Popup): #For single files
                 else:
                     sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 
-            print("DONE in while loop", len(self.fileList))
             self.pb.value = self.pb.max
             totalPer += 100
             total += self.pb.max

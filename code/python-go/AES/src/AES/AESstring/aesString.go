@@ -59,17 +59,36 @@ func DecryptListOfString(expandedKeys [176]byte, l []string) []string {
   return out
 }
 
-func GetLists(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
+func GetListsEnc(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
     if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
       if list[i].IsDir() {
-        fileList, targetList = GetLists(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
+        fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
       } else {
         fileList   = append(fileList, folder+list[i].Name())
         targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
+      }
+    } else {
+      log.Output(0, "Name too long: "+list[i].Name())
+    }
+  }
+  return fileList, targetList
+}
+
+func GetListsDec(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) {
+  os.Mkdir(target, os.ModePerm)
+  list, err := ioutil.ReadDir(folder)
+  if err != nil { panic(err) }
+  for i := range list {
+    if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
+      if list[i].IsDir() {
+        fileList, targetList = GetListsDec(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKeys, list[i].Name())+"/")
+      } else {
+        fileList   = append(fileList, folder+list[i].Name())
+        targetList = append(targetList, target+DecryptFileName(expandedKeys, list[i].Name()))
       }
     } else {
       log.Output(0, "Name too long: "+list[i].Name())

@@ -5,15 +5,9 @@ import (
   "os"
 )
 
-// Data you are sorting by has to be grouped with the file names
 type Tuple struct {
   A os.FileInfo
   B string
-}
-
-type SizeTuple struct {
-  Size int64
-  Name string
 }
 
 func getLower(inp []byte) []byte {

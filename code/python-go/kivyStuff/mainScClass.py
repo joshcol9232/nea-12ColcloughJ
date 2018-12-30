@@ -228,21 +228,10 @@ class MainScreen(Screen):
         if not path:
             return False
         else:
-            fs = os.listdir(path)
-            listOfFolders = []
-            listOfFiles = []
-            fs = self.decListString(fs)
-            for item in fs:
-                if (item != self.thumbsName) and (item != self.recycleName):
-                    if os.path.isdir(path+item):
-                        listOfFolders.append(item)
-                    else:
-                        listOfFiles.append(item)
-
+            _, fsDec = self.listDir(path)
             self.lastPathSent = path
-
-            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)  # Sort the list and return it
-
+            return [i for i in fsDec if i != ".$thumbs" and i != ".$recycling"]
+            # Cheeky bit of list comprehension so that these two folders are not sent.
 
 
 ##Functions for changing screen within threads (used to prevent segmentation faults)
@@ -511,6 +500,9 @@ class MainScreen(Screen):
 ###########Searches############
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName)
+        print("Dir name:", dirName, files)
+        if len(files) == 0:
+            return
         for fileObj in files:
             loc = fileObj.name.find(item) # Find where in the word the item is found, if it is a substring of the word
 
@@ -540,7 +532,6 @@ class MainScreen(Screen):
 
 
     def searchForItem(self, item):
-        self.resetButtons()
         self.searchResults = []
         Thread(target=self.findAndSort, args=(item,), daemon=True).start()
 
@@ -554,7 +545,7 @@ class MainScreen(Screen):
             return [values[0], values[1]]
 
 
-######Encryption Stuff + opening decrypted files######  Mostly an interface to the go program
+######Encryption Stuff + opening decrypted files + interface with go######
     def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
         #print("TARGET L0C:", targetLoc)
         if self.encPop != None:
@@ -563,7 +554,7 @@ class MainScreen(Screen):
 
         if os.path.isdir(d):
             self.createFolders(targetLoc)
-            fileList, locList = self.getDirLists(d, targetLoc)
+            fileList, locList = self.getDirLists(encType, d, targetLoc)
             self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
             Thread(target=self.passToPipe, args=(encType+"Dir", "\n".join(fileList), "\n".join(locList),)).start()
             self.encPop.open()
@@ -582,24 +573,35 @@ class MainScreen(Screen):
         #mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
+        commandsNotNeedingKey = []
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
             progname = "AES/AES"
 
+        key = self.key
+        if type in commandsNotNeedingKey:
+            key = "0"       # When the key is not needed, don't bother passing it.
+
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
         return out
 
-    def getDirLists(self, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
-        out = self.passToPipe("getLists", root, targ).decode()
+    def getDirLists(self, encType, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
+        print(encType)
+        out = self.passToPipe("getLists"+encType, root, targ).decode()
         out = out.split("--!--") # Separator
         return out[0].split(",,"), out[1].split(",,")
 
     def listDir(self, location):
         out = self.passToPipe("listDir", location, "").decode()
         out = out.split("--!--") # Separator
-        return out[0].split(",,"), out[1].split(",,")
+        out = [out[0].split(",,"), out[1].split(",,")]
+        if out[0] == [""]:
+            out[0] = []
+        if out[1] == [""]:
+            out[1] = []
+        return out[0], out[1]
 
     def encString(self, string):
         out = self.passToPipe("encString", string, "").decode()
