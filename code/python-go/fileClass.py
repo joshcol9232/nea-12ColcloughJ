@@ -79,7 +79,7 @@ class File:
             if self.fileSep == "\\":
                 goproc = Popen(self.outerScreen.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
             elif self.fileSep == "/":
-                goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+                goproc = Popen(self.outerScreen.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
 
             out, err = goproc.communicate((self.hexPath).encode())
             if err != None:

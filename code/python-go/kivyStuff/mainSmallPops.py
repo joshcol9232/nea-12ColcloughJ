@@ -183,7 +183,7 @@ class btTransferPop(encDecPop):
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
             os.makedirs(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep)
 
-        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc)
 
         bufferSize = 1024
         buff = []

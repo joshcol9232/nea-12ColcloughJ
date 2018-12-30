@@ -51,7 +51,7 @@ class LoginScreen(Screen):
         if self.fileSep == "\\":
             progname = "AESWin"
         else:
-            progname = "go/AES"
+            progname = "AES/AES"
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         return out

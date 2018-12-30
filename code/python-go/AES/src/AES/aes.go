@@ -250,7 +250,6 @@ func shiftRows(state []byte) {
   //  2  6 10 14  ----> 10 14  2  6   Shifted left by 2
   //  3  7 11 15        15  3  7 11   Shifted left by 3
 
-
 func invShiftRows(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
   state[ 4], state[ 5], state[ 6], state[ 7],
@@ -266,7 +265,6 @@ func invShiftRows(state []byte) {
   //   5  9 13  1  ---->  1  5  9 13   Shifted right by 1
   //  10 14  2  6  ---->  2  6 10 14   Shifted right by 2
   //  15  3  7 11         3  7 11 15   Shifted right by 3
-
 
 func mixColumns(state []byte) {
   state[ 0], state[ 1], state[ 2], state[ 3],
@@ -321,7 +319,6 @@ func invMixColumns(state []byte) {
   mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
   mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
 }
-
 
 func Encrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[:16])

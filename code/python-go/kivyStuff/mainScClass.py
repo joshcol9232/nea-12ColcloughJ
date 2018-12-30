@@ -576,7 +576,7 @@ class MainScreen(Screen):
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
-            progname = "go/AES"
+            progname = "AES/AES"
 
         key = self.key
         if type in commandsNotNeedingKey:
@@ -640,7 +640,7 @@ class MainScreen(Screen):
         if self.fileSep == "\\":  # If on windows
             goproc = Popen(self.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
         elif self.fileSep == "/":
-            goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+            goproc = Popen(self.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
 
         out, err = goproc.communicate((location).encode())
         if err != None:
