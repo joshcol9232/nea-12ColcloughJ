@@ -605,11 +605,11 @@ class MainScreen(Screen):
 
     def encString(self, string):
         out = self.passToPipe("encString", string, "").decode()
-        return out.split(",,")
+        return out
 
     def decString(self, string):
         out = self.passToPipe("decString", string, "").decode()
-        return out.split(",,")
+        return out
 
     def encListString(self, list):
         out = self.passToPipe("encList", "\n".join(list), "").decode()
@@ -702,8 +702,9 @@ class MainScreen(Screen):
             inpSplit = inp.split(self.fileSep)
 
             if os.path.isdir(inp):
-                if inpSplit[-1][-1] == self.fileSep:
-                    inpSplit[-1] = inpSplit[-1][:-1]
+                print(inpSplit, "inpSplit")
+                while inpSplit[-1] == "":       # Removes excess "/" from input
+                    inpSplit = inpSplit[:-1]
                 targ = self.currentDir+self.encString(inpSplit[-1])+self.fileSep
                 inp = self.fileSep.join(inpSplit)+self.fileSep
             else:
