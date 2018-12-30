@@ -911,29 +911,6 @@ static CYTHON_INLINE PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* k
 #define __Pyx_PyObject_GetItem(obj, key)  PyObject_GetItem(obj, key)
 #endif
 
-/* PyObjectGetAttrStr.proto */
-#if CYTHON_USE_TYPE_SLOTS
-static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject* attr_name);
-#else
-#define __Pyx_PyObject_GetAttrStr(o,n) PyObject_GetAttr(o,n)
-#endif
-
-/* IncludeStringH.proto */
-#include <string.h>
-
-/* BytesEquals.proto */
-static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals);
-
-/* UnicodeEquals.proto */
-static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals);
-
-/* StrEquals.proto */
-#if PY_MAJOR_VERSION >= 3
-#define __Pyx_PyString_Equals __Pyx_PyUnicode_Equals
-#else
-#define __Pyx_PyString_Equals __Pyx_PyBytes_Equals
-#endif
-
 /* ListAppend.proto */
 #if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
 static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
@@ -956,6 +933,13 @@ static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
     ((likely((Py_TYPE(obj) == type) | (none_allowed && (obj == Py_None)))) ? 1 :\
         __Pyx__ArgTypeTest(obj, type, name, exact))
 static int __Pyx__ArgTypeTest(PyObject *obj, PyTypeObject *type, const char *name, int exact);
+
+/* PyObjectGetAttrStr.proto */
+#if CYTHON_USE_TYPE_SLOTS
+static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject* attr_name);
+#else
+#define __Pyx_PyObject_GetAttrStr(o,n) PyObject_GetAttr(o,n)
+#endif
 
 /* PyThreadStateGet.proto */
 #if CYTHON_FAST_THREAD_STATE
@@ -1049,450 +1033,28 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 
 /* Module declarations from 'sortsCy' */
-static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *, int __pyx_skip_dispatch); /*proto*/
 static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *, int __pyx_skip_dispatch); /*proto*/
 #define __Pyx_MODULE_NAME "sortsCy"
 extern int __pyx_module_is_main_sortsCy;
 int __pyx_module_is_main_sortsCy = 0;
 
 /* Implementation of 'sortsCy' */
-static const char __pyx_k_[] = " -";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_test[] = "__test__";
-static const char __pyx_k_rawSize[] = "rawSize";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
-static PyObject *__pyx_kp_s_;
 static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_n_s_main;
-static PyObject *__pyx_n_s_rawSize;
 static PyObject *__pyx_n_s_test;
-static PyObject *__pyx_pf_7sortsCy_quickSortSize(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObjects); /* proto */
-static PyObject *__pyx_pf_7sortsCy_2quickSortTuples(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_tuples); /* proto */
+static PyObject *__pyx_pf_7sortsCy_quickSortTuples(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_tuples); /* proto */
 /* Late includes */
 
 /* "sortsCy.pyx":1
- * cpdef list quickSortSize(list fileObjects):             # <<<<<<<<<<<<<<
- *     cdef list left = []
- *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
- */
-
-static PyObject *__pyx_pw_7sortsCy_1quickSortSize(PyObject *__pyx_self, PyObject *__pyx_v_fileObjects); /*proto*/
-static PyObject *__pyx_f_7sortsCy_quickSortSize(PyObject *__pyx_v_fileObjects, CYTHON_UNUSED int __pyx_skip_dispatch) {
-  PyObject *__pyx_v_left = 0;
-  PyObject *__pyx_v_right = 0;
-  PyObject *__pyx_v_middle = 0;
-  float __pyx_v_pivotSize;
-  PyObject *__pyx_v_pivot = NULL;
-  PyObject *__pyx_v_i = NULL;
-  PyObject *__pyx_r = NULL;
-  __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  Py_ssize_t __pyx_t_2;
-  int __pyx_t_3;
-  PyObject *__pyx_t_4 = NULL;
-  float __pyx_t_5;
-  int __pyx_t_6;
-  PyObject *__pyx_t_7 = NULL;
-  PyObject *__pyx_t_8 = NULL;
-  __Pyx_RefNannySetupContext("quickSortSize", 0);
-
-  /* "sortsCy.pyx":2
- * cpdef list quickSortSize(list fileObjects):
- *     cdef list left = []             # <<<<<<<<<<<<<<
- *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
- *     cdef list middle = []
- */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_v_left = ((PyObject*)__pyx_t_1);
-  __pyx_t_1 = 0;
-
-  /* "sortsCy.pyx":3
- * cpdef list quickSortSize(list fileObjects):
- *     cdef list left = []
- *     cdef list right = []  #Make seperate l+r lists, and add on at the end.             # <<<<<<<<<<<<<<
- *     cdef list middle = []
- *     cdef float pivotSize
- */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 3, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_v_right = ((PyObject*)__pyx_t_1);
-  __pyx_t_1 = 0;
-
-  /* "sortsCy.pyx":4
- *     cdef list left = []
- *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
- *     cdef list middle = []             # <<<<<<<<<<<<<<
- *     cdef float pivotSize
- *     if len(fileObjects) > 1:
- */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_v_middle = ((PyObject*)__pyx_t_1);
-  __pyx_t_1 = 0;
-
-  /* "sortsCy.pyx":6
- *     cdef list middle = []
- *     cdef float pivotSize
- *     if len(fileObjects) > 1:             # <<<<<<<<<<<<<<
- *         pivot = fileObjects[int(len(fileObjects)/2)]
- *         if pivot.rawSize == " -":
- */
-  if (unlikely(__pyx_v_fileObjects == Py_None)) {
-    PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 6, __pyx_L1_error)
-  }
-  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 6, __pyx_L1_error)
-  __pyx_t_3 = ((__pyx_t_2 > 1) != 0);
-  if (__pyx_t_3) {
-
-    /* "sortsCy.pyx":7
- *     cdef float pivotSize
- *     if len(fileObjects) > 1:
- *         pivot = fileObjects[int(len(fileObjects)/2)]             # <<<<<<<<<<<<<<
- *         if pivot.rawSize == " -":
- *             pivotSize = 0
- */
-    if (unlikely(__pyx_v_fileObjects == Py_None)) {
-      PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 7, __pyx_L1_error)
-    }
-    if (unlikely(__pyx_v_fileObjects == Py_None)) {
-      PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 7, __pyx_L1_error)
-    }
-    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_fileObjects); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 7, __pyx_L1_error)
-    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 7, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_fileObjects, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_v_pivot = __pyx_t_1;
-    __pyx_t_1 = 0;
-
-    /* "sortsCy.pyx":8
- *     if len(fileObjects) > 1:
- *         pivot = fileObjects[int(len(fileObjects)/2)]
- *         if pivot.rawSize == " -":             # <<<<<<<<<<<<<<
- *             pivotSize = 0
- *         else:
- */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_pivot, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_3 = (__Pyx_PyString_Equals(__pyx_t_1, __pyx_kp_s_, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 8, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (__pyx_t_3) {
-
-      /* "sortsCy.pyx":9
- *         pivot = fileObjects[int(len(fileObjects)/2)]
- *         if pivot.rawSize == " -":
- *             pivotSize = 0             # <<<<<<<<<<<<<<
- *         else:
- *             pivotSize = pivot.rawSize
- */
-      __pyx_v_pivotSize = 0.0;
-
-      /* "sortsCy.pyx":8
- *     if len(fileObjects) > 1:
- *         pivot = fileObjects[int(len(fileObjects)/2)]
- *         if pivot.rawSize == " -":             # <<<<<<<<<<<<<<
- *             pivotSize = 0
- *         else:
- */
-      goto __pyx_L4;
-    }
-
-    /* "sortsCy.pyx":11
- *             pivotSize = 0
- *         else:
- *             pivotSize = pivot.rawSize             # <<<<<<<<<<<<<<
- * 
- *         for i in fileObjects:
- */
-    /*else*/ {
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_pivot, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 11, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_v_pivotSize = __pyx_t_5;
-    }
-    __pyx_L4:;
-
-    /* "sortsCy.pyx":13
- *             pivotSize = pivot.rawSize
- * 
- *         for i in fileObjects:             # <<<<<<<<<<<<<<
- *             if i.rawSize == " -":
- *                 left.append(i)
- */
-    if (unlikely(__pyx_v_fileObjects == Py_None)) {
-      PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 13, __pyx_L1_error)
-    }
-    __pyx_t_1 = __pyx_v_fileObjects; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
-    for (;;) {
-      if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_1)) break;
-      #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 13, __pyx_L1_error)
-      #else
-      __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 13, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      #endif
-      __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_4);
-      __pyx_t_4 = 0;
-
-      /* "sortsCy.pyx":14
- * 
- *         for i in fileObjects:
- *             if i.rawSize == " -":             # <<<<<<<<<<<<<<
- *                 left.append(i)
- *             elif i.rawSize < pivotSize:
- */
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 14, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_3 = (__Pyx_PyString_Equals(__pyx_t_4, __pyx_kp_s_, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 14, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (__pyx_t_3) {
-
-        /* "sortsCy.pyx":15
- *         for i in fileObjects:
- *             if i.rawSize == " -":
- *                 left.append(i)             # <<<<<<<<<<<<<<
- *             elif i.rawSize < pivotSize:
- *                 left.append(i)
- */
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 15, __pyx_L1_error)
-
-        /* "sortsCy.pyx":14
- * 
- *         for i in fileObjects:
- *             if i.rawSize == " -":             # <<<<<<<<<<<<<<
- *                 left.append(i)
- *             elif i.rawSize < pivotSize:
- */
-        goto __pyx_L7;
-      }
-
-      /* "sortsCy.pyx":16
- *             if i.rawSize == " -":
- *                 left.append(i)
- *             elif i.rawSize < pivotSize:             # <<<<<<<<<<<<<<
- *                 left.append(i)
- *             elif i.rawSize > pivotSize:
- */
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 16, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_7 = PyFloat_FromDouble(__pyx_v_pivotSize); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 16, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_8 = PyObject_RichCompare(__pyx_t_4, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 16, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 16, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (__pyx_t_3) {
-
-        /* "sortsCy.pyx":17
- *                 left.append(i)
- *             elif i.rawSize < pivotSize:
- *                 left.append(i)             # <<<<<<<<<<<<<<
- *             elif i.rawSize > pivotSize:
- *                 right.append(i)
- */
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 17, __pyx_L1_error)
-
-        /* "sortsCy.pyx":16
- *             if i.rawSize == " -":
- *                 left.append(i)
- *             elif i.rawSize < pivotSize:             # <<<<<<<<<<<<<<
- *                 left.append(i)
- *             elif i.rawSize > pivotSize:
- */
-        goto __pyx_L7;
-      }
-
-      /* "sortsCy.pyx":18
- *             elif i.rawSize < pivotSize:
- *                 left.append(i)
- *             elif i.rawSize > pivotSize:             # <<<<<<<<<<<<<<
- *                 right.append(i)
- *             else:
- */
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_i, __pyx_n_s_rawSize); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 18, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_7 = PyFloat_FromDouble(__pyx_v_pivotSize); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 18, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_4 = PyObject_RichCompare(__pyx_t_8, __pyx_t_7, Py_GT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 18, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 18, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (__pyx_t_3) {
-
-        /* "sortsCy.pyx":19
- *                 left.append(i)
- *             elif i.rawSize > pivotSize:
- *                 right.append(i)             # <<<<<<<<<<<<<<
- *             else:
- *                 middle.append(i)
- */
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 19, __pyx_L1_error)
-
-        /* "sortsCy.pyx":18
- *             elif i.rawSize < pivotSize:
- *                 left.append(i)
- *             elif i.rawSize > pivotSize:             # <<<<<<<<<<<<<<
- *                 right.append(i)
- *             else:
- */
-        goto __pyx_L7;
-      }
-
-      /* "sortsCy.pyx":21
- *                 right.append(i)
- *             else:
- *                 middle.append(i)             # <<<<<<<<<<<<<<
- *         return quickSortSize(left)+middle+quickSortSize(right)
- *     else:
- */
-      /*else*/ {
-        __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_i); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 21, __pyx_L1_error)
-      }
-      __pyx_L7:;
-
-      /* "sortsCy.pyx":13
- *             pivotSize = pivot.rawSize
- * 
- *         for i in fileObjects:             # <<<<<<<<<<<<<<
- *             if i.rawSize == " -":
- *                 left.append(i)
- */
-    }
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-    /* "sortsCy.pyx":22
- *             else:
- *                 middle.append(i)
- *         return quickSortSize(left)+middle+quickSortSize(right)             # <<<<<<<<<<<<<<
- *     else:
- *         return fileObjects
- */
-    __Pyx_XDECREF(__pyx_r);
-    __pyx_t_1 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_left, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = PyNumber_Add(__pyx_t_1, __pyx_v_middle); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_right, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_7 = PyNumber_Add(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_7);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_r = ((PyObject*)__pyx_t_7);
-    __pyx_t_7 = 0;
-    goto __pyx_L0;
-
-    /* "sortsCy.pyx":6
- *     cdef list middle = []
- *     cdef float pivotSize
- *     if len(fileObjects) > 1:             # <<<<<<<<<<<<<<
- *         pivot = fileObjects[int(len(fileObjects)/2)]
- *         if pivot.rawSize == " -":
- */
-  }
-
-  /* "sortsCy.pyx":24
- *         return quickSortSize(left)+middle+quickSortSize(right)
- *     else:
- *         return fileObjects             # <<<<<<<<<<<<<<
- * 
- * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
- */
-  /*else*/ {
-    __Pyx_XDECREF(__pyx_r);
-    __Pyx_INCREF(__pyx_v_fileObjects);
-    __pyx_r = __pyx_v_fileObjects;
-    goto __pyx_L0;
-  }
-
-  /* "sortsCy.pyx":1
- * cpdef list quickSortSize(list fileObjects):             # <<<<<<<<<<<<<<
- *     cdef list left = []
- *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
- */
-
-  /* function exit code */
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_7);
-  __Pyx_XDECREF(__pyx_t_8);
-  __Pyx_AddTraceback("sortsCy.quickSortSize", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = 0;
-  __pyx_L0:;
-  __Pyx_XDECREF(__pyx_v_left);
-  __Pyx_XDECREF(__pyx_v_right);
-  __Pyx_XDECREF(__pyx_v_middle);
-  __Pyx_XDECREF(__pyx_v_pivot);
-  __Pyx_XDECREF(__pyx_v_i);
-  __Pyx_XGIVEREF(__pyx_r);
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-/* Python wrapper */
-static PyObject *__pyx_pw_7sortsCy_1quickSortSize(PyObject *__pyx_self, PyObject *__pyx_v_fileObjects); /*proto*/
-static PyObject *__pyx_pw_7sortsCy_1quickSortSize(PyObject *__pyx_self, PyObject *__pyx_v_fileObjects) {
-  PyObject *__pyx_r = 0;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("quickSortSize (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_fileObjects), (&PyList_Type), 1, "fileObjects", 1))) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_r = __pyx_pf_7sortsCy_quickSortSize(__pyx_self, ((PyObject*)__pyx_v_fileObjects));
-
-  /* function exit code */
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __pyx_r = NULL;
-  __pyx_L0:;
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static PyObject *__pyx_pf_7sortsCy_quickSortSize(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_fileObjects) {
-  PyObject *__pyx_r = NULL;
-  __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  __Pyx_RefNannySetupContext("quickSortSize", 0);
-  __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_7sortsCy_quickSortSize(__pyx_v_fileObjects, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_r = __pyx_t_1;
-  __pyx_t_1 = 0;
-  goto __pyx_L0;
-
-  /* function exit code */
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("sortsCy.quickSortSize", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = NULL;
-  __pyx_L0:;
-  __Pyx_XGIVEREF(__pyx_r);
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-/* "sortsCy.pyx":26
- *         return fileObjects
- * 
  * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  */
 
-static PyObject *__pyx_pw_7sortsCy_3quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples); /*proto*/
+static PyObject *__pyx_pw_7sortsCy_1quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples); /*proto*/
 static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyObject *__pyx_v_left = 0;
   PyObject *__pyx_v_right = 0;
@@ -1511,43 +1073,42 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
   int __pyx_t_8;
   __Pyx_RefNannySetupContext("quickSortTuples", 0);
 
-  /* "sortsCy.pyx":27
- * 
+  /* "sortsCy.pyx":2
  * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
  *     cdef list left = []             # <<<<<<<<<<<<<<
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 27, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_left = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":28
+  /* "sortsCy.pyx":3
  * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.             # <<<<<<<<<<<<<<
  *     cdef list middle = []
  *     cdef float pivot
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_right = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":29
+  /* "sortsCy.pyx":4
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  *     cdef list middle = []             # <<<<<<<<<<<<<<
  *     cdef float pivot
  *     if len(tuples) > 1:
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 29, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_middle = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "sortsCy.pyx":31
+  /* "sortsCy.pyx":6
  *     cdef list middle = []
  *     cdef float pivot
  *     if len(tuples) > 1:             # <<<<<<<<<<<<<<
@@ -1556,13 +1117,13 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  */
   if (unlikely(__pyx_v_tuples == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 31, __pyx_L1_error)
+    __PYX_ERR(0, 6, __pyx_L1_error)
   }
-  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_tuples); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 31, __pyx_L1_error)
+  __pyx_t_2 = PyList_GET_SIZE(__pyx_v_tuples); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 6, __pyx_L1_error)
   __pyx_t_3 = ((__pyx_t_2 > 1) != 0);
   if (__pyx_t_3) {
 
-    /* "sortsCy.pyx":32
+    /* "sortsCy.pyx":7
  *     cdef float pivot
  *     if len(tuples) > 1:
  *         pivot = tuples[int(len(tuples)/2)][0]             # <<<<<<<<<<<<<<
@@ -1571,29 +1132,29 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  */
     if (unlikely(__pyx_v_tuples == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 32, __pyx_L1_error)
+      __PYX_ERR(0, 7, __pyx_L1_error)
     }
     if (unlikely(__pyx_v_tuples == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 32, __pyx_L1_error)
+      __PYX_ERR(0, 7, __pyx_L1_error)
     }
-    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_tuples); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 32, __pyx_L1_error)
-    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 32, __pyx_L1_error)
+    __pyx_t_2 = PyList_GET_SIZE(__pyx_v_tuples); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 7, __pyx_L1_error)
+    __pyx_t_1 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_2, 2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 32, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 7, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_tuples, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 32, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_tuples, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 32, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 7, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 32, __pyx_L1_error)
+    __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 7, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_v_pivot = __pyx_t_5;
 
-    /* "sortsCy.pyx":33
+    /* "sortsCy.pyx":8
  *     if len(tuples) > 1:
  *         pivot = tuples[int(len(tuples)/2)][0]
  *         for i in tuples:             # <<<<<<<<<<<<<<
@@ -1602,48 +1163,48 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  */
     if (unlikely(__pyx_v_tuples == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 33, __pyx_L1_error)
+      __PYX_ERR(0, 8, __pyx_L1_error)
     }
     __pyx_t_4 = __pyx_v_tuples; __Pyx_INCREF(__pyx_t_4); __pyx_t_2 = 0;
     for (;;) {
       if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_4)) break;
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_1 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_2); __Pyx_INCREF(__pyx_t_1); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 33, __pyx_L1_error)
+      __pyx_t_1 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_2); __Pyx_INCREF(__pyx_t_1); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 8, __pyx_L1_error)
       #else
-      __pyx_t_1 = PySequence_ITEM(__pyx_t_4, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 33, __pyx_L1_error)
+      __pyx_t_1 = PySequence_ITEM(__pyx_t_4, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       #endif
       __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_1);
       __pyx_t_1 = 0;
 
-      /* "sortsCy.pyx":34
+      /* "sortsCy.pyx":9
  *         pivot = tuples[int(len(tuples)/2)][0]
  *         for i in tuples:
  *             if i[0] < pivot:             # <<<<<<<<<<<<<<
  *                 left.append(i)
  *             elif i[0] > pivot:
  */
-      __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_i, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 34, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_i, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 9, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_6 = PyFloat_FromDouble(__pyx_v_pivot); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 34, __pyx_L1_error)
+      __pyx_t_6 = PyFloat_FromDouble(__pyx_v_pivot); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 9, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_7 = PyObject_RichCompare(__pyx_t_1, __pyx_t_6, Py_LT); __Pyx_XGOTREF(__pyx_t_7); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 34, __pyx_L1_error)
+      __pyx_t_7 = PyObject_RichCompare(__pyx_t_1, __pyx_t_6, Py_LT); __Pyx_XGOTREF(__pyx_t_7); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 9, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_7); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 34, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_7); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 9, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       if (__pyx_t_3) {
 
-        /* "sortsCy.pyx":35
+        /* "sortsCy.pyx":10
  *         for i in tuples:
  *             if i[0] < pivot:
  *                 left.append(i)             # <<<<<<<<<<<<<<
  *             elif i[0] > pivot:
  *                 right.append(i)
  */
-        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 35, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_left, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 10, __pyx_L1_error)
 
-        /* "sortsCy.pyx":34
+        /* "sortsCy.pyx":9
  *         pivot = tuples[int(len(tuples)/2)][0]
  *         for i in tuples:
  *             if i[0] < pivot:             # <<<<<<<<<<<<<<
@@ -1653,34 +1214,34 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
         goto __pyx_L6;
       }
 
-      /* "sortsCy.pyx":36
+      /* "sortsCy.pyx":11
  *             if i[0] < pivot:
  *                 left.append(i)
  *             elif i[0] > pivot:             # <<<<<<<<<<<<<<
  *                 right.append(i)
  *             else:
  */
-      __pyx_t_7 = __Pyx_GetItemInt(__pyx_v_i, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 36, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_GetItemInt(__pyx_v_i, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 11, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_6 = PyFloat_FromDouble(__pyx_v_pivot); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 36, __pyx_L1_error)
+      __pyx_t_6 = PyFloat_FromDouble(__pyx_v_pivot); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 11, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_t_7, __pyx_t_6, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 36, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_t_7, __pyx_t_6, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 36, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 11, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       if (__pyx_t_3) {
 
-        /* "sortsCy.pyx":37
+        /* "sortsCy.pyx":12
  *                 left.append(i)
  *             elif i[0] > pivot:
  *                 right.append(i)             # <<<<<<<<<<<<<<
  *             else:
  *                 middle.append(i)
  */
-        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 37, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_right, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 12, __pyx_L1_error)
 
-        /* "sortsCy.pyx":36
+        /* "sortsCy.pyx":11
  *             if i[0] < pivot:
  *                 left.append(i)
  *             elif i[0] > pivot:             # <<<<<<<<<<<<<<
@@ -1690,7 +1251,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
         goto __pyx_L6;
       }
 
-      /* "sortsCy.pyx":39
+      /* "sortsCy.pyx":14
  *                 right.append(i)
  *             else:
  *                 middle.append(i)             # <<<<<<<<<<<<<<
@@ -1698,11 +1259,11 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  *     else:
  */
       /*else*/ {
-        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 39, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyList_Append(__pyx_v_middle, __pyx_v_i); if (unlikely(__pyx_t_8 == ((int)-1))) __PYX_ERR(0, 14, __pyx_L1_error)
       }
       __pyx_L6:;
 
-      /* "sortsCy.pyx":33
+      /* "sortsCy.pyx":8
  *     if len(tuples) > 1:
  *         pivot = tuples[int(len(tuples)/2)][0]
  *         for i in tuples:             # <<<<<<<<<<<<<<
@@ -1712,7 +1273,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "sortsCy.pyx":40
+    /* "sortsCy.pyx":15
  *             else:
  *                 middle.append(i)
  *         return quickSortTuples(left)+middle+quickSortTuples(right)             # <<<<<<<<<<<<<<
@@ -1720,14 +1281,14 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  *         return tuples
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_left, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_4 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_left, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 15, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_1 = PyNumber_Add(__pyx_t_4, __pyx_v_middle); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_1 = PyNumber_Add(__pyx_t_4, __pyx_v_middle); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_right, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_4 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_right, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 15, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_6 = PyNumber_Add(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_6 = PyNumber_Add(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 15, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -1735,7 +1296,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
     __pyx_t_6 = 0;
     goto __pyx_L0;
 
-    /* "sortsCy.pyx":31
+    /* "sortsCy.pyx":6
  *     cdef list middle = []
  *     cdef float pivot
  *     if len(tuples) > 1:             # <<<<<<<<<<<<<<
@@ -1744,7 +1305,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
  */
   }
 
-  /* "sortsCy.pyx":42
+  /* "sortsCy.pyx":17
  *         return quickSortTuples(left)+middle+quickSortTuples(right)
  *     else:
  *         return tuples             # <<<<<<<<<<<<<<
@@ -1756,9 +1317,7 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
     goto __pyx_L0;
   }
 
-  /* "sortsCy.pyx":26
- *         return fileObjects
- * 
+  /* "sortsCy.pyx":1
  * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
@@ -1783,13 +1342,13 @@ static PyObject *__pyx_f_7sortsCy_quickSortTuples(PyObject *__pyx_v_tuples, CYTH
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7sortsCy_3quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples); /*proto*/
-static PyObject *__pyx_pw_7sortsCy_3quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples) {
+static PyObject *__pyx_pw_7sortsCy_1quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples); /*proto*/
+static PyObject *__pyx_pw_7sortsCy_1quickSortTuples(PyObject *__pyx_self, PyObject *__pyx_v_tuples) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("quickSortTuples (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_tuples), (&PyList_Type), 1, "tuples", 1))) __PYX_ERR(0, 26, __pyx_L1_error)
-  __pyx_r = __pyx_pf_7sortsCy_2quickSortTuples(__pyx_self, ((PyObject*)__pyx_v_tuples));
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_tuples), (&PyList_Type), 1, "tuples", 1))) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_r = __pyx_pf_7sortsCy_quickSortTuples(__pyx_self, ((PyObject*)__pyx_v_tuples));
 
   /* function exit code */
   goto __pyx_L0;
@@ -1800,13 +1359,13 @@ static PyObject *__pyx_pw_7sortsCy_3quickSortTuples(PyObject *__pyx_self, PyObje
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7sortsCy_2quickSortTuples(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_tuples) {
+static PyObject *__pyx_pf_7sortsCy_quickSortTuples(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_tuples) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("quickSortTuples", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_tuples, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_7sortsCy_quickSortTuples(__pyx_v_tuples, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -1824,8 +1383,7 @@ static PyObject *__pyx_pf_7sortsCy_2quickSortTuples(CYTHON_UNUSED PyObject *__py
 }
 
 static PyMethodDef __pyx_methods[] = {
-  {"quickSortSize", (PyCFunction)__pyx_pw_7sortsCy_1quickSortSize, METH_O, 0},
-  {"quickSortTuples", (PyCFunction)__pyx_pw_7sortsCy_3quickSortTuples, METH_O, 0},
+  {"quickSortTuples", (PyCFunction)__pyx_pw_7sortsCy_1quickSortTuples, METH_O, 0},
   {0, 0, 0, 0}
 };
 
@@ -1862,10 +1420,8 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
-  {&__pyx_kp_s_, __pyx_k_, sizeof(__pyx_k_), 0, 0, 1, 0},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
-  {&__pyx_n_s_rawSize, __pyx_k_rawSize, sizeof(__pyx_k_rawSize), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
@@ -2125,7 +1681,7 @@ if (!__Pyx_RefNanny) {
   #endif
 
   /* "sortsCy.pyx":1
- * cpdef list quickSortSize(list fileObjects):             # <<<<<<<<<<<<<<
+ * cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).             # <<<<<<<<<<<<<<
  *     cdef list left = []
  *     cdef list right = []  #Make seperate l+r lists, and add on at the end.
  */
@@ -2523,169 +2079,6 @@ static PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key) {
 }
 #endif
 
-/* PyObjectGetAttrStr */
-#if CYTHON_USE_TYPE_SLOTS
-static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject* attr_name) {
-    PyTypeObject* tp = Py_TYPE(obj);
-    if (likely(tp->tp_getattro))
-        return tp->tp_getattro(obj, attr_name);
-#if PY_MAJOR_VERSION < 3
-    if (likely(tp->tp_getattr))
-        return tp->tp_getattr(obj, PyString_AS_STRING(attr_name));
-#endif
-    return PyObject_GetAttr(obj, attr_name);
-}
-#endif
-
-/* BytesEquals */
-static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals) {
-#if CYTHON_COMPILING_IN_PYPY
-    return PyObject_RichCompareBool(s1, s2, equals);
-#else
-    if (s1 == s2) {
-        return (equals == Py_EQ);
-    } else if (PyBytes_CheckExact(s1) & PyBytes_CheckExact(s2)) {
-        const char *ps1, *ps2;
-        Py_ssize_t length = PyBytes_GET_SIZE(s1);
-        if (length != PyBytes_GET_SIZE(s2))
-            return (equals == Py_NE);
-        ps1 = PyBytes_AS_STRING(s1);
-        ps2 = PyBytes_AS_STRING(s2);
-        if (ps1[0] != ps2[0]) {
-            return (equals == Py_NE);
-        } else if (length == 1) {
-            return (equals == Py_EQ);
-        } else {
-            int result;
-#if CYTHON_USE_UNICODE_INTERNALS
-            Py_hash_t hash1, hash2;
-            hash1 = ((PyBytesObject*)s1)->ob_shash;
-            hash2 = ((PyBytesObject*)s2)->ob_shash;
-            if (hash1 != hash2 && hash1 != -1 && hash2 != -1) {
-                return (equals == Py_NE);
-            }
-#endif
-            result = memcmp(ps1, ps2, (size_t)length);
-            return (equals == Py_EQ) ? (result == 0) : (result != 0);
-        }
-    } else if ((s1 == Py_None) & PyBytes_CheckExact(s2)) {
-        return (equals == Py_NE);
-    } else if ((s2 == Py_None) & PyBytes_CheckExact(s1)) {
-        return (equals == Py_NE);
-    } else {
-        int result;
-        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
-        if (!py_result)
-            return -1;
-        result = __Pyx_PyObject_IsTrue(py_result);
-        Py_DECREF(py_result);
-        return result;
-    }
-#endif
-}
-
-/* UnicodeEquals */
-static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals) {
-#if CYTHON_COMPILING_IN_PYPY
-    return PyObject_RichCompareBool(s1, s2, equals);
-#else
-#if PY_MAJOR_VERSION < 3
-    PyObject* owned_ref = NULL;
-#endif
-    int s1_is_unicode, s2_is_unicode;
-    if (s1 == s2) {
-        goto return_eq;
-    }
-    s1_is_unicode = PyUnicode_CheckExact(s1);
-    s2_is_unicode = PyUnicode_CheckExact(s2);
-#if PY_MAJOR_VERSION < 3
-    if ((s1_is_unicode & (!s2_is_unicode)) && PyString_CheckExact(s2)) {
-        owned_ref = PyUnicode_FromObject(s2);
-        if (unlikely(!owned_ref))
-            return -1;
-        s2 = owned_ref;
-        s2_is_unicode = 1;
-    } else if ((s2_is_unicode & (!s1_is_unicode)) && PyString_CheckExact(s1)) {
-        owned_ref = PyUnicode_FromObject(s1);
-        if (unlikely(!owned_ref))
-            return -1;
-        s1 = owned_ref;
-        s1_is_unicode = 1;
-    } else if (((!s2_is_unicode) & (!s1_is_unicode))) {
-        return __Pyx_PyBytes_Equals(s1, s2, equals);
-    }
-#endif
-    if (s1_is_unicode & s2_is_unicode) {
-        Py_ssize_t length;
-        int kind;
-        void *data1, *data2;
-        if (unlikely(__Pyx_PyUnicode_READY(s1) < 0) || unlikely(__Pyx_PyUnicode_READY(s2) < 0))
-            return -1;
-        length = __Pyx_PyUnicode_GET_LENGTH(s1);
-        if (length != __Pyx_PyUnicode_GET_LENGTH(s2)) {
-            goto return_ne;
-        }
-#if CYTHON_USE_UNICODE_INTERNALS
-        {
-            Py_hash_t hash1, hash2;
-        #if CYTHON_PEP393_ENABLED
-            hash1 = ((PyASCIIObject*)s1)->hash;
-            hash2 = ((PyASCIIObject*)s2)->hash;
-        #else
-            hash1 = ((PyUnicodeObject*)s1)->hash;
-            hash2 = ((PyUnicodeObject*)s2)->hash;
-        #endif
-            if (hash1 != hash2 && hash1 != -1 && hash2 != -1) {
-                goto return_ne;
-            }
-        }
-#endif
-        kind = __Pyx_PyUnicode_KIND(s1);
-        if (kind != __Pyx_PyUnicode_KIND(s2)) {
-            goto return_ne;
-        }
-        data1 = __Pyx_PyUnicode_DATA(s1);
-        data2 = __Pyx_PyUnicode_DATA(s2);
-        if (__Pyx_PyUnicode_READ(kind, data1, 0) != __Pyx_PyUnicode_READ(kind, data2, 0)) {
-            goto return_ne;
-        } else if (length == 1) {
-            goto return_eq;
-        } else {
-            int result = memcmp(data1, data2, (size_t)(length * kind));
-            #if PY_MAJOR_VERSION < 3
-            Py_XDECREF(owned_ref);
-            #endif
-            return (equals == Py_EQ) ? (result == 0) : (result != 0);
-        }
-    } else if ((s1 == Py_None) & s2_is_unicode) {
-        goto return_ne;
-    } else if ((s2 == Py_None) & s1_is_unicode) {
-        goto return_ne;
-    } else {
-        int result;
-        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
-        #if PY_MAJOR_VERSION < 3
-        Py_XDECREF(owned_ref);
-        #endif
-        if (!py_result)
-            return -1;
-        result = __Pyx_PyObject_IsTrue(py_result);
-        Py_DECREF(py_result);
-        return result;
-    }
-return_eq:
-    #if PY_MAJOR_VERSION < 3
-    Py_XDECREF(owned_ref);
-    #endif
-    return (equals == Py_EQ);
-return_ne:
-    #if PY_MAJOR_VERSION < 3
-    Py_XDECREF(owned_ref);
-    #endif
-    return (equals == Py_NE);
-#endif
-}
-
 /* ArgTypeTest */
 static int __Pyx__ArgTypeTest(PyObject *obj, PyTypeObject *type, const char *name, int exact)
 {
@@ -2706,6 +2099,20 @@ static int __Pyx__ArgTypeTest(PyObject *obj, PyTypeObject *type, const char *nam
         name, type->tp_name, Py_TYPE(obj)->tp_name);
     return 0;
 }
+
+/* PyObjectGetAttrStr */
+#if CYTHON_USE_TYPE_SLOTS
+static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject* attr_name) {
+    PyTypeObject* tp = Py_TYPE(obj);
+    if (likely(tp->tp_getattro))
+        return tp->tp_getattro(obj, attr_name);
+#if PY_MAJOR_VERSION < 3
+    if (likely(tp->tp_getattr))
+        return tp->tp_getattr(obj, PyString_AS_STRING(attr_name));
+#endif
+    return PyObject_GetAttr(obj, attr_name);
+}
+#endif
 
 /* PyErrFetchRestore */
 #if CYTHON_FAST_THREAD_STATE

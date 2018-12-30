@@ -617,7 +617,6 @@ class MainScreen(Screen):
 
     def sortSize(self, fileObjects):
         out = self.passToPipe("sortSize", "\n".join([str(i.rawSize) for i in fileObjects]), "").decode()
-        print(out, "OUT")
         out = [int(i) for i in out.split(",,")]
         if len(out) != len(fileObjects):
             raise ValueError("Length of sizes not the same as original:", len(out), len(fileObjects))
@@ -627,12 +626,12 @@ class MainScreen(Screen):
 
         added = []
         for i in fileObjects:
-            outList[out.index(i.rawSize)] = i
+            outList[out.index(i.rawSize)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
             added.append(i)
 
         #print([x.name for x in fileObjects if x not in added])
 
-        return [i for i in outList if i != -1]
+        return [i for i in outList if i != -1] # In case of any left-overs
 
 
     def decListString(self, list):

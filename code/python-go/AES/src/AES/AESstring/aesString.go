@@ -4,7 +4,7 @@ import (
   "log"
   "os"
   "io/ioutil"
-  "encoding/hex" // For enc/decoding encrypted string
+  b64 "encoding/base64" // For enc/decoding encrypted string
   "AES"
   "sorts" // QuickSortAlph made in sorts.go
 )
@@ -19,12 +19,11 @@ func EncryptFileName(expandedKeys [176]byte, name string) string {
   for i := 0; i < len(byteName); i += 16 {
     AES.Encrypt(byteName[i:i+16], expandedKeys)  // Done by reference so does not need to be assigned
   }
-
-  return hex.EncodeToString(byteName)
+  return b64.URLEncoding.EncodeToString(byteName) // URL encoding used so it is safe for file systems ("/")
 }
 
 func DecryptFileName(expandedKeys [176]byte, hexName string) string {
-  byteName, err := hex.DecodeString(hexName)
+  byteName, err := b64.URLEncoding.DecodeString(hexName)
   if err != nil { panic(err) }
 
   for i := 0; i < len(byteName); i += 16 {
@@ -64,15 +63,11 @@ func GetListsEnc(expandedKeys [176]byte, fileList, targetList []string, folder, 
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
-    if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
-      if list[i].IsDir() {
-        fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
-      } else {
-        fileList   = append(fileList, folder+list[i].Name())
-        targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
-      }
+    if list[i].IsDir() {
+      fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
     } else {
-      log.Output(0, "Name too long: "+list[i].Name())
+      fileList   = append(fileList, folder+list[i].Name())
+      targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
     }
   }
   return fileList, targetList

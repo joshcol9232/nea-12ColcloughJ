@@ -1,8 +1,6 @@
 from kivy.uix.button import Button
 from kivy.uix.image import Image
 
-from sortsCy import quickSortSize
-
 class listButton(Button):           #File button when using main screen.
 
     def __init__(self, mainScreen, fileObj, **kwargs):
