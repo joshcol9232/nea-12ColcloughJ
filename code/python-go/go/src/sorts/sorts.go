@@ -12,7 +12,7 @@ type Tuple struct {
   B string
 }
 
-func UseQuickSort(inp []string) []string {
+func UseQuickSortSize(inp []string) []string {
   var nums []int64
   var out []string
   for i := 0; i < len(inp); i++ {

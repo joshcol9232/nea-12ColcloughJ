@@ -63,7 +63,7 @@ func main() {
     fmt.Print(strings.Join(fs, ",,")+"--!--")
     fmt.Print(strings.Join(fsDec, ",,"))
   } else if request == "sortSize" {
-    fmt.Print(strings.Join(sorts.UseQuickSort(strings.Split(string(fields[1]), "\n")), ",,"))
+    fmt.Print(strings.Join(sorts.UseQuickSortSize(strings.Split(string(fields[1]), "\n")), ",,"))
   } else if request == "test" {
     valid := AEScheckKey.CheckKeyOfFile(key, string(fields[1]))
     if valid {

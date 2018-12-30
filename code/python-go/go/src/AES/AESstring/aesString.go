@@ -1,7 +1,6 @@
 package AESstring
 
 import (
-  "log"
   "os"
   "io/ioutil"
   b64 "encoding/base64" // For enc/decoding encrypted string
@@ -78,15 +77,11 @@ func GetListsDec(expandedKeys [176]byte, fileList, targetList []string, folder, 
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
-    if len(list[i].Name()) < 127 { // Max is 255 for file names, but this will double due to hex.
-      if list[i].IsDir() {
-        fileList, targetList = GetListsDec(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKeys, list[i].Name())+"/")
-      } else {
-        fileList   = append(fileList, folder+list[i].Name())
-        targetList = append(targetList, target+DecryptFileName(expandedKeys, list[i].Name()))
-      }
+    if list[i].IsDir() {
+      fileList, targetList = GetListsDec(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKeys, list[i].Name())+"/")
     } else {
-      log.Output(0, "Name too long: "+list[i].Name())
+      fileList   = append(fileList, folder+list[i].Name())
+      targetList = append(targetList, target+DecryptFileName(expandedKeys, list[i].Name()))
     }
   }
   return fileList, targetList

@@ -500,7 +500,6 @@ class MainScreen(Screen):
 ###########Searches############
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName)
-        print("Dir name:", dirName, files)
         if len(files) == 0:
             return
         for fileObj in files:
@@ -573,11 +572,11 @@ class MainScreen(Screen):
         #mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
-        commandsNotNeedingKey = []
+        commandsNotNeedingKey = ["sortSize", "sortAlph"]
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
-            progname = "AES/AES"
+            progname = "go/AES"
 
         key = self.key
         if type in commandsNotNeedingKey:
@@ -588,7 +587,6 @@ class MainScreen(Screen):
         return out
 
     def getDirLists(self, encType, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
-        print(encType)
         out = self.passToPipe("getLists"+encType, root, targ).decode()
         out = out.split("--!--") # Separator
         return out[0].split(",,"), out[1].split(",,")
@@ -721,7 +719,6 @@ class MainScreen(Screen):
             inpSplit = inp.split(self.fileSep)
 
             if os.path.isdir(inp):
-                print(inpSplit, "inpSplit")
                 while inpSplit[-1] == "":       # Removes excess "/" from input
                     inpSplit = inpSplit[:-1]
                 targ = self.currentDir+self.encString(inpSplit[-1])+self.fileSep

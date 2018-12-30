@@ -2,7 +2,6 @@ package AESfiles
 
 import (
   "os"        // For opening files
-  "log"
   "io"        // For reading files
   "runtime"   // For getting CPU core count
   "AES"
@@ -249,7 +248,6 @@ func DecryptFile(expandedKeys [176]byte, f, w string) {
 func EncryptList(expandedKeys [176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
-    log.Output(0, fileList[i]+" FILE")
     EncryptFile(expandedKeys, fileList[i], targetList[i])
   }
 }
