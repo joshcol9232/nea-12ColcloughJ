@@ -21,7 +21,7 @@ class nameSortButton(Button):           #Sorts the listButtons alphabetically an
         if self.outerScreen.ascending:
             self.text = "^"
             self.outerScreen.removeButtons()
-            self.outerScreen.createButtons(self.outerScreen.currentList, True)
+            self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
         else:
             self.text = "v"
             self.outerScreen.removeButtons()

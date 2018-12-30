@@ -62,7 +62,7 @@ class LoginScreen(Screen):
             self.count = 0
             self.findFile(self.path)
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
-            if diditwork == b"-Valid-\n": #The go program prints "-Valid-\n" or "-Invalid-\n" once it is done checking the key.
+            if diditwork == b"-Valid-": #The go program prints "-Valid-" or "-Invalid-" once it is done checking the key.
                 return True
             else:
                 return False

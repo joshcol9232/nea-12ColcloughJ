@@ -15,15 +15,14 @@ class File:
         self.rawSize = self.__getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
-        if path == None:
-            self.path = self.__getNormDir(self.hexPath)
-        else:
-            self.path = path
         if name == None:
             self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
         else:
             self.name = name
-
+        if path == None:
+            self.path = self.__getNormDir(self.hexPath)
+        else:
+            self.path = path
         if extension == None:
             extension = self.path.split(".")
             self.extension = extension[-1].lower()
@@ -38,11 +37,10 @@ class File:
 
 
     def __getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
-        hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
-        for i in range(len(hexDir)):
-            hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
-
-        return self.fileSep.join(hexDir)
+        dir = self.fileSep.join(self.outerScreen.decListString(hexDir.replace(self.outerScreen.path, "").split(self.fileSep)[:-1]))+self.name
+        if self.isDir:
+            dir += self.fileSep
+        return dir
 
     def __getFileSize(self, recurse=True):
         if self.isDir:
@@ -95,4 +93,3 @@ class File:
             self.checkSum = out.decode()
 
         return self.checkSum
-

@@ -1,11 +1,12 @@
 package AESstring
 
 import (
+  "log"
   "os"
   "io/ioutil"
-  "log"
   "encoding/hex" // For enc/decoding encrypted string
   "AES"
+  "sorts" // QuickSortAlph made in sorts.go
 )
 
 func EncryptFileName(expandedKeys [176]byte, name string) string {
@@ -29,16 +30,18 @@ func DecryptFileName(expandedKeys [176]byte, hexName string) string {
   for i := 0; i < len(byteName); i += 16 {
     AES.Decrypt(byteName[i:i+16], expandedKeys)
   }
-  checkForPadding(byteName)
+  byteName = checkForPadding(byteName)
   return string(byteName[:])
 }
 
-func checkForPadding(input []byte) {    // Checks for 0s in decrypted string (since 0 isn't on the ascii table as a letter/number)
-  for i := 0; i < len(input); i++ {
-    if input[i] == 0 {
-      input = append(input[:i], input[i+1:]...)
+func checkForPadding(input []byte) ([]byte) {
+  var newBytes []byte
+  for _, element := range input {
+    if (element > 31) && (element < 127) {    //If a character
+      newBytes = append(newBytes, element)
     }
   }
+  return newBytes
 }
 
 func EncryptListOfString(expandedKeys [176]byte, l []string) []string {
@@ -49,10 +52,11 @@ func EncryptListOfString(expandedKeys [176]byte, l []string) []string {
 }
 
 func DecryptListOfString(expandedKeys [176]byte, l []string) []string {
+  var out []string
   for i := range l {
-    l[i] = DecryptFileName(expandedKeys, l[i])
+    out = append(out, DecryptFileName(expandedKeys, l[i]))
   }
-  return l
+  return out
 }
 
 func GetLists(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
@@ -72,4 +76,46 @@ func GetLists(expandedKeys [176]byte, fileList, targetList []string, folder, tar
     }
   }
   return fileList, targetList
+}
+
+func getSortedFoldersAndFiles(inp []sorts.Tuple) ([]string, []string) {
+  var files []sorts.Tuple
+  var folders []sorts.Tuple
+  for i := 0; i < len(inp); i++ {
+    if inp[i].A.IsDir() {
+      folders = append(folders, inp[i])
+    } else {
+      files = append(files, inp[i])
+    }
+  }
+  foldersSort, filesSort := sorts.QuickSortAlph(folders), sorts.QuickSortAlph(files)
+  var (
+    encOut []string
+    decOut []string
+  )
+  for x := range foldersSort {
+    encOut = append(encOut, foldersSort[x].A.Name())
+    decOut = append(decOut, foldersSort[x].B)
+  }
+  for y := range filesSort {
+    encOut = append(encOut, filesSort[y].A.Name())
+    decOut = append(decOut, filesSort[y].B)
+  }
+  return encOut, decOut
+}
+
+func GetListOfFiles(expandedKeys [176]byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
+  list, err := ioutil.ReadDir(dir)
+  if err != nil { panic(err) }
+  l := make([]sorts.Tuple, 0)
+  var listOfNames []string
+  for x := range list {
+    listOfNames = append(listOfNames, list[x].Name())
+  }
+  dec := DecryptListOfString(expandedKeys, listOfNames)
+
+  for i := range list {
+    l = append(l, sorts.Tuple{A: list[i], B: dec[i]})
+  }
+  return getSortedFoldersAndFiles(l)
 }

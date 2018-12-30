@@ -69,9 +69,9 @@ class MainScreen(Screen):
             self.entered = True
 
         if self.recycleFolder in self.currentDir:
-            self.createButtons(self.List(self.path))     # Don't want to log into the recycling bin, as the user might get confused.
+            self.createButtons(self.List(self.path), sort=False)     # Don't want to log into the recycling bin, as the user might get confused.
         else:
-            self.createButtons(self.List(self.currentDir)) # Loads previous directory.
+            self.createButtons(self.List(self.currentDir), sort=False) # Loads previous directory.
 
     def on_leave(self):     # Kept separate from lock because i may want to add more screens that need the key, and do not log the user out.
         if self.useBT:      # Popups that are open block the lock button, but if BT is lost, the popups stay open.
@@ -336,6 +336,7 @@ class MainScreen(Screen):
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
         if sort:
+            print("sorting")
             fileObjects = self.getSortedFoldersAndFiles(fileObjects)    #Sort the list of files.
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
@@ -343,15 +344,15 @@ class MainScreen(Screen):
         self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
 
-        self.createButtonsCore(fileObjects)
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
-
+        self.createButtonsCore(fileObjects)
 
     def traverseButton(self, fileObj):  # Function when file is clicked.
         if self.recycleFolder not in self.currentDir:
             if fileObj.isDir:   #If is a folder, then display files within that folder.
                 self.previousDir = self.currentDir
                 self.currentDir = fileObj.hexPath
+                self.ascending = True
                 self.resetButtons()
             else:   # If is a file, decrypt the file and open it.
                 self.decrypt(fileObj)
@@ -477,33 +478,29 @@ class MainScreen(Screen):
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
-        self.createButtons(self.List(self.currentDir))
+        self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshFiles(self):   # Refreshes the files in the current directory
         self.removeButtons()
-        self.createButtons(self.List(self.currentDir))
+        self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshButtons(self): # Refreshes file list buttons currently displayed.
         self.removeButtons()
-        self.createButtons(self.currentList, False)
+        self.createButtons(self.currentList, sort=False)
 
     def goHome(self):   #Takes the user back to the vault dir.
         self.currentDir = self.path
         self.refreshFiles()
 
-
     def List(self, dir):    # Lists a directory, returning File objects.
-        fs = os.listdir(dir)
+        fs, fsDec = self.listDir(dir)   # Lists encrypted names and decrypted names.
         listOfFolders = []
         listOfFiles = []
-        for item in fs:
-            if os.path.isdir(dir+item):
-                listOfFolders.append(File(self, dir+item, item, self.fileSep, isDir=True))
+        for i in range(len(fs)):
+            if os.path.isdir(dir+fs[i]):
+                listOfFolders.append(File(self, dir+fs[i], fs[i], self.fileSep, name=fsDec[i], isDir=True))
             else:
-                if os.path.exists(self.currentDir+self.thumbsName+self.fileSep+item):
-                    listOfFiles.append(File(self, dir+item, item, self.fileSep, dir+self.thumbsName+self.fileSep+item))
-                else:
-                    listOfFiles.append(File(self, dir+item, item, self.fileSep))
+                listOfFiles.append(File(self, dir+fs[i], fs[i], self.fileSep, name=fsDec[i]))
 
         return listOfFolders+listOfFiles
 
@@ -560,11 +557,6 @@ class MainScreen(Screen):
 
 
 ######Encryption Stuff + opening decrypted files######
-    def getDirLists(self, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
-        out = self.passToPipe("dirList", root, targ).decode()
-        out = out.split("--!--") # Separator
-        return out[0].split(",,"), out[1].split(",,")
-
     def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
         #print("TARGET L0C:", targetLoc)
         if self.encPop != None:
@@ -601,6 +593,19 @@ class MainScreen(Screen):
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
         return out
 
+    def getDirLists(self, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
+        out = self.passToPipe("getLists", root, targ).decode()
+        out = out.split("--!--") # Separator
+        return out[0].split(",,"), out[1].split(",,")
+
+    def listDir(self, location):
+        out = self.passToPipe("listDir", location, "").decode()
+        out = out.split("--!--") # Separator
+        return out[0].split(",,"), out[1].split(",,")
+
+    def decListString(self, list):
+        out = self.passToPipe("decList", "\n".join(list), "").decode()
+        return out.split(",,")
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
         if self.fileSep == "\\":  # If on windows
