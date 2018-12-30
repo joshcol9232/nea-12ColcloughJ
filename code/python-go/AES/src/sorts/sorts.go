@@ -3,14 +3,53 @@ package sorts
 import (
   "fmt"
   "os"
+  "strconv"
 )
 
+// For keeping the decrypted name with their encrypted name
 type Tuple struct {
   A os.FileInfo
   B string
 }
 
-func getLower(inp []byte) []byte {
+func UseQuickSort(inp []string) []string {
+  var nums []int64
+  var out []string
+  for i := 0; i < len(inp); i++ {
+    int, err := strconv.ParseInt(inp[i], 10, 64)
+    if err != nil { panic(err) }
+    nums = append(nums, int)
+  }
+  nums = quickSort(nums)
+  for i := 0; i < len(nums); i++ {
+    out = append(out, strconv.FormatInt(nums[i], 10))
+  }
+  return out
+}
+
+func quickSort(inp []int64) []int64 {
+  if len(inp) < 2 {
+    return inp
+  }
+  var pivot int64 = inp[int(len(inp)/2)]
+  var left []int64
+  var middle []int64
+  var right []int64
+  for i := 0; i < len(inp); i++ {
+    if inp[i] < pivot {
+      left = append(left, inp[i])
+    } else if inp[i] > pivot {
+      right = append(right, inp[i])
+    } else {
+      middle = append(middle, inp[i])
+    }
+  }
+  left = quickSort(left)
+  right = quickSort(right)
+  return append(append(left, middle...), right...)
+}
+
+func getLower(inp []byte) []byte { // .lower() in python
   var out []byte
   for i := range inp {
     out = append(out, inp[i])

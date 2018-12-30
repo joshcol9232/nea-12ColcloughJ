@@ -11,6 +11,7 @@ import (
   "AES/AESfiles"
   "AES/AESstring"
   "AES/AEScheckKey"
+  "sorts"
 )
 
 func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
@@ -61,6 +62,8 @@ func main() {
     fs, fsDec := AESstring.GetListOfFiles(AES.ExpandKey(key), string(fields[1]))
     fmt.Print(strings.Join(fs, ",,")+"--!--")
     fmt.Print(strings.Join(fsDec, ",,"))
+  } else if request == "sortSize" {
+    fmt.Print(strings.Join(sorts.UseQuickSort(strings.Split(string(fields[1]), "\n")), ",,"))
   } else if request == "test" {
     valid := AEScheckKey.CheckKeyOfFile(key, string(fields[1]))
     if valid {

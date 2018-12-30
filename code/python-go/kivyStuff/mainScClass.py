@@ -615,6 +615,26 @@ class MainScreen(Screen):
         out = self.passToPipe("encList", "\n".join(list), "").decode()
         return out.split(",,")
 
+    def sortSize(self, fileObjects):
+        out = self.passToPipe("sortSize", "\n".join([str(i.rawSize) for i in fileObjects]), "").decode()
+        print(out, "OUT")
+        out = [int(i) for i in out.split(",,")]
+        if len(out) != len(fileObjects):
+            raise ValueError("Length of sizes not the same as original:", len(out), len(fileObjects))
+        outList = []
+        for i in range(len(fileObjects)):
+            outList.append(-1)   # Initialize
+
+        added = []
+        for i in fileObjects:
+            outList[out.index(i.rawSize)] = i
+            added.append(i)
+
+        #print([x.name for x in fileObjects if x not in added])
+
+        return [i for i in outList if i != -1]
+
+
     def decListString(self, list):
         out = self.passToPipe("decList", "\n".join(list), "").decode()
         return out.split(",,")

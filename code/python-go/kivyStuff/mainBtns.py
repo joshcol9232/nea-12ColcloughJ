@@ -35,9 +35,8 @@ class sizeSortButton(Button):           #Sorts the files/folders by size
         self.ascending = True
         self.sortList = []
 
-
     def sortBySize(self):
-        self.sortList = quickSortSize(self.outerScreen.currentList)
+        self.sortList = self.outerScreen.sortSize(self.outerScreen.currentList)
         if not self.ascending:
             self.sortList = self.sortList[::-1]    # Reverse sorted list.
 
