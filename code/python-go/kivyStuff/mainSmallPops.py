@@ -13,7 +13,6 @@ from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
-import aesFName
 from configOperations import dirInputValid
 
 class encDecPop(Popup): #For single files
@@ -87,7 +86,7 @@ class encDecPop(Popup): #For single files
 
     def __getRelPathDec(self, path):   # Similar to decryptRelPath in fileClass
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
-        return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+        return "/Vault/"+self.outerScreen.fileSep.join(self.outerScreen.decListString(splitPath))
 
     def encDec(self, encType, op):
         total = 0
@@ -246,7 +245,7 @@ class addNewFolderPop(Popup):
     def makeFolder(self, text):
         if dirInputValid(self.outerScreen.currentDir+text, self.outerScreen.fileSep):
             try:
-                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                os.makedirs(self.outerScreen.currentDir+self.outerScreen.encString(text))
             except OSError as e:
                 if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
                     pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})

@@ -18,7 +18,6 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 
 from fileClass import File
-import aesFName
 import sortsCy
 # Own kivy classes
 import mainBtns
@@ -58,8 +57,7 @@ class MainScreen(Screen):
         self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")    # Prepare recycling and thumbnail folder names for use in the program.
-            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
+            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
             self.recycleFolder = self.path+self.recycleName+self.fileSep
 
             if not os.path.exists(self.recycleFolder):
@@ -149,8 +147,7 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling") # Set so that file list can be sent
-                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
+                            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])  # Set so that file list can be sent
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -234,12 +231,13 @@ class MainScreen(Screen):
             fs = os.listdir(path)
             listOfFolders = []
             listOfFiles = []
+            fs = self.decListString(fs)
             for item in fs:
                 if (item != self.thumbsName) and (item != self.recycleName):
                     if os.path.isdir(path+item):
-                        listOfFolders.append(aesFName.decryptFileName(self.key, item))
+                        listOfFolders.append(item)
                     else:
-                        listOfFiles.append(aesFName.decryptFileName(self.key, item))
+                        listOfFiles.append(item)
 
             self.lastPathSent = path
 
@@ -556,7 +554,7 @@ class MainScreen(Screen):
             return [values[0], values[1]]
 
 
-######Encryption Stuff + opening decrypted files######
+######Encryption Stuff + opening decrypted files######  Mostly an interface to the go program
     def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
         #print("TARGET L0C:", targetLoc)
         if self.encPop != None:
@@ -602,6 +600,18 @@ class MainScreen(Screen):
         out = self.passToPipe("listDir", location, "").decode()
         out = out.split("--!--") # Separator
         return out[0].split(",,"), out[1].split(",,")
+
+    def encString(self, string):
+        out = self.passToPipe("encString", string, "").decode()
+        return out.split(",,")
+
+    def decString(self, string):
+        out = self.passToPipe("decString", string, "").decode()
+        return out.split(",,")
+
+    def encListString(self, list):
+        out = self.passToPipe("encList", "\n".join(list), "").decode()
+        return out.split(",,")
 
     def decListString(self, list):
         out = self.passToPipe("decList", "\n".join(list), "").decode()
@@ -692,10 +702,10 @@ class MainScreen(Screen):
             if os.path.isdir(inp):
                 if inpSplit[-1][-1] == self.fileSep:
                     inpSplit[-1] = inpSplit[-1][:-1]
-                targ = self.currentDir+aesFName.encryptFileName(self.key, inpSplit[-1])+self.fileSep
+                targ = self.currentDir+self.encString(inpSplit[-1])+self.fileSep
                 inp = self.fileSep.join(inpSplit)+self.fileSep
             else:
-                targ = self.currentDir+aesFName.encryptFileName(self.key, inpSplit[-1])
+                targ = self.currentDir+self.encString(inpSplit[-1])
                 inp = self.fileSep.join(inpSplit)
             self.encDec("y", inp, targ)
 

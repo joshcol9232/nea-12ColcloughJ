@@ -2,8 +2,6 @@ from os import path as osPath
 from os import listdir
 from subprocess import Popen, PIPE
 
-import aesFName
-
 class File:
 
     def __init__(self, screen, hexPath, hexName, fileSep, extension=None, isDir=False, name=None, path=None):
@@ -16,7 +14,7 @@ class File:
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
         if name == None:
-            self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
+            self.name = self.outerScreen.decString(self.hexName)
         else:
             self.name = name
         if path == None:
@@ -59,11 +57,9 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
-    def __recursiveSize(self, f, encrypt=False):  #Get size of folders.
+    def __recursiveSize(self, f):  #Get size of folders.
         fs = listdir(f)
         for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
             if osPath.isdir(f+self.fileSep+item):
                 try:
                     self.__recursiveSize(f+self.fileSep+item)
@@ -77,7 +73,7 @@ class File:
 
     def decryptRelPath(self):       # Gets relative path from root of Vault in human form
         splitPath = self.relPath.split(self.fileSep)
-        return self.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+        return self.fileSep.join(self.outerScreen.decListString(splitPath))
 
     def getCheckSum(self, new=True):
         if self.checkSum == None or new:

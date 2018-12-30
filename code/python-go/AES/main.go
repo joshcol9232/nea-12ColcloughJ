@@ -40,9 +40,9 @@ func main() {
     AESfiles.EncryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
   } else if request == "nDir" {
     AESfiles.DecryptList(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
-  } else if request == "yFileName" {
+  } else if request == "encString" {
     fmt.Print(AESstring.EncryptFileName(AES.ExpandKey(key), string(fields[1])))
-  } else if request == "nFileName" {
+  } else if request == "decString" {
     fmt.Print(AESstring.DecryptFileName(AES.ExpandKey(key), string(fields[1])))
   } else if request == "encList" {
     fmt.Print(strings.Join(AESstring.EncryptListOfString(AES.ExpandKey(key), strings.Split(string(fields[1]), "\n")), ",,"))
