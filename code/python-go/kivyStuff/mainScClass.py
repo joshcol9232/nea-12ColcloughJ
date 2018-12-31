@@ -261,9 +261,9 @@ class MainScreen(Screen):
             return " -"
         else:
             divCount = 0
-            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-            while bytes > 1000:
-                bytes = bytes/1000
+            divisions = {0: "B", 1: "KiB", 2: "MiB", 3: "GiB", 4: "TiB", 5: "PiB"}
+            while bytes > 1024:
+                bytes = bytes/1024
                 divCount += 1
 
             return ("%.2f" % bytes) + divisions[divCount]
@@ -545,28 +545,32 @@ class MainScreen(Screen):
 
 
 ######Encryption Stuff + opening decrypted files + interface with go######
-    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt
+    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt. A wrapper for the thread that will do it.
         #print("TARGET L0C:", targetLoc)
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
 
-        if os.path.isdir(d):
-            self.createFolders(targetLoc)
-            fileList, locList = self.getDirLists(encType, d, targetLoc)
-            self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
-            Thread(target=self.passToPipe, args=(encType+"Dir", "\n".join(fileList), "\n".join(locList),)).start()
-            self.encPop.open()
-        else:
-            #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
-            #mainthread(Clock.schedule_once(self.encPop.open, -1))
-            Thread(target=self.passToPipe, args=(encType, d, targetLoc,)).start()
-            self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
+        def encThread(encType, d, targetLoc, op=True):
+            if os.path.isdir(d):
+                self.createFolders(targetLoc)
+                fileList, locList = self.getDirLists(encType, d, targetLoc)
+                self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+                mainthread(self.encPop.open())
+                self.passToPipe(encType+"Dir", "\n".join(fileList), "\n".join(locList))
+            else:
+                #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
+                #mainthread(Clock.schedule_once(self.encPop.open, -1))
+                self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
+                mainthread(self.encPop.open())
+                self.passToPipe(encType, d, targetLoc)
 
-        if op and encType == "n":
-            self.openFileTh(targetLoc, d)
-        elif type == "y":
-            self.refreshFiles()
+            if op and encType == "n":
+                self.openFileTh(targetLoc, d)
+            elif type == "y":
+                self.refreshFiles()
+
+        return Thread(target=encThread, args=(encType, d, targetLoc, op,)).start()
 
         #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op) #self, labText, fileList, locList, **kwargs
         #mainthread(Clock.schedule_once(self.encPop.open, -1))

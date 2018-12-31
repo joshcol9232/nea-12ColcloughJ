@@ -65,9 +65,9 @@ class encDecPop(Popup): #For single files
 
     def getGoodUnit(self, bps):
         divCount = 0
-        divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
-        while bps > 1000:
-            bps = bps/1000
+        divisions = {0: "B/s", 1: "KiB/s", 2: "MiB/s", 3: "GiB/s", 4: "TiB/s"}
+        while bps > 1024:
+            bps = bps/1024
             divCount += 1
 
         return ("%.2f" % bps) + divisions[divCount]

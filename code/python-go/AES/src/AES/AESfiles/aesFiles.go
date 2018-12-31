@@ -77,7 +77,7 @@ func EncryptFile(expandedKeys [176]byte, f, w string) {
   }
 
   var workingWorkers int = 0
-  var workerNum int = getNumOfCores()*2  // 2 go routines per core got the most performance (didn't want usage above 90%)
+  var workerNum int = getNumOfCores()*2
 
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
