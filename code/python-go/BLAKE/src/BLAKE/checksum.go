@@ -46,10 +46,10 @@ func GetChecksum(f string, hashL int) [64]byte {
 
     for i := 0; i < bufferSize; i += 128 {
       if bytesLeft <= 128 {
-        h = BlakeCompress(h, buff[i:i+128], bytesFed+bytesLeft, true)
+        BlakeCompress(&h, buff[i:i+128], bytesFed+bytesLeft, true)
       } else {
         bytesFed += 128
-        h = BlakeCompress(h, buff[i:i+128], bytesFed, false)
+        BlakeCompress(&h, buff[i:i+128], bytesFed, false)
       }
       bytesLeft -= 128
     }

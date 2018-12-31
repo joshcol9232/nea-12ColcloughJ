@@ -8,7 +8,7 @@ import (
   "sorts" // QuickSortAlph made in sorts.go
 )
 
-func EncryptFileName(expandedKeys [176]byte, name string) string {
+func EncryptFileName(expandedKeys []byte, name string) string {
   var byteName = []byte(name)
 
   for len(byteName) % 16 != 0 {   // Pad with 0's
@@ -21,7 +21,7 @@ func EncryptFileName(expandedKeys [176]byte, name string) string {
   return b64.URLEncoding.EncodeToString(byteName) // URL encoding used so it is safe for file systems ("/")
 }
 
-func DecryptFileName(expandedKeys [176]byte, hexName string) string {
+func DecryptFileName(expandedKeys []byte, hexName string) string {
   byteName, err := b64.URLEncoding.DecodeString(hexName)
   if err != nil { panic(err) }
 
@@ -42,14 +42,14 @@ func checkForPadding(input []byte) ([]byte) {
   return newBytes
 }
 
-func EncryptListOfString(expandedKeys [176]byte, l []string) []string {
+func EncryptListOfString(expandedKeys []byte, l []string) []string {
   for i := range l {
     l[i] = EncryptFileName(expandedKeys, l[i])
   }
   return l
 }
 
-func DecryptListOfString(expandedKeys [176]byte, l []string) []string {
+func DecryptListOfString(expandedKeys []byte, l []string) []string {
   var out []string
   for i := range l {
     out = append(out, DecryptFileName(expandedKeys, l[i]))
@@ -57,7 +57,7 @@ func DecryptListOfString(expandedKeys [176]byte, l []string) []string {
   return out
 }
 
-func GetListsEnc(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
+func GetListsEnc(expandedKeys []byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
@@ -72,7 +72,7 @@ func GetListsEnc(expandedKeys [176]byte, fileList, targetList []string, folder, 
   return fileList, targetList
 }
 
-func GetListsDec(expandedKeys [176]byte, fileList, targetList []string, folder, target string) ([]string, []string) {
+func GetListsDec(expandedKeys []byte, fileList, targetList []string, folder, target string) ([]string, []string) {
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
@@ -113,7 +113,7 @@ func getSortedFoldersAndFiles(inp []sorts.Tuple) ([]string, []string) {
   return encOut, decOut
 }
 
-func GetListOfFiles(expandedKeys [176]byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
+func GetListOfFiles(expandedKeys []byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
   list, err := ioutil.ReadDir(dir)
   if err != nil { panic(err) }
   l := make([]sorts.Tuple, 0)
