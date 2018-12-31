@@ -59,7 +59,7 @@ func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64
 }
 
 
-func BlakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
+func BlakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function. Takes a block of 128 uint64s
   v := make([]uint64, 16) // Current vector as a slice. This allows you to pass by reference
   for i := 0; i < 8; i++ {
     v[i] = h[i]
