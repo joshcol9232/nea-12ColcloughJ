@@ -3,6 +3,8 @@ from shutil import rmtree
 
 from kivy.config import Config
 Config.set("graphics", "resizable", True)
+Config.set("graphics", "width", "1000") # Set defaults
+Config.set("graphics", "height", "600")
 Config.set("input", "mouse", "mouse,disable_multitouch") # Disable multitouch features used on mobile apps.
 Config.write()
 

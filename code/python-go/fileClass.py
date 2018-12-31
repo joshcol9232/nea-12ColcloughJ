@@ -2,8 +2,6 @@ from os import path as osPath
 from os import listdir
 from subprocess import Popen, PIPE
 
-import aesFName
-
 class File:
 
     def __init__(self, screen, hexPath, hexName, fileSep, extension=None, isDir=False, name=None, path=None):
@@ -15,15 +13,14 @@ class File:
         self.rawSize = self.__getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
+        if name == None:
+            self.name = self.outerScreen.decString(self.hexName)
+        else:
+            self.name = name
         if path == None:
             self.path = self.__getNormDir(self.hexPath)
         else:
             self.path = path
-        if name == None:
-            self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
-        else:
-            self.name = name
-
         if extension == None:
             extension = self.path.split(".")
             self.extension = extension[-1].lower()
@@ -36,13 +33,11 @@ class File:
 
         self.relPath = self.hexPath.replace(self.outerScreen.path, "")   # Encrypted path relative to root folder of Vault
 
-
     def __getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
-        hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
-        for i in range(len(hexDir)):
-            hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
-
-        return self.fileSep.join(hexDir)
+        dir = self.fileSep.join(self.outerScreen.decListString(hexDir.replace(self.outerScreen.path, "").split(self.fileSep)[:-1]))+self.name
+        if self.isDir:
+            dir += self.fileSep
+        return dir
 
     def __getFileSize(self, recurse=True):
         if self.isDir:
@@ -61,11 +56,9 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
-    def __recursiveSize(self, f, encrypt=False):  #Get size of folders.
+    def __recursiveSize(self, f):  #Get size of folders.
         fs = listdir(f)
         for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
             if osPath.isdir(f+self.fileSep+item):
                 try:
                     self.__recursiveSize(f+self.fileSep+item)
@@ -79,14 +72,14 @@ class File:
 
     def decryptRelPath(self):       # Gets relative path from root of Vault in human form
         splitPath = self.relPath.split(self.fileSep)
-        return self.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+        return self.fileSep.join(self.outerScreen.decListString(splitPath))
 
     def getCheckSum(self, new=True):
         if self.checkSum == None or new:
             if self.fileSep == "\\":
                 goproc = Popen(self.outerScreen.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
             elif self.fileSep == "/":
-                goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+                goproc = Popen(self.outerScreen.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
 
             out, err = goproc.communicate((self.hexPath).encode())
             if err != None:
@@ -95,4 +88,3 @@ class File:
             self.checkSum = out.decode()
 
         return self.checkSum
-

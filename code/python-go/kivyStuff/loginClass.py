@@ -51,7 +51,7 @@ class LoginScreen(Screen):
         if self.fileSep == "\\":
             progname = "AESWin"
         else:
-            progname = "AES"
+            progname = "AES/AES"
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         return out
@@ -62,7 +62,7 @@ class LoginScreen(Screen):
             self.count = 0
             self.findFile(self.path)
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
-            if diditwork == b"-Valid-\n": #The go program prints "-Valid-\n" or "-Invalid-\n" once it is done checking the key.
+            if diditwork == b"-Valid-": #The go program prints "-Valid-" or "-Invalid-" once it is done checking the key.
                 return True
             else:
                 return False

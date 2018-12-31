@@ -1,17 +1,4 @@
-package main
-
-import (
-  //"fmt"       // For sending output on stout
-  "os"        // For opening files
-  "io"        // For reading files
-  //"io/ioutil" // For reading from stdin
-  "strings"   // For converting string key to an array of bytes
-  "strconv"   // ^
-  "runtime"   // For getting CPU core count
-  "testing"
-)
-
-const DEFAULT_BUFFER_SIZE = 32768  // Define the default buffer size for enc/decrypt
+package AES
 
 // Global lookup tables.
 var sBox = [256]byte {0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
@@ -181,9 +168,9 @@ func keyExpansionCore(inp [4]byte, i int) [4]byte {
   return inp
 }
 
-func expandKey(inputKey []byte) [176]byte {
+func ExpandKey(inputKey []byte) [176]byte {
   var expandedKeys [176]byte
-  // first 16 bytes of the expandedkeys should be the same 16 as the original key
+  // first 16 bytes of the expandedKeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
     expandedKeys[i] = inputKey[i]
   }
@@ -210,427 +197,155 @@ func expandKey(inputKey []byte) [176]byte {
 }
 
 func addRoundKey(state []byte, roundKey []byte) {       // Add round key is also it's own inverse
-  for i := 0; i < 16; i++ {
-    state[i] ^= roundKey[i] // XOR each byte of the key with each byte of the state.
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
+
+  state[ 0]^roundKey[ 0], state[ 1]^roundKey[ 1], state[ 2]^roundKey[ 2], state[ 3]^roundKey[ 3],
+  state[ 4]^roundKey[ 4], state[ 5]^roundKey[ 5], state[ 6]^roundKey[ 6], state[ 7]^roundKey[ 7],
+  state[ 8]^roundKey[ 8], state[ 9]^roundKey[ 9], state[10]^roundKey[10], state[11]^roundKey[11],
+  state[12]^roundKey[12], state[13]^roundKey[13], state[14]^roundKey[14], state[15]^roundKey[15]
 }
 
 func subBytes(state []byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = sBox[state[i]]
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
+
+  sBox[state[ 0]], sBox[state[ 1]], sBox[state[ 2]], sBox[state[ 3]],
+  sBox[state[ 4]], sBox[state[ 5]], sBox[state[ 6]], sBox[state[ 7]],
+  sBox[state[ 8]], sBox[state[ 9]], sBox[state[10]], sBox[state[11]],
+  sBox[state[12]], sBox[state[13]], sBox[state[14]], sBox[state[15]]
 }
 
 func invSubBytes(state []byte) {
-  for i := 0; i < 16; i++ {
-    state[i] = invSBox[state[i]]
-  }
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
+
+  invSBox[state[ 0]], invSBox[state[ 1]], invSBox[state[ 2]], invSBox[state[ 3]],
+  invSBox[state[ 4]], invSBox[state[ 5]], invSBox[state[ 6]], invSBox[state[ 7]],
+  invSBox[state[ 8]], invSBox[state[ 9]], invSBox[state[10]], invSBox[state[11]],
+  invSBox[state[12]], invSBox[state[13]], invSBox[state[14]], invSBox[state[15]]
 }
 
 func shiftRows(state []byte) {
-  state = []byte{state[ 0], state[ 5], state[10], state[15],
-                 state[ 4], state[ 9], state[14], state[ 3],
-                 state[ 8], state[13], state[ 2], state[ 7],
-                 state[12], state[ 1], state[ 6], state[11]}
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
+
+  state[ 0], state[ 5], state[10], state[15],
+  state[ 4], state[ 9], state[14], state[ 3],
+  state[ 8], state[13], state[ 2], state[ 7],
+  state[12], state[ 1], state[ 6], state[11]
 }
   //  Shifts it like this:
-  // 
+  //
   //  0  4  8 12         0  4  8 12   Shifted left by 0
   //  1  5  9 13  ---->  5  9 13  1   Shifted left by 1
   //  2  6 10 14  ----> 10 14  2  6   Shifted left by 2
   //  3  7 11 15        15  3  7 11   Shifted left by 3
 
-
 func invShiftRows(state []byte) {
-  state = []byte{state[ 0], state[13], state[10], state[ 7],
-                 state[ 4], state[ 1], state[14], state[11],
-                 state[ 8], state[ 5], state[ 2], state[15],
-                 state[12], state[ 9], state[ 6], state[ 3]}
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
+
+  state[ 0], state[13], state[10], state[ 7],
+  state[ 4], state[ 1], state[14], state[11],
+  state[ 8], state[ 5], state[ 2], state[15],
+  state[12], state[ 9], state[ 6], state[ 3]
 }
   //   0  4  8 12         0  4  8 12   Shifted right by 0
   //   5  9 13  1  ---->  1  5  9 13   Shifted right by 1
   //  10 14  2  6  ---->  2  6 10 14   Shifted right by 2
   //  15  3  7 11         3  7 11 15   Shifted right by 3
 
-
 func mixColumns(state []byte) {
-  state = []byte{mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
-                 state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
-                 state[ 0] ^ state[ 1] ^ mul2[state[ 2]] ^ mul3[state[ 3]],
-                 mul3[state[ 0]] ^ state[ 1] ^ state[ 2] ^ mul2[state[ 3]],
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
 
-                 mul2[state[ 4]] ^ mul3[state[ 5]] ^ state[ 6] ^ state[ 7],
-                 state[ 4] ^ mul2[state [5]] ^ mul3[state[ 6]] ^ state[ 7],
-                 state[ 4] ^ state[ 5] ^ mul2[state[ 6]] ^ mul3[state[ 7]],
-                 mul3[state[ 4]] ^ state[ 5] ^ state[ 6] ^ mul2[state[ 7]],
+  mul2[state[ 0]] ^ mul3[state[ 1]] ^ state[ 2] ^ state[ 3],
+  state[ 0] ^ mul2[state[ 1]] ^ mul3[state[ 2]] ^ state[ 3],
+  state[ 0] ^ state[ 1] ^ mul2[state[ 2]] ^ mul3[state[ 3]],
+  mul3[state[ 0]] ^ state[ 1] ^ state[ 2] ^ mul2[state[ 3]],
 
-                 mul2[state[ 8]] ^ mul3[state[ 9]] ^ state[10] ^ state[11],
-                 state[ 8] ^ mul2[state[ 9]] ^ mul3[state[10]] ^ state[11],
-                 state[ 8] ^ state[ 9] ^ mul2[state[10]] ^ mul3[state[11]],
-                 mul3[state[ 8]] ^ state[ 9] ^ state[10] ^ mul2[state[11]],
+  mul2[state[ 4]] ^ mul3[state[ 5]] ^ state[ 6] ^ state[ 7],
+  state[ 4] ^ mul2[state [5]] ^ mul3[state[ 6]] ^ state[ 7],
+  state[ 4] ^ state[ 5] ^ mul2[state[ 6]] ^ mul3[state[ 7]],
+  mul3[state[ 4]] ^ state[ 5] ^ state[ 6] ^ mul2[state[ 7]],
 
-                 mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
-                 state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
-                 state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
-                 mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]}
+  mul2[state[ 8]] ^ mul3[state[ 9]] ^ state[10] ^ state[11],
+  state[ 8] ^ mul2[state[ 9]] ^ mul3[state[10]] ^ state[11],
+  state[ 8] ^ state[ 9] ^ mul2[state[10]] ^ mul3[state[11]],
+  mul3[state[ 8]] ^ state[ 9] ^ state[10] ^ mul2[state[11]],
+
+  mul2[state[12]] ^ mul3[state[13]] ^ state[14] ^ state[15],
+  state[12] ^ mul2[state[13]] ^ mul3[state[14]] ^ state[15],
+  state[12] ^ state[13] ^ mul2[state[14]] ^ mul3[state[15]],
+  mul3[state[12]] ^ state[13] ^ state[14] ^ mul2[state[15]]
 }
 
 func invMixColumns(state []byte) {
-  state = []byte{mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
-                 mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
-                 mul13[state[ 0]] ^ mul9[state[ 1]] ^ mul14[state[ 2]] ^ mul11[state[ 3]],
-                 mul11[state[ 0]] ^ mul13[state[ 1]] ^ mul9[state[ 2]] ^ mul14[state[ 3]],
+  state[ 0], state[ 1], state[ 2], state[ 3],
+  state[ 4], state[ 5], state[ 6], state[ 7],
+  state[ 8], state[ 9], state[10], state[11],
+  state[12], state[13], state[14], state[15] =
 
-                 mul14[state[ 4]] ^ mul11[state[ 5]] ^ mul13[state[ 6]] ^ mul9[state[ 7]],
-                 mul9[state[ 4]] ^ mul14[state[ 5]] ^ mul11[state[ 6]] ^ mul13[state[ 7]],
-                 mul13[state[ 4]] ^ mul9[state[ 5]] ^ mul14[state[ 6]] ^ mul11[state[ 7]],
-                 mul11[state[ 4]] ^ mul13[state[ 5]] ^ mul9[state[ 6]] ^ mul14[state[ 7]],
+  mul14[state[ 0]] ^ mul11[state[ 1]] ^ mul13[state[ 2]] ^ mul9[state[ 3]],
+  mul9[state[ 0]] ^ mul14[state[ 1]] ^ mul11[state[ 2]] ^ mul13[state[ 3]],
+  mul13[state[ 0]] ^ mul9[state[ 1]] ^ mul14[state[ 2]] ^ mul11[state[ 3]],
+  mul11[state[ 0]] ^ mul13[state[ 1]] ^ mul9[state[ 2]] ^ mul14[state[ 3]],
 
-                 mul14[state[ 8]] ^ mul11[state[ 9]] ^ mul13[state[10]] ^ mul9[state[11]],
-                 mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
-                 mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
-                 mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
+  mul14[state[ 4]] ^ mul11[state[ 5]] ^ mul13[state[ 6]] ^ mul9[state[ 7]],
+  mul9[state[ 4]] ^ mul14[state[ 5]] ^ mul11[state[ 6]] ^ mul13[state[ 7]],
+  mul13[state[ 4]] ^ mul9[state[ 5]] ^ mul14[state[ 6]] ^ mul11[state[ 7]],
+  mul11[state[ 4]] ^ mul13[state[ 5]] ^ mul9[state[ 6]] ^ mul14[state[ 7]],
 
-                 mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
-                 mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
-                 mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
-                 mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]}
+  mul14[state[ 8]] ^ mul11[state[ 9]] ^ mul13[state[10]] ^ mul9[state[11]],
+  mul9[state[ 8]] ^ mul14[state[ 9]] ^ mul11[state[10]] ^ mul13[state[11]],
+  mul13[state[ 8]] ^ mul9[state[ 9]] ^ mul14[state[10]] ^ mul11[state[11]],
+  mul11[state[ 8]] ^ mul13[state[ 9]] ^ mul9[state[10]] ^ mul14[state[11]],
+
+  mul14[state[12]] ^ mul11[state[13]] ^ mul13[state[14]] ^ mul9[state[15]],
+  mul9[state[12]] ^ mul14[state[13]] ^ mul11[state[14]] ^ mul13[state[15]],
+  mul13[state[12]] ^ mul9[state[13]] ^ mul14[state[14]] ^ mul11[state[15]],
+  mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
 }
 
-
-func encrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
+func Encrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[:16])
 
-  for i := 0; i < regularRounds; i++ {
+  for i := 0; i < 144; i += 16 {    // 9 regular rounds * 16 = 144
     subBytes(state)
     shiftRows(state)
     mixColumns(state)
-    addRoundKey(state, expandedKeys[(16 * (i+1)):(16 * (i+2))])
+    addRoundKey(state, expandedKeys[i+16:i+32])
   }
   // Last round
   subBytes(state)
   shiftRows(state)
   addRoundKey(state, expandedKeys[160:])
-
-  return state
 }
 
-func decrypt(state []byte, expandedKeys [176]byte, regularRounds int) ([]byte) {
+func Decrypt(state []byte, expandedKeys [176]byte) {
   addRoundKey(state, expandedKeys[160:])
   invShiftRows(state)
   invSubBytes(state)
 
-  for i := regularRounds; i != 0; i-- {
-    addRoundKey(state, expandedKeys[(16 * (i)):(16 * (i+1))])
+  for i := 144; i != 0; i -= 16 {
+    addRoundKey(state, expandedKeys[i:i+16])
     invMixColumns(state)
     invShiftRows(state)
     invSubBytes(state)
   }
   // Last round
   addRoundKey(state, expandedKeys[:16])
-
-  return state
 }
-
-
-func check(e error) {     // Used for checking errors when reading/writing to files.
-  if e != nil {
-    panic(e)
-  }
-}
-
-func getNumOfCores() int {  //Gets the number of cores so it determines buffer size.
-  maxProcs := runtime.GOMAXPROCS(0)
-  numCPU := runtime.NumCPU()
-  if maxProcs < numCPU {
-    return maxProcs
-  }
-  return numCPU
-}
-
-func compareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
-  if len(slice1) != len(slice2) {
-    return false
-  } else {
-    for i := 0; i < len(slice1); i++ {
-      if slice1[i] != slice2[i] {
-        return false
-      }
-    }
-  }
-  return true
-}
-
-// For holding the buffer to be worked on and the offset together, so it can be written to the file in the correct place at the end.
-type work struct {
-  buff []byte
-  offset int64
-}
-
-func workerEnc(jobs <-chan work, results chan<- work, expandedKeys [176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
-  for job := range jobs {
-    var encBuff []byte    // Make a buffer to hold encrypted data.
-    for i := 0; i < len(job.buff); i += 16 {
-      encBuff = append(encBuff, encrypt(job.buff[i:i+16], expandedKeys, 9)...)
-    }
-    results<- work{buff: encBuff, offset: job.offset}
-  }
-}
-
-func workerDec(jobs <-chan work, results chan<- work, expandedKeys [176]byte, fileSize int) {
-  for job := range jobs {
-    var decBuff []byte
-    for i := 0; i < len(job.buff); i += 16 {
-      if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        var decrypted []byte = decrypt(job.buff[i:i+16], expandedKeys, 9)   // Decrypt 128 bit chunk of buffer
-        // Store in variable as we are going to change it.
-        var focus int = int(decrypted[len(decrypted)-1])
-        var focusCount int = 0
-
-        if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-          for j := 15; (int(decrypted[j]) == focus) && (j > 0); j-- {
-            if int(decrypted[j]) == focus { focusCount++ }
-          }
-          if focus == focusCount {
-            decrypted = decrypted[:(16-focus)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-          }
-        }
-        decBuff = append(decBuff, decrypted...) // ... is to say that I want to append the items in the array to the decBuff, rather than append the array itself.
-      } else {
-        decBuff = append(decBuff, decrypt(job.buff[i:i+16], expandedKeys, 9)...)
-      }
-    }
-    results<- work{buff: decBuff, offset: job.offset}
-  }
-}
-
-func encryptFile(key []byte, f, w string) {
-  a, err := os.Open(f)    // Open original file to get statistics and read data.
-  check(err)
-  aInfo, err := a.Stat()  // Get statistics
-  check(err)
-
-  fileSize := int(aInfo.Size()) // Get size of original file
-
-  var expandedKeys [176]byte
-  expandedKeys = expandKey(key) // Expand the key for each round
-
-  if _, err := os.Stat(w); err == nil { // If file already exists, delete it
-    os.Remove(w)
-  }
-
-  var workingWorkers int = 0
-  var workerNum int = getNumOfCores()*2
-
-  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
-  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
-
-  /* 
-  Each go routine will be given access to the job queue, where each worker then waits to complete the job.
-  Once the job is completed, the go routine pushes the result onto the result queue, where the result can be
-  recieved by the main routine. The results are read once all of the go routines are busy, or if the file
-  is completed, then the remaining workers still working are asked for their results.
-  */
-
-  for i := 0; i < workerNum; i++ { // Use all cores bar one
-    go workerEnc(jobs, results, expandedKeys)
-  }
-
-  var bufferSize int = DEFAULT_BUFFER_SIZE
-
-  if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
-    bufferSize = fileSize
-  }
-
-  var buffCount int = 0   // Keeps track of how far through the file we are
-
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file for appending.
-  check(err)  // Check it opened correctly
-
-  // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  e.Write(encrypt(key, expandedKeys, 9))
-  offset := 16
-
-  for buffCount < fileSize {    // Same as a while buffCount < fileSize: in python3
-    if bufferSize > (fileSize - buffCount) {
-      bufferSize = fileSize - buffCount    // If this is the last block, read the amount of data left in the file.
-    }
-
-    buff := make([]byte, bufferSize)  // Make a slice the size of the buffer
-    _, err := io.ReadFull(a, buff) // Read the contents of the original file, but only enough to fill the buff array.
-                                   // The "_" tells go to ignore the value returned by io.ReadFull, which in this case is the number of bytes read.
-    check(err)
-
-    if len(buff) % 16 != 0 {  // If the buffer is not divisable by 16 (usually the end of a file), then padding needs to be added.
-      var extraNeeded int
-      var l int = len(buff)
-      for l % 16 != 0 {       // extraNeeded holds the value for how much padding the block needs.
-        l++
-        extraNeeded++
-      }
-
-      for i := 0; i < extraNeeded; i++ {                  // Add the number of extra bytes needed to the end of the block, if the block is not long enough.
-        buff = append(buff, byte(extraNeeded))  // For example, the array [1, 1, 1, 1, 1, 1, 1, 1] would have the number 8 appended to then end 8 times to make the array 16 in length.
-      } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
-    }
-
-    jobs <- work{buff: buff, offset: int64(offset)}
-    workingWorkers++
-
-    if workingWorkers == workerNum {
-      workingWorkers = 0
-      for i := 0; i < workerNum; i++ {
-        wk := <-results
-        e.WriteAt(wk.buff, wk.offset)
-      }
-    }
-
-    offset += bufferSize
-    buffCount += bufferSize
-  }
-
-  if workingWorkers != 0 {
-    for i := 0; i < workingWorkers; i++ {
-      wk := <-results
-      e.WriteAt(wk.buff, wk.offset)
-    }
-  }
-
-  close(jobs)
-  close(results)
-
-  a.Close()  // Close the files used.
-  e.Close()
-}
-
-
-func decryptFile(key []byte, f, w string) {
-  a, err := os.Open(f)
-  check(err)
-  aInfo, err := a.Stat()
-  check(err)
-
-  fileSize := int(aInfo.Size())-16 // Take away length of added key for checksum
-
-  var expandedKeys [176]byte
-
-  expandedKeys = expandKey(key)
-
-  if _, err := os.Stat(w); err == nil { // If file exists, delete it
-    os.Remove(w)
-  }
-
-  var bufferSize int = DEFAULT_BUFFER_SIZE
-
-  var workingWorkers int = 0
-  var workerNum int = getNumOfCores()*2
-
-  jobs := make(chan work, )
-  results := make(chan work)
-
-  for i := 0; i < workerNum; i++ { // Use all cores bar one
-    go workerDec(jobs, results, expandedKeys, fileSize)
-  }
-
-  if fileSize < bufferSize {
-    bufferSize = fileSize
-  }
-
-  var buffCount int = 0
-
-  e, err := os.OpenFile(w, os.O_CREATE|os.O_WRONLY, 0644) // Open file
-  check(err)
-
-  // Check first block is key
-  firstBlock := make([]byte, 16)
-  _, er := io.ReadFull(a, firstBlock)
-  check(er)
-  decFirst := decrypt(firstBlock, expandedKeys, 9)
-
-  if compareSlices(key, decFirst) { // If key is valid
-    offset := 0
-    a.Seek(16, 0) // Move past key
-    for buffCount < fileSize{   // While the data done is less than the fileSize
-      if bufferSize > (fileSize - buffCount) {
-        bufferSize = fileSize - buffCount
-      }
-
-      buff := make([]byte, bufferSize)
-      _, err := io.ReadFull(a, buff)  // Ignore the number of bytes read (_)
-      check(err)
-
-      jobs<- work{buff: buff, offset: int64(offset)}
-      workingWorkers++
-
-      if workingWorkers == workerNum {
-        workingWorkers = 0
-        for i := 0; i < workerNum; i++ {
-          wk := <-results
-          e.WriteAt(wk.buff, wk.offset)
-        }
-      }
-
-      offset += bufferSize
-      buffCount += bufferSize
-    }
-
-    if workingWorkers != 0 {
-      for i := 0; i < workingWorkers; i++ {
-        wk := <-results
-        e.WriteAt(wk.buff, wk.offset)
-      }
-    }
-    close(jobs)
-    close(results)
-
-  } else {
-    panic("Invalid Key")  // If first block is not equal to the key, then do not bother trying to decrypt the file.
-  }
-  a.Close()
-  e.Close()
-}
-
-
-func checkKey(key []byte, f string)  bool{
-  a, err := os.Open(f)    // Open an encrypted file to check first block against key
-  check(err)
-
-  var expandedKeys [176]byte
-
-  expandedKeys = expandKey(key) // Expand the key
-
-  // Check first block is key
-  firstBlock := make([]byte, 16)
-  _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
-  check(er)
-  firstDecrypted := decrypt(firstBlock, expandedKeys, 9)    // Decrypt first block
-
-  a.Close()
-  return compareSlices(key, firstDecrypted) // Compare decrypted first block with the key.
-}
-
-func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
-    n := strings.Split(str, ".")    // Splits by decimal point
-    return strconv.Atoi(n[0])       // Returns integer of whole number
-}
-
-// BENCHMARK
-func BenchmarkEncryptFile(b *testing.B) {
-  f := "/home/josh/GentooMin.iso"
-  w := "/home/josh/temp"
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
-  for n := 0; n < b.N; n++ {
-    encryptFile(key, f, w)
-  }
-}
-
-func BenchmarkDecryptFile(b *testing.B) {
-  f := "/home/josh/temp"
-  w := "/home/josh/decTemp.iso"
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69}
-  for n := 0; n < b.N; n++ {
-    decryptFile(key, f, w)
-  }
-}
-
-func main() {}

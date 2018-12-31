@@ -13,17 +13,15 @@ from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
-import aesFName
 from configOperations import dirInputValid
 
 class encDecPop(Popup): #For single files
 
-    def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+    def __init__(self, outerScreen, encType, fileList, locList, op=True, **kwargs):
         super(Popup, self).__init__(**kwargs)
         self.outerScreen = outerScreen
         self.fileList = fileList
         self.locList = locList
-        self.done = False
 
         # Kivy stuff
         self.title = "Please wait..."
@@ -41,6 +39,9 @@ class encDecPop(Popup): #For single files
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
         self.wholePb = ProgressBar(value=0, max=self.__getTotalSize(), size_hint=(.9, .2))
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
         self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -64,9 +65,9 @@ class encDecPop(Popup): #For single files
 
     def getGoodUnit(self, bps):
         divCount = 0
-        divisions = {0: "B/s", 1: "KB/s", 2: "MB/s", 3: "GB/s", 4: "TB/s"}
-        while bps > 1000:
-            bps = bps/1000
+        divisions = {0: "B/s", 1: "KiB/s", 2: "MiB/s", 3: "GiB/s", 4: "TiB/s"}
+        while bps > 1024:
+            bps = bps/1024
             divCount += 1
 
         return ("%.2f" % bps) + divisions[divCount]
@@ -85,7 +86,7 @@ class encDecPop(Popup): #For single files
 
     def __getRelPathDec(self, path):   # Similar to decryptRelPath in fileClass
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
-        return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+        return "/Vault/"+self.outerScreen.fileSep.join(self.outerScreen.decListString(splitPath))
 
     def encDec(self, encType, op):
         total = 0
@@ -98,13 +99,9 @@ class encDecPop(Popup): #For single files
         per = 0
         prevPer = 0
         for i in range(len(self.fileList)):
-            self.done = False
+            done = False
             self.pb.value = 0
             self.pb.max = os.path.getsize(self.fileList[i])
-            if i == len(self.fileList)-1:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
-            else:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
 
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
@@ -112,7 +109,7 @@ class encDecPop(Popup): #For single files
             else:
                 self.currFile.text = self.fileList[i]
 
-            while not self.done: # Padding can cause issues as original size is not known.
+            while not done: # Padding can cause issues as original size is not known.
                 if os.path.exists(self.locList[i]):
                     self.pb.value = os.path.getsize(self.locList[i])
                     self.wholePb.value = total + self.pb.value
@@ -120,7 +117,7 @@ class encDecPop(Popup): #For single files
 
                     a = time()   # Temporary variable to hold the time
                     timeDelta = a - timeLast     # Get time difference
-                    if timeDelta >= 0.5:  # Update every 0.5 seconds
+                    if timeDelta >= 0.1:  # Update every 0.1 seconds
                         perDelta = per - prevPer   # Change in percentage in that time.
                         timeLast = a
                         sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
@@ -136,11 +133,10 @@ class encDecPop(Popup): #For single files
                     self.per.text = "{0:.2f}%".format(per)
 
                 if self.pb.value >= self.pb.max-64:  # -64 is due to padding and key.
-                    self.done = True
+                    done = True
                 else:
                     sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 
-            print("DONE in while loop", len(self.fileList))
             self.pb.value = self.pb.max
             totalPer += 100
             total += self.pb.max
@@ -187,7 +183,7 @@ class btTransferPop(encDecPop):
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
             os.makedirs(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep)
 
-        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc)
 
         bufferSize = 1024
         buff = []
@@ -224,13 +220,13 @@ class decryptFileToLocPop(Popup): # Input box for location of where directory is
                 if not os.path.exists(inp):
                     os.makedirs(inp)
                 if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
             else:
                 if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
                     if not os.path.exists(inp):
                         os.makedirs(inp)
                     inp += self.fileObj.name
-                self.outerScreen.encDecTerminal("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
 
     def getTitle(self):
         if self.fileObj.isDir:
@@ -248,7 +244,7 @@ class addNewFolderPop(Popup):
     def makeFolder(self, text):
         if dirInputValid(self.outerScreen.currentDir+text, self.outerScreen.fileSep):
             try:
-                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                os.makedirs(self.outerScreen.currentDir+self.outerScreen.encString(text))
             except OSError as e:
                 if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
                     pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})

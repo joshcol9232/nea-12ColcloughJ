@@ -1,8 +1,6 @@
 from kivy.uix.button import Button
 from kivy.uix.image import Image
 
-from sortsCy import quickSortSize
-
 class listButton(Button):           #File button when using main screen.
 
     def __init__(self, mainScreen, fileObj, **kwargs):
@@ -21,7 +19,7 @@ class nameSortButton(Button):           #Sorts the listButtons alphabetically an
         if self.outerScreen.ascending:
             self.text = "^"
             self.outerScreen.removeButtons()
-            self.outerScreen.createButtons(self.outerScreen.currentList, True)
+            self.outerScreen.createButtons(self.outerScreen.currentList[::-1], False)
         else:
             self.text = "v"
             self.outerScreen.removeButtons()
@@ -35,9 +33,8 @@ class sizeSortButton(Button):           #Sorts the files/folders by size
         self.ascending = True
         self.sortList = []
 
-
     def sortBySize(self):
-        self.sortList = quickSortSize(self.outerScreen.currentList)
+        self.sortList = self.outerScreen.sortSize(self.outerScreen.currentList)
         if not self.ascending:
             self.sortList = self.sortList[::-1]    # Reverse sorted list.
 

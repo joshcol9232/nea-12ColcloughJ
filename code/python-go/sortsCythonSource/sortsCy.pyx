@@ -1,4 +1,3 @@
-# Since compareStrings will be called a lot, i will define as cpdef for speeeed
 cpdef int compareStrings(fileObj, string2, fileObjects=True):
     cdef int count = 0
 
@@ -29,8 +28,6 @@ cpdef int compareStrings(fileObj, string2, fileObjects=True):
     else:
         raise ValueError("Two strings are the same in compareStrings.")
 
-
-
 cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically
     cdef list left = []
     cdef list right = []  #Make seperate l+r lists, and add on at the end.
@@ -53,37 +50,11 @@ cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabeti
     else:
         return myList
 
-
-cpdef list quickSortSize(list fileObjects):
-    cdef list left = []
-    cdef list right = []  #Make seperate l+r lists, and add on at the end.
-    cdef list middle = []
-    cdef int pivotSize
-    if len(fileObjects) > 1:
-        pivot = fileObjects[int(len(fileObjects)/2)]
-        if pivot.rawSize == " -":
-            pivotSize = 0
-        else:
-            pivotSize = pivot.rawSize
-
-        for i in fileObjects:
-            if i.rawSize == " -":
-                left.append(i)
-            elif i.rawSize < pivotSize:
-                left.append(i)
-            elif i.rawSize > pivotSize:
-                right.append(i)
-            else:
-                middle.append(i)
-        return quickSortSize(left)+middle+quickSortSize(right)
-    else:
-        return fileObjects
-
 cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
     cdef list left = []
     cdef list right = []  #Make seperate l+r lists, and add on at the end.
     cdef list middle = []
-    cdef int pivot
+    cdef float pivot
     if len(tuples) > 1:
         pivot = tuples[int(len(tuples)/2)][0]
         for i in tuples:
@@ -96,4 +67,3 @@ cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search result
         return quickSortTuples(left)+middle+quickSortTuples(right)
     else:
         return tuples
-
