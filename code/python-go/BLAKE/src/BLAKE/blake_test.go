@@ -49,7 +49,7 @@ func TestBlakeMix(t *testing.T) {
       											 0xaa69fe02ab573a54, 0xd55261f05e988e99, 0x47c5fed6073fff6f, 0xafdc6ec84b5122fd,
       											 0x9771847d3761d4df, 0x9219a1cce5eaceb3, 0x81c389d523f73c81, 0xc518f0411804f255}
 
-  blakeMix(arr, 0, 4, 8, 12, arr[0], arr[1]) // Simulates first mix of the compression function.
+  blakeMix(arr, 0, 4, 8, 12, &arr[0], &arr[1]) // Simulates first mix of the compression function.
 
   if fmt.Sprintf("%x", arr) != fmt.Sprintf("%x", expectedResult) {
     t.Fatalf("Expected %x but got %x", expectedResult, arr)
