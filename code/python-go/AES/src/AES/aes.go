@@ -168,8 +168,8 @@ func keyExpansionCore(inp [4]byte, i int) [4]byte {
   return inp
 }
 
-func ExpandKey(inputKey []byte) []byte {
-  expandedKeys := make([]byte, 176)
+func ExpandKey(inputKey []byte) [176]byte {
+  var expandedKeys [176]byte
   // first 16 bytes of the expandedKeys should be the same 16 as the original key
   for i := 0; i < 16; i++ {
     expandedKeys[i] = inputKey[i]
@@ -320,7 +320,7 @@ func invMixColumns(state []byte) {
   mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
 }
 
-func Encrypt(state []byte, expandedKeys []byte) {
+func Encrypt(state []byte, expandedKeys *[176]byte) {
   addRoundKey(state, expandedKeys[:16])
 
   for i := 0; i < 144; i += 16 {    // 9 regular rounds * 16 = 144
@@ -335,7 +335,7 @@ func Encrypt(state []byte, expandedKeys []byte) {
   addRoundKey(state, expandedKeys[160:])
 }
 
-func Decrypt(state []byte, expandedKeys []byte) {
+func Decrypt(state []byte, expandedKeys *[176]byte) {
   addRoundKey(state, expandedKeys[160:])
   invShiftRows(state)
   invSubBytes(state)

@@ -261,9 +261,9 @@ class MainScreen(Screen):
             return " -"
         else:
             divCount = 0
-            divisions = {0: "B", 1: "KiB", 2: "MiB", 3: "GiB", 4: "TiB", 5: "PiB"}
-            while bytes > 1024:
-                bytes = bytes/1024
+            divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+            while bytes > 1000:
+                bytes = bytes/1000
                 divCount += 1
 
             return ("%.2f" % bytes) + divisions[divCount]
@@ -584,7 +584,7 @@ class MainScreen(Screen):
 
         key = self.key
         if type in commandsNotNeedingKey:
-            key = "0"       # When the key is not needed, don't bother passing it.
+            key = ""       # When the key is not needed, don't bother passing it.
 
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES

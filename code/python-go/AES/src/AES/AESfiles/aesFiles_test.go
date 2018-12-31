@@ -28,25 +28,25 @@ var (
 
 func BenchmarkEncryptFileLarge(b *testing.B) {
   for n := 0; n < b.N; n++ {
-    EncryptFile(expandedKey, largeFile, largeFileTemp)
+    EncryptFile(&expandedKey, largeFile, largeFileTemp)
   }
 }
 
 func BenchmarkDecryptFileLarge(b *testing.B) {
   for n := 0; n < b.N; n++ {
-    DecryptFile(expandedKey, largeFileTemp, largeFileDec)
+    DecryptFile(&expandedKey, largeFileTemp, largeFileDec)
   }
 }
 
 func BenchmarkEncryptFileMedium(b *testing.B) {
   for n := 0; n < b.N; n++ {
-    EncryptFile(expandedKey, mediumFile, mediumFileTemp)
+    EncryptFile(&expandedKey, mediumFile, mediumFileTemp)
   }
 }
 
 func BenchmarkDecryptFileMedium(b *testing.B) {
   for n := 0; n < b.N; n++ {
-    DecryptFile(expandedKey, mediumFileTemp, mediumFileDec)
+    DecryptFile(&expandedKey, mediumFileTemp, mediumFileDec)
   }
 }
 
@@ -56,8 +56,8 @@ func TestEncDecMediumFile(t *testing.T) {
 
   initialHash := strings.Replace(fmt.Sprintf("%s", out), mediumFile, "", -1) // b2sum outputs the dir after the checksum is output, so remove the dir.
 
-  EncryptFile(expandedKey, mediumFile, mediumFileTemp)
-  DecryptFile(expandedKey, mediumFileTemp, mediumFileDec)
+  EncryptFile(&expandedKey, mediumFile, mediumFileTemp)
+  DecryptFile(&expandedKey, mediumFileTemp, mediumFileDec)
 
   out, err = exec.Command("/bin/bash", "-c", "b2sum '"+mediumFileDec+"'").Output()
 
@@ -74,8 +74,8 @@ func TestEncDecSmallFile(t *testing.T) {
 
   initialHash := strings.Replace(fmt.Sprintf("%s", out), smallFile, "", -1) // b2sum outputs the dir after the checksum is output, so remove the dir.
 
-  EncryptFile(expandedKey, smallFile, smallFileTemp)
-  DecryptFile(expandedKey, smallFileTemp, smallFileDec)
+  EncryptFile(&expandedKey, smallFile, smallFileTemp)
+  DecryptFile(&expandedKey, smallFileTemp, smallFileDec)
 
   out, err = exec.Command("/bin/bash", "-c", "b2sum '"+smallFileDec+"'").Output()
 

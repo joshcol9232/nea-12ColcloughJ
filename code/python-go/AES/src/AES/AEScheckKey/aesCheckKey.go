@@ -21,7 +21,7 @@ func CompareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
 
 func CheckKey(key []byte, block []byte) bool {
   expandedKeys := AES.ExpandKey(key) // Expand the key
-  AES.Decrypt(block, expandedKeys)    // Decrypt first block
+  AES.Decrypt(block, &expandedKeys)    // Decrypt first block
   return CompareSlices(key, block) // Compare decrypted first block with the key.
 }
 

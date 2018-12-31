@@ -29,7 +29,7 @@ type work struct {
   offset int64
 }
 
-func workerEnc(jobs <-chan work, results chan<- work, expandedKeys []byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
+func workerEnc(jobs <-chan work, results chan<- work, expandedKeys *[176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       AES.Encrypt(job.buff[i:i+16], expandedKeys)
@@ -39,7 +39,7 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKeys []byte) {    
 }
 
 // Worker that encrypts chunk given
-func workerDec(jobs <-chan work, results chan<- work, expandedKeys []byte, fileSize int) {
+func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, fileSize int) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
@@ -64,7 +64,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys []byte, fileS
   }
 }
 
-func EncryptFile(expandedKeys []byte, f, w string) {
+func EncryptFile(expandedKeys *[176]byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
@@ -163,7 +163,7 @@ func EncryptFile(expandedKeys []byte, f, w string) {
 }
 
 
-func DecryptFile(expandedKeys []byte, f, w string) {
+func DecryptFile(expandedKeys *[176]byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -246,14 +246,14 @@ func DecryptFile(expandedKeys []byte, f, w string) {
 }
 
 // For dealing with directories
-func EncryptList(expandedKeys []byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
+func EncryptList(expandedKeys *[176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
     EncryptFile(expandedKeys, fileList[i], targetList[i])
   }
 }
 
-func DecryptList(expandedKeys []byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
+func DecryptList(expandedKeys *[176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
     DecryptFile(expandedKeys, fileList[i], targetList[i])
