@@ -2,6 +2,7 @@ package AESstring
 
 import (
   "os"
+  "log"
   "io/ioutil"
   b64 "encoding/base64" // For enc/decoding encrypted string
   "AES"
@@ -62,11 +63,15 @@ func GetListsEnc(expandedKeys *[176]byte, fileList, targetList []string, folder,
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
-    if list[i].IsDir() {
-      fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
+    if len(list[i].Name()) <= 176 {
+      if list[i].IsDir() {
+        fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
+      } else {
+        fileList   = append(fileList, folder+list[i].Name())
+        targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
+      }
     } else {
-      fileList   = append(fileList, folder+list[i].Name())
-      targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
+      log.Output(0, "File name too long: "+list[i].Name())
     }
   }
   return fileList, targetList

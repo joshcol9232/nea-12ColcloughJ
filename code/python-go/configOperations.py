@@ -3,7 +3,6 @@ from os import listdir, makedirs
 from sys import platform
 from tempfile import gettempdir
 
-
 def findConfigFile(startDir, fileSep):
     config = None
     if fileSep == "/":

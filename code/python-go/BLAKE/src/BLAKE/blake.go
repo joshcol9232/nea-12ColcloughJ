@@ -40,14 +40,14 @@ func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
 }
 
-func blakeMix(v []uint64, a, b, c, d int, x, y uint64) {
-  v[a] = v[a] + v[b] + x
+func blakeMix(v []uint64, a, b, c, d int, x, y *uint64) {
+  v[a] = v[a] + v[b] + *x
   v[d] = rotR64((v[d] ^ v[a]), 32)
 
   v[c] = v[c] + v[d]
   v[b] = rotR64((v[b] ^ v[c]), 24)
 
-  v[a] = v[a] + v[b] + y
+  v[a] = v[a] + v[b] + *y
   v[d] = rotR64((v[d] ^ v[a]), 16)
 
   v[c] = v[c] + v[d]
@@ -60,10 +60,16 @@ func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64
 
 func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Compressing function. Takes a block of 128 uint64s
   v := make([]uint64, 16) // Current vector as a slice. This allows you to pass by reference
-  for i := 0; i < 8; i++ {
-    v[i] = h[i]
-    v[i+8] = k[i]
-  }
+
+  v[ 0], v[ 1], v[ 2], v[ 3],     // Doing this instead of for loop allows for marginal performance increase.
+  v[ 4], v[ 5], v[ 6], v[ 7],
+  v[ 8], v[ 9], v[10], v[11],
+  v[12], v[13], v[14], v[15] =
+  h[0],  h[1],  h[2],  h[3],
+  h[4],  h[5],  h[6],  h[7],
+  k[0],  k[1],  k[2],  k[3],
+  k[4],  k[5],  k[6],  k[7]
+
   v[12] ^= uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
   v[13] ^= (uint64(t) >> 64)
 
@@ -76,16 +82,15 @@ func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Co
     m[i] = get64(block[i*8:(i*8)+8])
   }
   for i := 0; i < 12; i++ {
-    // Mix
-    blakeMix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
-    blakeMix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
-    blakeMix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
-    blakeMix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
+    blakeMix(v, 0, 4,  8, 12, &m[sigma[i][0]], &m[sigma[i][1]])
+    blakeMix(v, 1, 5,  9, 13, &m[sigma[i][2]], &m[sigma[i][3]])
+    blakeMix(v, 2, 6, 10, 14, &m[sigma[i][4]], &m[sigma[i][5]])
+    blakeMix(v, 3, 7, 11, 15, &m[sigma[i][6]], &m[sigma[i][7]])
 
-    blakeMix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
-    blakeMix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
-    blakeMix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
-    blakeMix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
+    blakeMix(v, 0, 5, 10, 15, &m[sigma[i][ 8]], &m[sigma[i][ 9]])   // Rows have been shifted
+    blakeMix(v, 1, 6, 11, 12, &m[sigma[i][10]], &m[sigma[i][11]])
+    blakeMix(v, 2, 7,  8, 13, &m[sigma[i][12]], &m[sigma[i][13]])
+    blakeMix(v, 3, 4,  9, 14, &m[sigma[i][14]], &m[sigma[i][15]])
   }
 
   for i := 0; i < 8; i++ {
