@@ -46,10 +46,10 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, f
         AES.Decrypt(job.buff[i:i+16], expandedKeys)   // Decrypt 128 bit chunk of buffer
         // Store in variable as we are going to change it.
         var focus int = int(job.buff[i+15])
-        var focusCount int = 0
+        var focusCount int = 1
 
         if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-          for j := 15; (int(job.buff[i+j]) == focus) && (j > 0); j-- {
+          for j := 14; (int(job.buff[i+j]) == focus) && (j >= 0); j-- {
             if int(job.buff[i+j]) == focus { focusCount++ }
           }
           if focus == focusCount {

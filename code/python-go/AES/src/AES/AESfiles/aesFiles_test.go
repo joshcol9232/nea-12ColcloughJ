@@ -17,9 +17,9 @@ const (
   mediumFileTemp = "/home/josh/8kTemp"
   mediumFileDec = "/home/josh/8kDec.png"
 
-  smallFile = "/home/josh/a.txt"
+  smallFile = "/home/josh/small"
   smallFileTemp = "/home/josh/temp2"
-  smallFileDec = "/home/josh/aDec.txt"
+  smallFileDec = "/home/josh/smallDec"
 )
 
 var (
