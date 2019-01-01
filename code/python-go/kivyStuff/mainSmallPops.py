@@ -142,6 +142,7 @@ class encDecPop(Popup): #For single files
             total += self.pb.max
 
         mainthread(Clock.schedule_once(self.dismiss, -1))
+        self.outerScreen.resetButtons()
 
 
 class btTransferPop(encDecPop):

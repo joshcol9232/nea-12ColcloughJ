@@ -31,7 +31,7 @@ except:
 
 class MainScreen(Screen):
 
-    class infoLabel(Label):   # Not a popup so only suitable place.
+    class infoLabel(Label):   # Not a popup or button so only suitable place.
         pass
 
     def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, **kwargs):
