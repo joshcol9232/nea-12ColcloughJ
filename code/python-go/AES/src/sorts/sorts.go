@@ -12,7 +12,7 @@ type Tuple struct {
   B string
 }
 
-func UseQuickSortSize(inp []string) []string {
+func UseQuickSortSize(inp []string) []string {  // Converts inputs so that QuickSortSize can be used.
   var nums []int64
   var out []string
   for i := 0; i < len(inp); i++ {
@@ -60,7 +60,7 @@ func getLower(inp []byte) []byte { // .lower() in python
   return out
 }
 
-func QuickSortAlph(inp []Tuple) []Tuple {
+func QuickSortAlph(inp []Tuple) []Tuple {  // Only used internally by AES
   if len(inp) < 2 {
     return inp
   }
@@ -87,15 +87,15 @@ func compareStrings(string1, string2 string) int {
   if string1 == string2 {
     return 2
   }
-  string1b, string2b := []byte(string1), []byte(string2)
-  string1bLower, string2bLower := getLower(string1b), getLower(string2b)
+  string1b, string2b := []byte(string1), []byte(string2) // Get the ascii values in bytes
+  string1bLower, string2bLower := getLower(string1b), getLower(string2b) // Get each string as lower case
 
   for i := 0; i < len(string1) && i < len(string2); i++ {
     if string2bLower[i] < string1bLower[i] {
       return 1
     } else if string2bLower[i] > string1bLower[i] {
       return 0
-    } else {
+    } else {                                      // If the characters are both the same, then compare if they are lower case or upper case.
       if string2b[i] < string1b[i] {
         return 1
       } else if string2b[i] > string1b[i] {
@@ -103,12 +103,12 @@ func compareStrings(string1, string2 string) int {
       }
     }
   }
-  if len(string1) > len(string2) {
+  if len(string1) > len(string2) {      // If they are the exact same to a certain point, then compare their lengths
     return 1
   } else if len(string1) < len(string2) {
     return 0
   } else {
-    panic("Strings are the exact same!")
+    panic("Strings are the exact same! : ", string1, string2)
   }
 }
 
