@@ -29,20 +29,20 @@ type work struct {
   offset int64
 }
 
-func workerEnc(jobs <-chan work, results chan<- work, expandedKeys *[176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
+func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) {    // Encrypts a chunk when given (a chunk of length bufferSize)
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
-      AES.Encrypt(job.buff[i:i+16], expandedKeys)
+      AES.Encrypt(job.buff[i:i+16], expandedKey)
     }
     results<- work{buff: job.buff, offset: job.offset}
   }
 }
 
 // Worker that encrypts chunk given
-func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, fileSize int) {
+func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fileSize int) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
-      AES.Decrypt(job.buff[i:i+16], expandedKeys)
+      AES.Decrypt(job.buff[i:i+16], expandedKey)
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
         var focus int = int(job.buff[i+15])
         var focusCount int = 1
@@ -60,7 +60,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, f
   }
 }
 
-func EncryptFile(expandedKeys *[176]byte, f, w string) {
+func EncryptFile(expandedKey *[176]byte, f, w string) {
   a, err := os.Open(f)    // Open original file to get statistics and read data.
   check(err)
   aInfo, err := a.Stat()  // Get statistics
@@ -78,8 +78,8 @@ func EncryptFile(expandedKeys *[176]byte, f, w string) {
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
-  for i := 0; i < workerNum; i++ { // Use all cores bar one
-    go workerEnc(jobs, results, expandedKeys)
+  for i := 0; i < workerNum; i++ {
+    go workerEnc(jobs, results, expandedKey)
   }
   /*
   Each go routine will be given access to the job channel, where each worker then waits to complete the job.
@@ -99,8 +99,8 @@ func EncryptFile(expandedKeys *[176]byte, f, w string) {
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  var originalKey = expandedKeys[:16]
-  AES.Encrypt(originalKey, expandedKeys)
+  var originalKey = expandedKey[:16]
+  AES.Encrypt(originalKey, expandedKey)
   e.Write(originalKey)
   offset := 16
 
@@ -157,7 +157,7 @@ func EncryptFile(expandedKeys *[176]byte, f, w string) {
 }
 
 
-func DecryptFile(expandedKeys *[176]byte, f, w string) {
+func DecryptFile(expandedKey *[176]byte, f, w string) {
   a, err := os.Open(f)
   check(err)
   aInfo, err := a.Stat()
@@ -174,11 +174,11 @@ func DecryptFile(expandedKeys *[176]byte, f, w string) {
   var workingWorkers int = 0
   var workerNum int = getNumOfCores()*2
 
-  jobs := make(chan work, )
-  results := make(chan work)
+  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
+  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
-  for i := 0; i < workerNum; i++ { // Use all cores bar one
-    go workerDec(jobs, results, expandedKeys, fileSize)
+  for i := 0; i < workerNum; i++ {
+    go workerDec(jobs, results, expandedKey, fileSize)
   }
 
   if fileSize < bufferSize {
@@ -194,9 +194,9 @@ func DecryptFile(expandedKeys *[176]byte, f, w string) {
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
-  AES.Decrypt(firstBlock, expandedKeys)
+  AES.Decrypt(firstBlock, expandedKey)
 
-  if AEScheckKey.CompareSlices(expandedKeys[:16], firstBlock) { // If key is valid
+  if AEScheckKey.CompareSlices(expandedKey[:16], firstBlock) { // If key is valid
     offset := 0
     a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
@@ -240,16 +240,16 @@ func DecryptFile(expandedKeys *[176]byte, f, w string) {
 }
 
 // For dealing with directories
-func EncryptList(expandedKeys *[176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
+func EncryptList(expandedKey *[176]byte, fileList []string, targetList []string) {  // Encrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
-    EncryptFile(expandedKeys, fileList[i], targetList[i])
+    EncryptFile(expandedKey, fileList[i], targetList[i])
   }
 }
 
-func DecryptList(expandedKeys *[176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
+func DecryptList(expandedKey *[176]byte, fileList []string, targetList []string) {  // Decrypts list of files given to the corresponding targets.
   if len(fileList) != len(targetList) { panic("fileList and targList are different in length") }
   for i := range fileList {
-    DecryptFile(expandedKeys, fileList[i], targetList[i])
+    DecryptFile(expandedKey, fileList[i], targetList[i])
   }
 }

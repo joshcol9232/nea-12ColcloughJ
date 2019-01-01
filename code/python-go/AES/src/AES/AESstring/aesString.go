@@ -9,7 +9,7 @@ import (
   "sorts" // QuickSortAlph made in sorts.go
 )
 
-func EncryptFileName(expandedKeys *[176]byte, name string) string {
+func EncryptFileName(expandedKey *[176]byte, name string) string {
   var byteName = []byte(name)
 
   for len(byteName) % 16 != 0 {   // Pad with 0's
@@ -17,17 +17,17 @@ func EncryptFileName(expandedKeys *[176]byte, name string) string {
   }
 
   for i := 0; i < len(byteName); i += 16 {
-    AES.Encrypt(byteName[i:i+16], expandedKeys)  // Done by reference so does not need to be assigned
+    AES.Encrypt(byteName[i:i+16], expandedKey)  // Done by reference so does not need to be assigned
   }
   return b64.URLEncoding.EncodeToString(byteName) // URL encoding used so it is safe for file systems ("/")
 }
 
-func DecryptFileName(expandedKeys *[176]byte, hexName string) string {
+func DecryptFileName(expandedKey *[176]byte, hexName string) string {
   byteName, err := b64.URLEncoding.DecodeString(hexName)
   if err != nil { panic(err) }
 
   for i := 0; i < len(byteName); i += 16 {
-    AES.Decrypt(byteName[i:i+16], expandedKeys)
+    AES.Decrypt(byteName[i:i+16], expandedKey)
   }
   byteName = checkForPadding(byteName)
   return string(byteName[:])
@@ -43,32 +43,32 @@ func checkForPadding(input []byte) ([]byte) {
   return newBytes
 }
 
-func EncryptListOfString(expandedKeys *[176]byte, l []string) []string {
+func EncryptListOfString(expandedKey *[176]byte, l []string) []string {
   for i := range l {
-    l[i] = EncryptFileName(expandedKeys, l[i])
+    l[i] = EncryptFileName(expandedKey, l[i])
   }
   return l
 }
 
-func DecryptListOfString(expandedKeys *[176]byte, l []string) []string {
+func DecryptListOfString(expandedKey *[176]byte, l []string) []string {
   var out []string
   for i := range l {
-    out = append(out, DecryptFileName(expandedKeys, l[i]))
+    out = append(out, DecryptFileName(expandedKey, l[i]))
   }
   return out
 }
 
-func GetListsEnc(expandedKeys *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
+func GetListsEnc(expandedKey *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
     if len(list[i].Name()) <= 176 {
       if list[i].IsDir() {
-        fileList, targetList = GetListsEnc(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKeys, list[i].Name())+"/")
+        fileList, targetList = GetListsEnc(expandedKey, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKey, list[i].Name())+"/")
       } else {
         fileList   = append(fileList, folder+list[i].Name())
-        targetList = append(targetList, target+EncryptFileName(expandedKeys, list[i].Name()))
+        targetList = append(targetList, target+EncryptFileName(expandedKey, list[i].Name()))
       }
     } else {
       log.Output(0, "File name too long: "+list[i].Name())
@@ -77,16 +77,16 @@ func GetListsEnc(expandedKeys *[176]byte, fileList, targetList []string, folder,
   return fileList, targetList
 }
 
-func GetListsDec(expandedKeys *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) {
+func GetListsDec(expandedKey *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) {
   os.Mkdir(target, os.ModePerm)
   list, err := ioutil.ReadDir(folder)
   if err != nil { panic(err) }
   for i := range list {
     if list[i].IsDir() {
-      fileList, targetList = GetListsDec(expandedKeys, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKeys, list[i].Name())+"/")
+      fileList, targetList = GetListsDec(expandedKey, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKey, list[i].Name())+"/")
     } else {
       fileList   = append(fileList, folder+list[i].Name())
-      targetList = append(targetList, target+DecryptFileName(expandedKeys, list[i].Name()))
+      targetList = append(targetList, target+DecryptFileName(expandedKey, list[i].Name()))
     }
   }
   return fileList, targetList
@@ -118,7 +118,7 @@ func getSortedFoldersAndFiles(inp []sorts.Tuple) ([]string, []string) {
   return encOut, decOut
 }
 
-func GetListOfFiles(expandedKeys *[176]byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
+func GetListOfFiles(expandedKey *[176]byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
   list, err := ioutil.ReadDir(dir)
   if err != nil { panic(err) }
   l := make([]sorts.Tuple, 0)
@@ -126,7 +126,7 @@ func GetListOfFiles(expandedKeys *[176]byte, dir string) ([]string, []string) { 
   for x := range list {
     listOfNames = append(listOfNames, list[x].Name())
   }
-  dec := DecryptListOfString(expandedKeys, listOfNames)
+  dec := DecryptListOfString(expandedKey, listOfNames)
 
   for i := range list {
     l = append(l, sorts.Tuple{A: list[i], B: dec[i]})

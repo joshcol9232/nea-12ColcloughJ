@@ -169,18 +169,18 @@ func keyExpansionCore(inp [4]byte, i int) [4]byte {
 }
 
 func ExpandKey(inputKey []byte) [176]byte {
-  var expandedKeys [176]byte
-  // first 16 bytes of the expandedKeys should be the same 16 as the original key
+  var expandedKey [176]byte
+  // first 16 bytes of the expandedKey should be the same 16 as the original key
   for i := 0; i < 16; i++ {
-    expandedKeys[i] = inputKey[i]
+    expandedKey[i] = inputKey[i]
   }
-  var bytesGenerated int = 16 // needs to get to 176 to fill expandedKeys with 11 keys, one for every round.
+  var bytesGenerated int = 16 // needs to get to 176 to fill expandedKey with 11 keys, one for every round.
   var rconIteration int = 1
   var temp [4]byte
 
   for bytesGenerated < 176{
     // Read 4 bytes for use in keyExpansionCore
-    copy(temp[:], expandedKeys[bytesGenerated-4:bytesGenerated])
+    copy(temp[:], expandedKey[bytesGenerated-4:bytesGenerated])
 
     if bytesGenerated % 16 == 0 {    // Keys are length 16 bytes so every 16 bytes generated, expand.
       temp = keyExpansionCore(temp, rconIteration)
@@ -188,12 +188,12 @@ func ExpandKey(inputKey []byte) [176]byte {
     }
 
     for y := 0; y < 4; y++ {
-      expandedKeys[bytesGenerated] = expandedKeys[bytesGenerated - 16] ^ temp[y]  // XOR first 4 bytes of previous key with the temporary list.
+      expandedKey[bytesGenerated] = expandedKey[bytesGenerated - 16] ^ temp[y]  // XOR first 4 bytes of previous key with the temporary list.
       bytesGenerated += 1
     }
   }
 
-  return expandedKeys
+  return expandedKey
 }
 
 func addRoundKey(state []byte, roundKey []byte) {       // Add round key is also it's own inverse
@@ -320,32 +320,32 @@ func invMixColumns(state []byte) {
   mul11[state[12]] ^ mul13[state[13]] ^ mul9[state[14]] ^ mul14[state[15]]
 }
 
-func Encrypt(state []byte, expandedKeys *[176]byte) {
-  addRoundKey(state, expandedKeys[:16])
+func Encrypt(state []byte, expandedKey *[176]byte) {
+  addRoundKey(state, expandedKey[:16])
 
   for i := 0; i < 144; i += 16 {    // 9 regular rounds * 16 = 144
     subBytes(state)
     shiftRows(state)
     mixColumns(state)
-    addRoundKey(state, expandedKeys[i+16:i+32])
+    addRoundKey(state, expandedKey[i+16:i+32])
   }
   // Last round
   subBytes(state)
   shiftRows(state)
-  addRoundKey(state, expandedKeys[160:])
+  addRoundKey(state, expandedKey[160:])
 }
 
-func Decrypt(state []byte, expandedKeys *[176]byte) {
-  addRoundKey(state, expandedKeys[160:])
+func Decrypt(state []byte, expandedKey *[176]byte) {
+  addRoundKey(state, expandedKey[160:])
   invShiftRows(state)
   invSubBytes(state)
 
   for i := 144; i != 0; i -= 16 {
-    addRoundKey(state, expandedKeys[i:i+16])
+    addRoundKey(state, expandedKey[i:i+16])
     invMixColumns(state)
     invShiftRows(state)
     invSubBytes(state)
   }
   // Last round
-  addRoundKey(state, expandedKeys[:16])
+  addRoundKey(state, expandedKey[:16])
 }

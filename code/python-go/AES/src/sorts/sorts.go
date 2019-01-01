@@ -108,7 +108,7 @@ func compareStrings(string1, string2 string) int {
   } else if len(string1) < len(string2) {
     return 0
   } else {
-    panic("Strings are the exact same! : ", string1, string2)
+    panic("Strings are the exact same!")
   }
 }
 
