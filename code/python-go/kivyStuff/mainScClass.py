@@ -462,16 +462,19 @@ class MainScreen(Screen):
         self.remove_widget(self.scroll)
 
     def resetButtons(self): # Goes back to self.currentDir, different to refresh.
+        print("resetButtons")
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
         self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshFiles(self):   # Refreshes the files in the current directory
+        print("refreshFiles")
         self.removeButtons()
         self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshButtons(self): # Refreshes file list buttons currently displayed.
+        print("refreshButtons")
         self.removeButtons()
         self.createButtons(self.currentList, sort=False)
 
@@ -546,34 +549,29 @@ class MainScreen(Screen):
 
 ######Encryption Stuff + opening decrypted files + interface with go######
     def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt. A wrapper for the thread that will do it.
-        #print("TARGET L0C:", targetLoc)
         if self.encPop != None:
             self.encPop.dismiss()
             self.encPop = None
 
         def encThread(encType, d, targetLoc, op=True):
             if os.path.isdir(d):
-                self.createFolders(targetLoc)
+                if not os.path.exists(targetLoc):
+                    os.makedirs(targetLoc)
                 fileList, locList = self.getDirLists(encType, d, targetLoc)
                 self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
                 mainthread(self.encPop.open())
                 self.passToPipe(encType+"Dir", "\n".join(fileList), "\n".join(locList))
             else:
-                #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op)
-                #mainthread(Clock.schedule_once(self.encPop.open, -1))
                 self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
                 mainthread(self.encPop.open())
                 self.passToPipe(encType, d, targetLoc)
 
+
             if op and encType == "n":
                 self.openFileTh(targetLoc, d)
-            elif type == "y":
-                self.refreshFiles()
 
         return Thread(target=encThread, args=(encType, d, targetLoc, op,)).start()
 
-        #self.encPop = mainSPops.encDecPop(self, encType, labText, op=op) #self, labText, fileList, locList, **kwargs
-        #mainthread(Clock.schedule_once(self.encPop.open, -1))
 
     def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
         commandsNotNeedingKey = ["sortSize", "sortAlph"]
@@ -630,7 +628,6 @@ class MainScreen(Screen):
         for i in fileObjects:
             outList[out.index(i.rawSize)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
             added.append(i)
-
         #print([x.name for x in fileObjects if x not in added])
 
         return [i for i in outList if i != -1] # In case of any left-overs
@@ -641,7 +638,7 @@ class MainScreen(Screen):
         return out.split(",,")
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
-        if self.fileSep == "\\":  # If on windows
+        if self.fileSep == "\\":      # If on windows
             goproc = Popen(self.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
         elif self.fileSep == "/":
             goproc = Popen(self.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
@@ -654,10 +651,6 @@ class MainScreen(Screen):
 
     def getFileExtension(self, fileName):
         return fileName.split(".")[-1].lower()
-
-    def isImage(self, fileName):  # Used to get a file extension from a given file name.
-        extension = self.getFileExtension(fileName).lower()
-        return bool(extension == "png" or extension == "jpg")
 
     def getThumbnail(self, fileObj):
         if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
@@ -697,7 +690,7 @@ class MainScreen(Screen):
         self.checkCanEncrypt(filePath.decode())
         return "Done"
 
-    def decrypt(self, fileObj, op=True): # Default decrypt
+    def decrypt(self, fileObj, op=True):            # Default decrypt for file. Manages opening files etc.
         if not os.path.isdir(self.osTemp+"FileMate"+self.fileSep):
             os.makedirs(self.osTemp+"FileMate"+self.fileSep)
         fileLoc = self.osTemp+"FileMate"+self.fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
@@ -705,15 +698,6 @@ class MainScreen(Screen):
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
             self.encDec("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
-
-    def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
-        if os.path.exists(dir):
-            return True
-        else:
-            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-            self.popup.open()
-            return False
-
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
@@ -732,7 +716,6 @@ class MainScreen(Screen):
                 inp = self.fileSep.join(inpSplit)
             self.encDec("y", inp, targ)
 
-
     def checkCanEncrypt(self, inp):  # Used for adding new files to the vault by the user.
         if "--" in inp: # Multiple files/folders input.
             inp = inp.split("--")
@@ -741,13 +724,14 @@ class MainScreen(Screen):
         else:
             self.checkCanEncryptCore(inp)
 
-        self.resetButtons()
 
-
-    def createFolders(self, targetLoc):   # Create a folder safely.
-        if not os.path.exists(targetLoc):
-            os.makedirs(targetLoc)
-
+    def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
+        if os.path.exists(dir):
+            return True
+        else:
+            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+            self.popup.open()
+            return False
 
     def clearUpTempFiles(self):     # Deletes temp files when the program is locked.
         print("Deleting temp files.")

@@ -88,6 +88,12 @@ class encDecPop(Popup): #For single files
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
         return "/Vault/"+self.outerScreen.fileSep.join(self.outerScreen.decListString(splitPath))
 
+    def __getMeanOfList(self, l):
+        out = 0
+        for i in l:
+            out += i
+        return out/len(l)
+
     def encDec(self, encType, op):
         total = 0
         totalPer = 0
@@ -98,6 +104,7 @@ class encDecPop(Popup): #For single files
         perDelta = 0
         per = 0
         prevPer = 0
+        lastPerDeltas = [] # Stores 8 of the last percentage deltas so that a mean can be obtained.
         for i in range(len(self.fileList)):
             done = False
             self.pb.value = 0
@@ -117,8 +124,13 @@ class encDecPop(Popup): #For single files
 
                     a = time()   # Temporary variable to hold the time
                     timeDelta = a - timeLast     # Get time difference
-                    if timeDelta >= 0.2:  # Update every 0.1 seconds
+                    if timeDelta >= 0.5:  # Update every 0.5 seconds
                         perDelta = per - prevPer   # Change in percentage in that time.
+                        if len(lastPerDeltas) == 8:
+                            lastPerDeltas = lastPerDeltas[1:]
+                        lastPerDeltas.append(perDelta)
+                        perDelta = self.__getMeanOfList(lastPerDeltas)
+
                         timeLast = a
                         sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
                         speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
@@ -142,7 +154,8 @@ class encDecPop(Popup): #For single files
             total += self.pb.max
 
         mainthread(Clock.schedule_once(self.dismiss, -1))
-        self.outerScreen.resetButtons()
+        if encType == "y":
+            mainthread(self.outerScreen.resetButtons())
 
 
 class btTransferPop(encDecPop):
