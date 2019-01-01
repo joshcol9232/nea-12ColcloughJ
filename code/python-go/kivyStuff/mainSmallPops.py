@@ -117,7 +117,7 @@ class encDecPop(Popup): #For single files
 
                     a = time()   # Temporary variable to hold the time
                     timeDelta = a - timeLast     # Get time difference
-                    if timeDelta >= 0.1:  # Update every 0.1 seconds
+                    if timeDelta >= 0.2:  # Update every 0.1 seconds
                         perDelta = per - prevPer   # Change in percentage in that time.
                         timeLast = a
                         sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted

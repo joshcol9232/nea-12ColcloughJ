@@ -8,7 +8,7 @@ import (
   "AES/AEScheckKey"
 )
 
-const DEFAULT_BUFFER_SIZE = 32768  // Define the default buffer size for enc/decrypt
+const DEFAULT_BUFFER_SIZE = 65536  // Define the default buffer size for enc/decrypt (is 2^16)
 
 func check(e error) {  // Checks error given
   if e != nil { panic(e) }
@@ -42,12 +42,10 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKeys *[176]byte) {
 func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, fileSize int) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
+      AES.Decrypt(job.buff[i:i+16], expandedKeys)
       if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        AES.Decrypt(job.buff[i:i+16], expandedKeys)   // Decrypt 128 bit chunk of buffer
-        // Store in variable as we are going to change it.
         var focus int = int(job.buff[i+15])
         var focusCount int = 1
-
         if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
           for j := 14; (int(job.buff[i+j]) == focus) && (j >= 0); j-- {
             if int(job.buff[i+j]) == focus { focusCount++ }
@@ -56,8 +54,6 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKeys *[176]byte, f
             job.buff = append(job.buff[:(i+16-focus)], job.buff[i+16:]...)  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
           }
         }
-      } else {
-        AES.Decrypt(job.buff[i:i+16], expandedKeys)
       }
     }
     results<- work{buff: job.buff, offset: job.offset}
@@ -82,17 +78,15 @@ func EncryptFile(expandedKeys *[176]byte, f, w string) {
   jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
-  /*
-  Each go routine will be given access to the job queue, where each worker then waits to complete the job.
-  Once the job is completed, the go routine pushes the result onto the result queue, where the result can be
-  recieved by the main routine. The results are read once all of the go routines are busy, or if the file
-  is completed, then the remaining workers still working are asked for their results.
-  */
-
   for i := 0; i < workerNum; i++ { // Use all cores bar one
     go workerEnc(jobs, results, expandedKeys)
   }
-
+  /*
+  Each go routine will be given access to the job channel, where each worker then waits to complete the job.
+  Once the job is completed, the go routine pushes the result onto the result channel, where the result can be
+  recieved by the main routine. The results are read once all of the go routines are busy, or if the file
+  is completed, then the remaining workers still working are asked for their results.
+  */
   var bufferSize int = DEFAULT_BUFFER_SIZE
 
   if fileSize < bufferSize {    // If the buffer size is larger than the file size, just read the whole file.
