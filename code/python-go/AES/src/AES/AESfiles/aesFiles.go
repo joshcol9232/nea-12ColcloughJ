@@ -34,7 +34,7 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) { 
     for i := 0; i < len(job.buff); i += 16 {
       AES.Encrypt(job.buff[i:i+16], expandedKey)
     }
-    results<- work{buff: job.buff, offset: job.offset}
+    results<- job // Return result with encrypted job
   }
 }
 
@@ -56,7 +56,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fi
         }
       }
     }
-    results<- work{buff: job.buff, offset: job.offset}
+    results<- job  // Return job with decrypted buffer
   }
 }
 
@@ -79,7 +79,7 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
-    go workerEnc(jobs, results, expandedKey)
+    go workerEnc(jobs, results, expandedKey)   // Create the workers
   }
   /*
   Each go routine will be given access to the job channel, where each worker then waits to complete the job.
@@ -127,14 +127,14 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
       } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
     }
 
-    jobs <- work{buff: buff, offset: int64(offset)}
+    jobs <- work{buff: buff, offset: int64(offset)} // Input new work into the jobs channel.
     workingWorkers++
 
-    if workingWorkers == workerNum {
+    if workingWorkers == workerNum {  // Once all workers are working, wait for results.
       workingWorkers = 0
       for i := 0; i < workerNum; i++ {
         wk := <-results
-        e.WriteAt(wk.buff, wk.offset)
+        e.WriteAt(wk.buff, wk.offset)   // Write the buffer at the offset specified.
       }
     }
 
@@ -142,14 +142,14 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
     buffCount += bufferSize
   }
 
-  if workingWorkers != 0 {
+  if workingWorkers != 0 { // If there are still workers working, then accept the results.
     for i := 0; i < workingWorkers; i++ {
       wk := <-results
       e.WriteAt(wk.buff, wk.offset)
     }
   }
 
-  close(jobs)
+  close(jobs)   // Close the channels since the file has been finished.
   close(results)
 
   a.Close()  // Close the files used.
@@ -194,9 +194,8 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
-  AES.Decrypt(firstBlock, expandedKey)
 
-  if AEScheckKey.CompareSlices(expandedKey[:16], firstBlock) { // If key is valid
+  if AEScheckKey.CheckKey(expandedKey, firstBlock) { // If key is valid
     offset := 0
     a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize

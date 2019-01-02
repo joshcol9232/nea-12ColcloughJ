@@ -1951,6 +1951,9 @@ You will notice a few `.sh` files, these are just used to run tests on the code,
 In the `code/python-go/AES/src/` folder, there is also a folder called `sorts`, which holds the sorts that are used by `AESstring` to sort lists of files. The `sorts` package is used to sort lists of files.
 
 
+#### AES package
+
+
 Here is the `AES` package in `code/python-go/AES/src/AES/aes.go`:
 
 ```go
@@ -2328,6 +2331,9 @@ func main() {
 The expanded key is passed by reference to Encrypt and Decrypt so it does not keep being copied by functions. This increases speed slightly. The state is passed to each function as a slice, which is an array that can change size. In Go, slices are always passed by reference, so I do not need to worry about dereferencing it or anything, and hence why none of the functions in the `AES` package return any values (apart from for key expansion).
 
 
+#### AESfiles package
+
+
 Here is the `AESfiles` package in `code/python-go/AES/src/AES/AESfiles/aesFiles.go`:
 
 ```go
@@ -2367,7 +2373,7 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) { 
     for i := 0; i < len(job.buff); i += 16 {
       AES.Encrypt(job.buff[i:i+16], expandedKey)
     }
-    results<- work{buff: job.buff, offset: job.offset}
+    results<- job // Return result with encrypted job
   }
 }
 
@@ -2389,7 +2395,7 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fi
         }
       }
     }
-    results<- work{buff: job.buff, offset: job.offset}
+    results<- job  // Return job with decrypted buffer
   }
 }
 
@@ -2412,7 +2418,7 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
-    go workerEnc(jobs, results, expandedKey)
+    go workerEnc(jobs, results, expandedKey)   // Create the workers
   }
   /*
   Each go routine will be given access to the job channel, where each worker then waits to complete the job.
@@ -2460,14 +2466,14 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
       } // This is so that when the block is decrypted, the pattern can be recognised, and the correct amount of padding can be removed.
     }
 
-    jobs <- work{buff: buff, offset: int64(offset)}
+    jobs <- work{buff: buff, offset: int64(offset)} // Input new work into the jobs channel.
     workingWorkers++
 
-    if workingWorkers == workerNum {
+    if workingWorkers == workerNum {  // Once all workers are working, wait for results.
       workingWorkers = 0
       for i := 0; i < workerNum; i++ {
         wk := <-results
-        e.WriteAt(wk.buff, wk.offset)
+        e.WriteAt(wk.buff, wk.offset)   // Write the buffer at the offset specified.
       }
     }
 
@@ -2475,14 +2481,14 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
     buffCount += bufferSize
   }
 
-  if workingWorkers != 0 {
+  if workingWorkers != 0 { // If there are still workers working, then accept the results.
     for i := 0; i < workingWorkers; i++ {
       wk := <-results
       e.WriteAt(wk.buff, wk.offset)
     }
   }
 
-  close(jobs)
+  close(jobs)   // Close the channels since the file has been finished.
   close(results)
 
   a.Close()  // Close the files used.
@@ -2527,9 +2533,8 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   firstBlock := make([]byte, 16)
   _, er := io.ReadFull(a, firstBlock)
   check(er)
-  AES.Decrypt(firstBlock, expandedKey)
 
-  if AEScheckKey.CompareSlices(expandedKey[:16], firstBlock) { // If key is valid
+  if AEScheckKey.CheckKey(expandedKey, firstBlock) { // If key is valid
     offset := 0
     a.Seek(16, 0) // Move past key
     for buffCount < fileSize{   // While the data done is less than the fileSize
@@ -2591,25 +2596,178 @@ func DecryptList(expandedKey *[176]byte, fileList []string, targetList []string)
 Enc/decryption of files is done in parallel (using multiple processes/CPU cores) by having 'workers' that accept jobs from a work channel, do work on each job given and return them in a results channel.
 The workers are really just a function that is run in a **g**oroutine (coroutines that are designed to be easy to use and low on memory), and each worker waits for a job on the job channel while the job channel is open. The job channel allows for the transfer of a 'work' struct to the goroutine, containing a full buffer of the original file, and what offset in the file that buffer was read from. The offset is important because each goroutine may finish at a different time, and the data has to be in the correct order, however it does not need to be written to the new file at the same time. As long as it is in order it is fine. 
 
+If on the last block of decryption, then the program checks for padding, which works the same as specified in the **Design** section. If the last element of the last block has a value less than 16, it counts how many of that number occur going back through the block, and if the number of occurrences matches the value itself, then the occurrences 
 
 Here is a visual representation of this process:
 
-
-![](TechSolution/AES/dataBlockWorkers.png)
+<img src="TechSolution/AES/dataBlockWorkers.png" style="zoom:80%"/>
 
 
 The number of workers is determined by the number of cores, and is then multiplied by 2 because I wanted the CPU usage to be about 85-90%, using a lot of cpu usage but also leaving room for other processes.
-The `DEFAULT_BUFFER_SIZE` is set to a power of 2 (2^x) as this is a very divisable number, and computers work best with powers of 2, and block sizes of file systems are usually set to powers of two (the operating system reads data from the hard disk in blocks of a pre-determined amount).
+The `DEFAULT_BUFFER_SIZE` is set to a power of 2 (2^x) as this is a very divisable number, and computers work best with powers of 2.
+
+I did play with the `DEFAULT_BUFFER_SIZE` value on multiple machines, and ended up settling on $2^16$, as it seemed to perform best on several computers.
+
+`EncryptList` and `DecryptList` take a list of files to enc/decrypt, and a list of targets to decrypt each file in the list to. This is used when enc/decrypting folders. Separating this function from the generation of the lists is a good idea because it makes programming additional features more flexible, as the list does not necessarily need to be created in Go.
+
+The lists are generated in the `AESstring` package, which we will look at next.
 
 
+#### AESstring package
 
 
+The AESstring package contains functions for enc/decrypting strings, and generating lists of directories that need enc/decrypting.
+
+All file names are encoded in base 64 to allow for larger file names to be encrypted (since with hex encoding, the name's size would increase by 2x, since each charachter is 1 byte). The maximum file name length on most operating systems is 255 in length, and the maximum length for a string to be encoded into base 64 to be within the 255 byte limit is 176 bytes.
+
+Here is the package (`code/python-go/AES/src/AES/AESstring/aesString.go`):
+
+```go
+package AESstring
+
+import (
+  "os"                  // For making new folders
+  "log"                 // For debugging
+  "io/ioutil"           // For listing contents of directories
+  b64 "encoding/base64" // For enc/decoding encrypted string
+  "AES"
+  "sorts" // QuickSortAlph made in sorts.go
+)
+
+func EncryptFileName(expandedKey *[176]byte, name string) string {
+  var byteName = []byte(name)
+
+  for len(byteName) % 16 != 0 {   // Pad with 0's
+    byteName = append(byteName, 0)
+  }
+
+  for i := 0; i < len(byteName); i += 16 {
+    AES.Encrypt(byteName[i:i+16], expandedKey)  // Done by reference so does not need to be assigned
+  }
+  return b64.URLEncoding.EncodeToString(byteName) // URL encoding used so it is safe for file systems ("/")
+}
+
+func DecryptFileName(expandedKey *[176]byte, hexName string) string {
+  byteName, err := b64.URLEncoding.DecodeString(hexName)
+  if err != nil { panic(err) }
+
+  for i := 0; i < len(byteName); i += 16 {
+    AES.Decrypt(byteName[i:i+16], expandedKey)
+  }
+  byteName = checkForPadding(byteName)
+  return string(byteName[:])
+}
+
+func checkForPadding(input []byte) []byte {
+  var newBytes []byte
+  for _, element := range input {
+    if (element > 31) && (element < 127) {    //If a character
+      newBytes = append(newBytes, element)
+    }
+  }
+  return newBytes
+}
+
+func EncryptListOfString(expandedKey *[176]byte, l []string) []string {
+  for i := range l {
+    l[i] = EncryptFileName(expandedKey, l[i])
+  }
+  return l
+}
+
+func DecryptListOfString(expandedKey *[176]byte, l []string) []string {
+  var out []string
+  for i := range l {
+    out = append(out, DecryptFileName(expandedKey, l[i]))
+  }
+  return out
+}
+
+func GetListsEnc(expandedKey *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) { // Also makes the folders required
+  os.Mkdir(target, os.ModePerm)
+  list, err := ioutil.ReadDir(folder)
+  if err != nil { panic(err) }        // Go has weird error handling
+  for i := range list {
+    if len(list[i].Name()) <= 176 {
+      if list[i].IsDir() {
+        fileList, targetList = GetListsEnc(expandedKey, fileList, targetList, folder+list[i].Name()+"/", target+EncryptFileName(expandedKey, list[i].Name())+"/")  // Recursively go through folders
+      } else {
+        fileList   = append(fileList, folder+list[i].Name())
+        targetList = append(targetList, target+EncryptFileName(expandedKey, list[i].Name()))
+      }
+    } else {
+      log.Output(0, "File name too long: "+list[i].Name())
+    }
+  }
+  return fileList, targetList
+}
+
+func GetListsDec(expandedKey *[176]byte, fileList, targetList []string, folder, target string) ([]string, []string) {
+  os.Mkdir(target, os.ModePerm)
+  list, err := ioutil.ReadDir(folder)
+  if err != nil { panic(err) }
+  for i := range list {
+    if list[i].IsDir() {
+      fileList, targetList = GetListsDec(expandedKey, fileList, targetList, folder+list[i].Name()+"/", target+DecryptFileName(expandedKey, list[i].Name())+"/")
+    } else {
+      fileList   = append(fileList, folder+list[i].Name())
+      targetList = append(targetList, target+DecryptFileName(expandedKey, list[i].Name()))
+    }
+  }
+  return fileList, targetList
+}
+
+func getSortedFoldersAndFiles(inp []sorts.Tuple) ([]string, []string) {
+  var files []sorts.Tuple
+  var folders []sorts.Tuple
+  for i := 0; i < len(inp); i++ {
+    if inp[i].A.IsDir() {
+      folders = append(folders, inp[i])
+    } else {
+      files = append(files, inp[i])
+    }
+  }
+  foldersSort, filesSort := sorts.QuickSortAlph(folders), sorts.QuickSortAlph(files)  // Sort the folders and files.
+  var (
+    encOut []string
+    decOut []string
+  )
+  for x := range foldersSort { // Append folder names to each list.
+    encOut = append(encOut, foldersSort[x].A.Name())
+    decOut = append(decOut, foldersSort[x].B)
+  }
+  for y := range filesSort {   // Append file names to each list.
+    encOut = append(encOut, filesSort[y].A.Name())
+    decOut = append(decOut, filesSort[y].B)
+  }
+  return encOut, decOut
+}
+
+func GetListOfFiles(expandedKey *[176]byte, dir string) ([]string, []string) {  // Decrypts a list of files at the directory specified, also returning original list
+  list, err := ioutil.ReadDir(dir)
+  if err != nil { panic(err) }
+  l := make([]sorts.Tuple, 0)
+  var listOfNames []string
+  for x := range list {
+    listOfNames = append(listOfNames, list[x].Name())
+  }
+  dec := DecryptListOfString(expandedKey, listOfNames)
+
+  for i := range list {
+    l = append(l, sorts.Tuple{A: list[i], B: dec[i]})  // Make a tuple containing the encrypted name and the decrypted name.
+  }                                                    // These need to be paired so the encrypted names can be returned in order.
+  return getSortedFoldersAndFiles(l)
+}
+```
+
+In `GetListOfFiles`, the directory given is listed, decrypted, and then tuples containing the file info object and decrypted name are sorted.
 
 
+#### AEScheckKey package
 
+This package handles key checking. It takes the first 16 byte block of a file, or a block given, and decrypts the block then compares it against the key given to decrypt it with. This is because in encryption, the key is encrypted and written to the first 16 bytes of the file so that it can be checked when decrypting it.
 
-
-
+This system works well, and is better than decrypting the whole file just to find out that the key is incorrect.
 
 
 
@@ -2623,6 +2781,9 @@ The `DEFAULT_BUFFER_SIZE` is set to a power of 2 (2^x) as this is a very divisab
 
 
 `checkKey` decrypts the first block of a file and compares it to the key. If the decrypted block is the same as the key, then the key is valid. This is because when I encrypt files, I append the encrypted key to the beggining of the new file, so that it can be checked when decrypting the file.
+
+
+
 
 The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, where `<field1>`is the first argument of the function you want to execute, and `<field2>` is the second argument. If there is no `<field2>` argument, then this can just be set to `0`. The key is input like this: `1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16` (it is hashed first though), where it is then split by the space in-between each number, and each number is converted to a byte, where it can be used in the functions that need it.
 

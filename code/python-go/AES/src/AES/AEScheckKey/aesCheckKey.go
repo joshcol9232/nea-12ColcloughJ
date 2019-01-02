@@ -19,10 +19,9 @@ func CompareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
   return true
 }
 
-func CheckKey(key []byte, block []byte) bool {
-  expandedKey := AES.ExpandKey(key) // Expand the key
-  AES.Decrypt(block, &expandedKey)    // Decrypt first block
-  return CompareSlices(key, block) // Compare decrypted first block with the key.
+func CheckKey(expandedKey *[176]byte, block []byte) bool {
+  AES.Decrypt(block, expandedKey)    // Decrypt first block
+  return CompareSlices(expandedKey[:16], block) // Compare decrypted first block with the key.
 }
 
 func CheckKeyOfFile(key []byte, f string) bool {
@@ -33,5 +32,6 @@ func CheckKeyOfFile(key []byte, f string) bool {
   _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
   if er != nil { panic(er) }
   a.Close()
-  return CheckKey(key, firstBlock)
+  expKey := AES.ExpandKey(key)
+  return CheckKey(&expKey, firstBlock)
 }
