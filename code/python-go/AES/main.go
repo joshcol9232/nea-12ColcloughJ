@@ -27,7 +27,7 @@ func main() {
   var expandedKey [176]byte
   var key []byte
 
-  if string(fields[3]) != "" {
+  if string(fields[3]) != "" {    // If the key has been passed.
     keyString := strings.Split(string(fields[3]), " ")
     for i := 0; i < len(keyString); i++ {
       a, err := strToInt(keyString[i])

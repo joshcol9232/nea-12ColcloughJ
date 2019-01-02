@@ -6,7 +6,7 @@ import (
   "AES"
 )
 
-func CompareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
+func compareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
   if len(slice1) != len(slice2) {
     return false
   } else {
@@ -21,7 +21,7 @@ func CompareSlices(slice1, slice2 []byte) bool {    // Function used for checkin
 
 func CheckKey(expandedKey *[176]byte, block []byte) bool {
   AES.Decrypt(block, expandedKey)    // Decrypt first block
-  return CompareSlices(expandedKey[:16], block) // Compare decrypted first block with the key.
+  return compareSlices(expandedKey[:16], block) // Compare decrypted first block with the key.
 }
 
 func CheckKeyOfFile(key []byte, f string) bool {

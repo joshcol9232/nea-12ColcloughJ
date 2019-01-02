@@ -2767,93 +2767,168 @@ In `GetListOfFiles`, the directory given is listed, decrypted, and then tuples c
 
 This package handles key checking. It takes the first 16 byte block of a file, or a block given, and decrypts the block then compares it against the key given to decrypt it with. This is because in encryption, the key is encrypted and written to the first 16 bytes of the file so that it can be checked when decrypting it.
 
-This system works well, and is better than decrypting the whole file just to find out that the key is incorrect.
+This system works well, and is better than decrypting the whole file just to try and open it and realising that the key was incorrect.
+
+Here is the code for the AEScheckKey package (`code/python-go/AES/src/AES/AEScheckKey/aesCheckKey.go`):
 
 
+```go
+package AEScheckKey
+
+import (
+  "os"
+  "io"
+  "AES"
+)
+
+func compareSlices(slice1, slice2 []byte) bool {    // Function used for checking first block of a file with the key when decrypting.
+  if len(slice1) != len(slice2) {
+    return false
+  } else {
+    for i := 0; i < len(slice1); i++ {
+      if slice1[i] != slice2[i] {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+func CheckKey(expandedKey *[176]byte, block []byte) bool {
+  AES.Decrypt(block, expandedKey)    // Decrypt first block
+  return compareSlices(expandedKey[:16], block) // Compare decrypted first block with the key.
+}
+
+func CheckKeyOfFile(key []byte, f string) bool {
+  a, err := os.Open(f)    // Open an encrypted file to check first block against key
+  if err != nil { panic(err) }
+
+  firstBlock := make([]byte, 16)
+  _, er := io.ReadFull(a, firstBlock)   // Fill a slice of length 16 with the first block of 16 bytes in the file.
+  if er != nil { panic(er) }
+  a.Close()
+  expKey := AES.ExpandKey(key)
+  return CheckKey(&expKey, firstBlock)
+}
+```
+
+The expanded key `expKey` is passed by reference, so on line `36`, the "&" gets the memory address (pointer) to the `expKey` array.
+
+`CheckKeyOfFile` decrypts the first block of a file and compares it to the key. If the decrypted block is the same as the key, then the key is valid. `CheckKey` does the same, however it takes a 16 byte block and checks the key against it. `compareSlices` is used internally to check the key against the decrypted block, so it does not need to be exported so the first letter of the function is lower case.
 
 
+#### The main package
+
+Every Go program that runs by itself requires a main package, with a main function.
+
+Here is the main package (`code/python-go/AES/main.go`):
+
+```go
+package main
+
+import (
+  "fmt"       // For sending output on stout
+  "log"
+  "os"        // Gets stdin
+  "io/ioutil" // For reading from stdin
+  "strings"   // For converting string key to an array of bytes
+  "strconv"   // ^
+  "AES"
+  "AES/AESfiles"
+  "AES/AESstring"
+  "AES/AEScheckKey"
+  "sorts"
+)
+
+func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
+    n := strings.Split(str, ".")    // Splits by decimal point
+    return strconv.Atoi(n[0])       // Returns integer of whole number
+}
+
+func main() {
+  bytes, err := ioutil.ReadAll(os.Stdin)
+  if err != nil { panic(err) }
+  fields := strings.Split(string(bytes), ", ")
+  request := string(fields[0])
+  var expandedKey [176]byte
+  var key []byte
+
+  if string(fields[3]) != "" {    // If the key has been passed.
+    keyString := strings.Split(string(fields[3]), " ")
+    for i := 0; i < len(keyString); i++ {
+      a, err := strToInt(keyString[i])
+      if err != nil { panic(err) }
+      key = append(key, byte(a))
+    }
+    expandedKey = AES.ExpandKey(key)
+
+  } else {
+    log.Output(0, "EGG")
+  }
 
 
+  if request == "y" {
+    AESfiles.EncryptFile(&expandedKey, string(fields[1]), string(fields[2]))
+  } else if request == "n" {
+    AESfiles.DecryptFile(&expandedKey, string(fields[1]), string(fields[2]))
+  } else if request == "yDir" {
+    AESfiles.EncryptList(&expandedKey, strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+  } else if request == "nDir" {
+    AESfiles.DecryptList(&expandedKey, strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n"))
+  } else if request == "encString" {
+    fmt.Print(AESstring.EncryptFileName(&expandedKey, string(fields[1])))
+  } else if request == "decString" {
+    fmt.Print(AESstring.DecryptFileName(&expandedKey, string(fields[1])))
+  } else if request == "encList" {
+    fmt.Print(strings.Join(AESstring.EncryptListOfString(&expandedKey, strings.Split(string(fields[1]), "\n")), ",,"))
+  } else if request == "decList" {
+    fmt.Print(strings.Join(AESstring.DecryptListOfString(&expandedKey, strings.Split(string(fields[1]), "\n")), ",,"))
+  } else if request == "getListsy" {
+    fileList, targList := AESstring.GetListsEnc(&expandedKey, []string{}, []string{}, string(fields[1]), string(fields[2]))
+    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(targList, ",,"))
+  } else if request == "getListsn" {
+    fileList, targList := AESstring.GetListsDec(&expandedKey, []string{}, []string{}, string(fields[1]), string(fields[2]))
+    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(targList, ",,"))
+  } else if request == "listDir" {
+    log.Output(0, "Getting List")
+    fs, fsDec := AESstring.GetListOfFiles(&expandedKey, string(fields[1]))
+    fmt.Print(strings.Join(fs, ",,")+"--!--")
+    fmt.Print(strings.Join(fsDec, ",,"))
+  } else if request == "sortSize" {
+    fmt.Print(strings.Join(sorts.UseQuickSortSize(strings.Split(string(fields[1]), "\n")), ",,"))
+  } else if request == "test" {
+    valid := AEScheckKey.CheckKeyOfFile(key, string(fields[1]))
+    if valid {
+      fmt.Print("-Valid-")
+    } else {
+      fmt.Print("-NotValid-")
+    }
+  } else {
+    panic("Invalid options.")
+  }
 
+   // out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "12345678901234567")
+   // fmt.Println(out, len(out))
+   // fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
+}
+```
 
-
-
-
-
-`checkKey` decrypts the first block of a file and compares it to the key. If the decrypted block is the same as the key, then the key is valid. This is because when I encrypt files, I append the encrypted key to the beggining of the new file, so that it can be checked when decrypting the file.
-
-
+The `main` function is run when the executable, `code/python-go/AES/AES` or `code/python-go/AESWin.exe` for Windows, is started. My `main` function accepts input from `stdin` (system's way of comunicating between programs), which stands for standard input. The results are returned on `stdout` (standard output), which are then recieved by Python.
 
 
 The program accepts the fields `<encryptionType>, <field1>, <field2>, <key>`, where `<field1>`is the first argument of the function you want to execute, and `<field2>` is the second argument. If there is no `<field2>` argument, then this can just be set to `0`. The key is input like this: `1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16` (it is hashed first though), where it is then split by the space in-between each number, and each number is converted to a byte, where it can be used in the functions that need it.
 
+If an array is needed to be passed through `field1` or `field2`, then it is joined with a new line `"\n"`, as the fields are separated with `,`. If an array is returned by the program, it is joined with `",,"`, and if multiple arrays are to be returned then they are separated with `--!--`.
+
 A full command to AES would look like this:
-```bash
+```python
 'y', '/home/josh/file.png', '/home/josh/temp', '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16'
 ```
 This string would get passed to the standard input of the program.
 
 `aes.go` is compiled to `AES` for Linux/MacOS, and `AESWin.exe` for Windows.
-
-I have created a benchmark function in `aes.go` to measure the true speed of the operation:
-
-```go
-import (
-  ...       // Not actually a line of code, just skipping through the code
-  "testing"
-)
-
-...
-
-// BENCHMARK
-func BenchmarkEncryptFile(b *testing.B) {
-  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"   // This write up
-  w := "/home/josh/temp"  // Temporary location
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69} // Random key
-  for n := 0; n < b.N; n++ {
-    encryptFile(key, f, w)
-  }
-}
-```
-
-Now if I run `go test aes_test.go -bench=.`, Go tests the function however many times it can in a certain period, and gives how long it took on average in nanoseconds. Here is an example output:
-
-```
-goos: linux
-goarch: amd64
-BenchmarkEncryptFile-4          10   187673212 ns/op
-PASS
-ok    command-line-arguments  2.085s
-```
-
-I made a small Python program to work out the speed, and for the sake of transparency here it is:
-
-```python
-def getGoodUnit(bytes):       #Get a good unit for displaying the sizes of files.
-    if bytes == " -":
-        return " -"
-    else:
-        divCount = 0
-        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-        while bytes > 1000:
-            bytes = bytes/1000
-            divCount += 1
-
-        return ("%.2f" % bytes) + divisions[divCount]
-
-def calc(time, data):
-    time = time * (10**-9)   # x10^-9 because it is in nano seconds
-    datTime = data/time
-    return getGoodUnit(datTime)
-
-print(calc(float(input("Time taken: ")), int(input("Num of bytes: ")))+"/s")
-```
-
-There is no error checking or anything since I am the only person using it (and because I'm lazy).
-
-The result is that on an i7-6600k, the speed of AES was 18.92 MB/s (187673212 ns/op for 10 operations), while on a laptop i7-3537U it was 10.21 MB/s.
-The speed is quite good, as when working on small files (< 2 MB), opening and editing files should be almost instant, and even opening larger files shouldn't take too long. At 18.92 MB/s a 2 GB file would take 105.7 seconds, or 1:45 minutes, which isn't too bad. I timed a 2 GB file (2,036,826,112 bytes precisely) and it actually took 2:00 minutes (yes, on the dot), probably due to background processes.
-
 
 
 ### SHA256:
@@ -6314,3 +6389,64 @@ The key for the different types of data will be:
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
+
+// TEMP 
+
+I have created a benchmark function in `aes.go` to measure the true speed of the operation:
+
+```go
+import (
+  ...       // Not actually a line of code, just skipping through the code
+  "testing"
+)
+
+...
+
+// BENCHMARK
+func BenchmarkEncryptFile(b *testing.B) {
+  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"   // This write up
+  w := "/home/josh/temp"  // Temporary location
+  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69} // Random key
+  for n := 0; n < b.N; n++ {
+    encryptFile(key, f, w)
+  }
+}
+```
+
+Now if I run `go test aes_test.go -bench=.`, Go tests the function however many times it can in a certain period, and gives how long it took on average in nanoseconds. Here is an example output:
+
+```
+goos: linux
+goarch: amd64
+BenchmarkEncryptFile-4          10   187673212 ns/op
+PASS
+ok    command-line-arguments  2.085s
+```
+
+I made a small Python program to work out the speed, and for the sake of transparency here it is:
+
+```python
+def getGoodUnit(bytes):       #Get a good unit for displaying the sizes of files.
+    if bytes == " -":
+        return " -"
+    else:
+        divCount = 0
+        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+        while bytes > 1000:
+            bytes = bytes/1000
+            divCount += 1
+
+        return ("%.2f" % bytes) + divisions[divCount]
+
+def calc(time, data):
+    time = time * (10**-9)   # x10^-9 because it is in nano seconds
+    datTime = data/time
+    return getGoodUnit(datTime)
+
+print(calc(float(input("Time taken: ")), int(input("Num of bytes: ")))+"/s")
+```
+
+There is no error checking or anything since I am the only person using it (and because I'm lazy).
+
+The result is that on an i7-6600k, the speed of AES was 18.92 MB/s (187673212 ns/op for 10 operations), while on a laptop i7-3537U it was 10.21 MB/s.
+The speed is quite good, as when working on small files (< 2 MB), opening and editing files should be almost instant, and even opening larger files shouldn't take too long. At 18.92 MB/s a 2 GB file would take 105.7 seconds, or 1:45 minutes, which isn't too bad. I timed a 2 GB file (2,036,826,112 bytes precisely) and it actually took 2:00 minutes (yes, on the dot), probably due to background processes.
