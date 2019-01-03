@@ -73,18 +73,3 @@ class File:
     def decryptRelPath(self):       # Gets relative path from root of Vault in human form
         splitPath = self.relPath.split(self.fileSep)
         return self.fileSep.join(self.outerScreen.decListString(splitPath))
-
-    def getCheckSum(self, new=True):
-        if self.checkSum == None or new:
-            if self.fileSep == "\\":
-                goproc = Popen(self.outerScreen.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
-            elif self.fileSep == "/":
-                goproc = Popen(self.outerScreen.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
-
-            out, err = goproc.communicate((self.hexPath).encode())
-            if err != None:
-                raise ValueError(err)
-
-            self.checkSum = out.decode()
-
-        return self.checkSum

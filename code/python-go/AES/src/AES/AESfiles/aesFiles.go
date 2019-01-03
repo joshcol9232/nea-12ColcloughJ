@@ -75,8 +75,8 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   var workingWorkers int = 0
   var workerNum int = getNumOfCores()*2
 
-  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
-  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
+  jobs := make(chan work)     // Make two channels for go routines to communicate over.
+  results := make(chan work)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
     go workerEnc(jobs, results, expandedKey)   // Create the workers
@@ -99,7 +99,10 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  var originalKey = expandedKey[:16]
+  originalKey := make([]byte, 16)
+  for i := 0; i < 16; i++ {
+    originalKey[i] = expandedKey[i]
+  }
   AES.Encrypt(originalKey, expandedKey)
   e.Write(originalKey)
   offset := 16
@@ -174,8 +177,8 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   var workingWorkers int = 0
   var workerNum int = getNumOfCores()*2
 
-  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
-  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
+  jobs := make(chan work)     // Make two channels for go routines to communicate over.
+  results := make(chan work)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
     go workerDec(jobs, results, expandedKey, fileSize)

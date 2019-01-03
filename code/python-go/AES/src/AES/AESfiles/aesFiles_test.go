@@ -2,6 +2,7 @@ package AESfiles
 
 import (
   "fmt"
+  "log"
   "testing"
   "os/exec"
   "strings"
@@ -55,13 +56,14 @@ func TestEncDecMediumFile(t *testing.T) {
   if err != nil { panic(err) }
 
   initialHash := strings.Replace(fmt.Sprintf("%s", out), mediumFile, "", -1) // b2sum outputs the dir after the checksum is output, so remove the dir.
+  log.Output(0, fmt.Sprintf("initialHash: %s", initialHash))
 
   EncryptFile(&expandedKey, mediumFile, mediumFileTemp)
   DecryptFile(&expandedKey, mediumFileTemp, mediumFileDec)
 
   out, err = exec.Command("/bin/bash", "-c", "b2sum '"+mediumFileDec+"'").Output()
-
   finalHash := strings.Replace(fmt.Sprintf("%s", out), mediumFileDec, "", -1)
+  log.Output(0, fmt.Sprintf("finalHash: %s", finalHash))
 
   if finalHash != initialHash {
     t.Fatalf("Expected %s but got %s", initialHash, finalHash)
@@ -73,6 +75,7 @@ func TestEncDecSmallFile(t *testing.T) {
   if err != nil { panic(err) }
 
   initialHash := strings.Replace(fmt.Sprintf("%s", out), smallFile, "", -1) // b2sum outputs the dir after the checksum is output, so remove the dir.
+  log.Output(0, fmt.Sprintf("initialHash: %s", initialHash))
 
   EncryptFile(&expandedKey, smallFile, smallFileTemp)
   DecryptFile(&expandedKey, smallFileTemp, smallFileDec)
@@ -80,6 +83,7 @@ func TestEncDecSmallFile(t *testing.T) {
   out, err = exec.Command("/bin/bash", "-c", "b2sum '"+smallFileDec+"'").Output()
 
   finalHash := strings.Replace(fmt.Sprintf("%s", out), smallFileDec, "", -1)
+  log.Output(0, fmt.Sprintf("finalHash: %s", finalHash))
 
   if finalHash != initialHash {
     t.Fatalf("Expected %s but got %s", initialHash, finalHash)

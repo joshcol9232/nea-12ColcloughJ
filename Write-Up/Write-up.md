@@ -1465,7 +1465,9 @@ If you wanted to edit the files at work without putting the entire program on a 
 
 All intensive AES and BLAKE are written in Go, while everything else is written in Python, however the sorts are Cythonized (Python that has been compiled to a C shared object, using a mix of static variables and dynamic variables). Python communicates with Go using stdin and stdout pipes. SHA is written in Python because it is only needed a couple of times during the program, and only ever has to hash small data, so it does not need to be as fast as possible.
 
-### The File Structure of the code:
+### File Structure:
+
+Here is the file structure of the code:
 
 ```
 code
@@ -2820,37 +2822,41 @@ Here is the main package (`code/python-go/AES/main.go`):
 package main
 
 import (
-  "fmt"       // For sending output on stout
-  "log"
-  "os"        // Gets stdin
-  "io/ioutil" // For reading from stdin
-  "strings"   // For converting string key to an array of bytes
-  "strconv"   // ^
   "AES"
+  "AES/AEScheckKey"
   "AES/AESfiles"
   "AES/AESstring"
-  "AES/AEScheckKey"
+  "fmt"       // For sending output on stout
+  "io/ioutil" // For reading from stdin
+  "log"
+  "os" // Gets stdin
   "sorts"
+  "strconv" // ^
+  "strings" // For converting string key to an array of bytes
 )
 
-func strToInt(str string) (int, error) {    // Used for converting string to integer, as go doesn't have that built in for some reason
-    n := strings.Split(str, ".")    // Splits by decimal point
-    return strconv.Atoi(n[0])       // Returns integer of whole number
+func strToInt(str string) (int, error) { // Used for converting string to integer, as go doesn't have that built in for some reason
+  n := strings.Split(str, ".") // Splits by decimal point
+  return strconv.Atoi(n[0])    // Returns integer of whole number
 }
 
 func main() {
   bytes, err := ioutil.ReadAll(os.Stdin)
-  if err != nil { panic(err) }
+  if err != nil {
+    panic(err)
+  }
   fields := strings.Split(string(bytes), ", ")
   request := string(fields[0])
   var expandedKey [176]byte
   var key []byte
 
-  if string(fields[3]) != "" {    // If the key has been passed.
+  if string(fields[3]) != "" { // If the key has been passed.
     keyString := strings.Split(string(fields[3]), " ")
     for i := 0; i < len(keyString); i++ {
       a, err := strToInt(keyString[i])
-      if err != nil { panic(err) }
+      if err != nil {
+        panic(err)
+      }
       key = append(key, byte(a))
     }
     expandedKey = AES.ExpandKey(key)
@@ -2858,7 +2864,6 @@ func main() {
   } else {
     log.Output(0, "EGG")
   }
-
 
   if request == "y" {
     AESfiles.EncryptFile(&expandedKey, string(fields[1]), string(fields[2]))
@@ -2878,19 +2883,24 @@ func main() {
     fmt.Print(strings.Join(AESstring.DecryptListOfString(&expandedKey, strings.Split(string(fields[1]), "\n")), ",,"))
   } else if request == "getListsy" {
     fileList, targList := AESstring.GetListsEnc(&expandedKey, []string{}, []string{}, string(fields[1]), string(fields[2]))
-    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(fileList, ",,") + "--!--")
     fmt.Print(strings.Join(targList, ",,"))
   } else if request == "getListsn" {
     fileList, targList := AESstring.GetListsDec(&expandedKey, []string{}, []string{}, string(fields[1]), string(fields[2]))
-    fmt.Print(strings.Join(fileList, ",,")+"--!--")
+    fmt.Print(strings.Join(fileList, ",,") + "--!--")
     fmt.Print(strings.Join(targList, ",,"))
   } else if request == "listDir" {
     log.Output(0, "Getting List")
     fs, fsDec := AESstring.GetListOfFiles(&expandedKey, string(fields[1]))
-    fmt.Print(strings.Join(fs, ",,")+"--!--")
+    fmt.Print(strings.Join(fs, ",,") + "--!--")
     fmt.Print(strings.Join(fsDec, ",,"))
   } else if request == "sortSize" {
     fmt.Print(strings.Join(sorts.UseQuickSortSize(strings.Split(string(fields[1]), "\n")), ",,"))
+  } else if request == "sortAlph" {
+    fmt.Print(strings.Join(sorts.UseQuickSortAlph(strings.Split(string(fields[1]), "\n")), ",,"))
+    log.Output(0, "Sorting alph")
+  } else if request == "sortSearch" {
+    fmt.Print(strings.Join(sorts.UseQuickSortSearch(strings.Split(string(fields[1]), "\n"), strings.Split(string(fields[2]), "\n")), ",,"))
   } else if request == "test" {
     valid := AEScheckKey.CheckKeyOfFile(key, string(fields[1]))
     if valid {
@@ -2901,10 +2911,6 @@ func main() {
   } else {
     panic("Invalid options.")
   }
-
-   // out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "12345678901234567")
-   // fmt.Println(out, len(out))
-   // fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
 }
 ```
 
@@ -3557,7 +3563,9 @@ func main() {
 }
 ``` 
 
-The `UseQuickSort____` functions are used for formatting input from `stdin` that Python has given us, so that 
+The `UseQuickSort____` functions are used for formatting input from `stdin` that Python has given us.
+
+`QuickSortAlph` is used by `AESstring` 
 
 `quickSortSearch` is used for sorting search results, as search results are collected along with the position that the search item was found in the word. For example, if I searched for "b" in a folder, and there was a file called "brian.png", then the search result would be (0, "brian.png"). `quickSortSearch` then sorts these results by the number. I need to use a tuple so that I know what string belongs to which number.
 
@@ -3574,8 +3582,6 @@ from os import path as osPath
 from os import listdir
 from subprocess import Popen, PIPE
 
-import aesFName
-
 class File:
 
     def __init__(self, screen, hexPath, hexName, fileSep, extension=None, isDir=False, name=None, path=None):
@@ -3587,15 +3593,14 @@ class File:
         self.rawSize = self.__getFileSize()
         self.size = self.outerScreen.getGoodUnit(self.rawSize)
         self.isDir = isDir
+        if name == None:
+            self.name = self.outerScreen.decString(self.hexName)
+        else:
+            self.name = name
         if path == None:
             self.path = self.__getNormDir(self.hexPath)
         else:
             self.path = path
-        if name == None:
-            self.name = aesFName.decryptFileName(self.outerScreen.key, self.hexName)
-        else:
-            self.name = name
-
         if extension == None:
             extension = self.path.split(".")
             self.extension = extension[-1].lower()
@@ -3608,13 +3613,11 @@ class File:
 
         self.relPath = self.hexPath.replace(self.outerScreen.path, "")   # Encrypted path relative to root folder of Vault
 
-
     def __getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
-        hexDir = (hexDir.replace(self.outerScreen.path, "")).split(self.fileSep)
-        for i in range(len(hexDir)):
-            hexDir[i] = aesFName.decryptFileName(self.outerScreen.key, hexDir[i])
-
-        return self.fileSep.join(hexDir)
+        dir = self.fileSep.join(self.outerScreen.decListString(hexDir.replace(self.outerScreen.path, "").split(self.fileSep)[:-1]))+self.name
+        if self.isDir:
+            dir += self.fileSep
+        return dir
 
     def __getFileSize(self, recurse=True):
         if self.isDir:
@@ -3633,11 +3636,9 @@ class File:
                 print(e, "couldn't get size.")
                 return " -"
 
-    def __recursiveSize(self, f, encrypt=False):  #Get size of folders.
+    def __recursiveSize(self, f):  #Get size of folders.
         fs = listdir(f)
         for item in fs:
-            if encrypt:
-                item = aesFName.encryptFileName(self.key, item)
             if osPath.isdir(f+self.fileSep+item):
                 try:
                     self.__recursiveSize(f+self.fileSep+item)
@@ -3651,22 +3652,7 @@ class File:
 
     def decryptRelPath(self):       # Gets relative path from root of Vault in human form
         splitPath = self.relPath.split(self.fileSep)
-        return self.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
-
-    def getCheckSum(self, new=True):
-        if self.checkSum == None or new:
-            if self.fileSep == "\\":
-                goproc = Popen(self.outerScreen.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
-            elif self.fileSep == "/":
-                goproc = Popen(self.outerScreen.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
-
-            out, err = goproc.communicate((self.hexPath).encode())
-            if err != None:
-                raise ValueError(err)
-
-            self.checkSum = out.decode()
-
-        return self.checkSum
+        return self.fileSep.join(self.outerScreen.decListString(splitPath))
 ```
 
 This is the File class talked about in the **File Storage** section of the design. As a recap, here is the class diagram I made for this class:
@@ -3697,6 +3683,8 @@ from shutil import rmtree
 
 from kivy.config import Config
 Config.set("graphics", "resizable", True)
+Config.set("graphics", "width", "1000") # Set default window size
+Config.set("graphics", "height", "600")
 Config.set("input", "mouse", "mouse,disable_multitouch") # Disable multitouch features used on mobile apps.
 Config.write()
 
@@ -3749,10 +3737,6 @@ class uiApp(App):
         sm.current = "Login"
 
         return sm
-
-
-if __name__ == "__main__":
-    runUI()
 ```
 
 This is the program that runs the app itself. All it does is create the root App, and add the ScreenManager as the root widget, where then child widgets (in this case screens) can be added.
@@ -3819,7 +3803,7 @@ class LoginScreen(Screen):
         if self.fileSep == "\\":
             progname = "AESWin"
         else:
-            progname = "AES"
+            progname = "AES/AES"
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, err = goproc.communicate(("test, "+d+", 0, ").encode()+key.encode())
         return out
@@ -3830,7 +3814,7 @@ class LoginScreen(Screen):
             self.count = 0
             self.findFile(self.path)
             diditwork = self.passToTerm(inputKey, self.decryptTestFile)
-            if diditwork == b"-Valid-\n": #The go program prints "-Valid-\n" or "-Invalid-\n" once it is done checking the key.
+            if diditwork == b"-Valid-": #The go program prints "-Valid-" or "-Invalid-" once it is done checking the key.
                 return True
             else:
                 return False
@@ -4047,8 +4031,9 @@ Here is the code for the MainScreen class (`code/python-go/kivyStuff/mainScClass
 import os
 from shutil import move, disk_usage, rmtree
 from threading import Thread
-from functools import partial   # For parsing in functions with multiple arguments to widgets/threads
+from functools import partial   # For passing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
+from time import sleep
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -4064,8 +4049,6 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 
 from fileClass import File
-import aesFName
-import sortsCy
 # Own kivy classes
 import mainBtns
 from settingsScreen import SettingsScreen
@@ -4078,7 +4061,7 @@ except:
 
 class MainScreen(Screen):
 
-    class infoLabel(Label):   # Not a popup so only suitable place.
+    class infoLabel(Label):   # Not a popup or button so only suitable place.
         pass
 
     def __init__(self, fileSep, osTemp, startDir, assetsPath, path, recurseSearch, useBT, configLoc, **kwargs):
@@ -4104,8 +4087,7 @@ class MainScreen(Screen):
         self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling")    # Prepare recycling and thumbnail folder names for use in the program.
-            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")
+            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
             self.recycleFolder = self.path+self.recycleName+self.fileSep
 
             if not os.path.exists(self.recycleFolder):
@@ -4115,9 +4097,9 @@ class MainScreen(Screen):
             self.entered = True
 
         if self.recycleFolder in self.currentDir:
-            self.createButtons(self.List(self.path))     # Don't want to log into the recycling bin, as the user might get confused.
+            self.createButtons(self.List(self.path), sort=False)     # Don't want to log into the recycling bin, as the user might get confused.
         else:
-            self.createButtons(self.List(self.currentDir)) # Loads previous directory.
+            self.createButtons(self.List(self.currentDir), sort=False) # Loads previous directory.
 
     def on_leave(self):     # Kept separate from lock because i may want to add more screens that need the key, and do not log the user out.
         if self.useBT:      # Popups that are open block the lock button, but if BT is lost, the popups stay open.
@@ -4195,8 +4177,7 @@ class MainScreen(Screen):
                             self.clientSock.send("1")
                             print("[BT]: Send true.")
                             self.validBTKey = True
-                            self.recycleName = aesFName.encryptFileName(self.key, ".$recycling") # Set so that file list can be sent
-                            self.thumbsName = aesFName.encryptFileName(self.key, ".$thumbs")   
+                            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])  # Set so that file list can be sent
                             self.sendFileList(self.getListForSend(self.path))
                             mainthread(self.changeToMain())   # Exit thread and change screen to main.
                         else:
@@ -4277,29 +4258,19 @@ class MainScreen(Screen):
         if not path:
             return False
         else:
-            fs = os.listdir(path)
-            listOfFolders = []
-            listOfFiles = []
-            for item in fs:
-                if (item != self.thumbsName) and (item != self.recycleName):
-                    if os.path.isdir(path+item):
-                        listOfFolders.append(aesFName.decryptFileName(self.key, item))
-                    else:
-                        listOfFiles.append(aesFName.decryptFileName(self.key, item))
-
+            _, fsDec = self.listDir(path)
             self.lastPathSent = path
-
-            return sortsCy.quickSortAlph(listOfFolders, fileObjects=False)+sortsCy.quickSortAlph(listOfFiles, fileObjects=False)  # Sort the list and return it
-
+            return [i for i in fsDec if i != ".$thumbs" and i != ".$recycling"]
+            # Cheeky bit of list comprehension so that these two folders are not sent.
 
 
 ##Functions for changing screen within threads (used to prevent segmentation faults)
     @mainthread
-    def changeToMain(self):
+    def changeToMain(self):   # Has to be defined in a function because threads need a target function.
         self.manager.current = "Main"
 
     @mainthread
-    def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
+    def changeToLogin(self):    # Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
         self.manager.current = "Login"
 ##############################################
 
@@ -4327,7 +4298,7 @@ class MainScreen(Screen):
 
             return ("%.2f" % bytes) + divisions[divCount]
 
-    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Get a sorted list of files for display. Displays all folders before files.
+    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Sorts list of fileObjects by folder/file and name
         folders = []
         files = []
         for i in range(len(fileObjects)):   #Separate into folders and files
@@ -4336,8 +4307,8 @@ class MainScreen(Screen):
             else:
                 files.append(fileObjects[i])
 
-        foldersSort = sortsCy.quickSortAlph(folders)   #Quick sort the list of folders and the list of files.
-        filesSort = sortsCy.quickSortAlph(files)
+        foldersSort = self.sortAlph(folders)   #Quick sort the list of folders and the list of files.
+        filesSort = self.sortAlph(files)
 
         if inverse: #If inverse
             foldersSort = foldersSort[::-1] #Invert the array
@@ -4382,6 +4353,7 @@ class MainScreen(Screen):
     def createButtons(self, fileObjects, sort=True):
         self.currentList = []
         if sort:
+            print("sorting")
             fileObjects = self.getSortedFoldersAndFiles(fileObjects)    #Sort the list of files.
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
@@ -4389,15 +4361,15 @@ class MainScreen(Screen):
         self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
 
-        self.createButtonsCore(fileObjects)
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
-
+        self.createButtonsCore(fileObjects)
 
     def traverseButton(self, fileObj):  # Function when file is clicked.
         if self.recycleFolder not in self.currentDir:
             if fileObj.isDir:   #If is a folder, then display files within that folder.
                 self.previousDir = self.currentDir
                 self.currentDir = fileObj.hexPath
+                self.ascending = True
                 self.resetButtons()
             else:   # If is a file, decrypt the file and open it.
                 self.decrypt(fileObj)
@@ -4523,33 +4495,29 @@ class MainScreen(Screen):
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
-        self.createButtons(self.List(self.currentDir))
+        self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshFiles(self):   # Refreshes the files in the current directory
         self.removeButtons()
-        self.createButtons(self.List(self.currentDir))
+        self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshButtons(self): # Refreshes file list buttons currently displayed.
         self.removeButtons()
-        self.createButtons(self.currentList, False)
+        self.createButtons(self.currentList, sort=False)
 
     def goHome(self):   #Takes the user back to the vault dir.
         self.currentDir = self.path
         self.refreshFiles()
 
-
     def List(self, dir):    # Lists a directory, returning File objects.
-        fs = os.listdir(dir)
+        fs, fsDec = self.listDir(dir)   # Lists encrypted names and decrypted names.
         listOfFolders = []
         listOfFiles = []
-        for item in fs:
-            if os.path.isdir(dir+item):
-                listOfFolders.append(File(self, dir+item, item, self.fileSep, isDir=True))
+        for i in range(len(fs)):
+            if os.path.isdir(dir+fs[i]):
+                listOfFolders.append(File(self, dir+fs[i], fs[i], self.fileSep, name=fsDec[i], isDir=True))
             else:
-                if os.path.exists(self.currentDir+self.thumbsName+self.fileSep+item):
-                    listOfFiles.append(File(self, dir+item, item, self.fileSep, dir+self.thumbsName+self.fileSep+item))
-                else:
-                    listOfFiles.append(File(self, dir+item, item, self.fileSep))
+                listOfFiles.append(File(self, dir+fs[i], fs[i], self.fileSep, name=fsDec[i]))
 
         return listOfFolders+listOfFiles
 
@@ -4562,6 +4530,8 @@ class MainScreen(Screen):
 ###########Searches############
     def findAndSortCore(self, dirName, item):
         files = self.List(dirName)
+        if len(files) == 0:
+            return
         for fileObj in files:
             loc = fileObj.name.find(item) # Find where in the word the item is found, if it is a substring of the word
 
@@ -4579,9 +4549,9 @@ class MainScreen(Screen):
         self.findAndSortCore(self.currentDir, item)
 
         if len(self.unsorted) > 0:
-            sorted = sortsCy.quickSortTuples(self.unsorted)
+            sorted = self.sortSearch(self.unsorted)
             for i in sorted:
-                self.searchResults.append(i[1])
+                self.searchResults.append(i)
             mainthread(self.removeButtons())
             return mainthread(self.createButtons(self.searchResults, False))
 
@@ -4591,7 +4561,6 @@ class MainScreen(Screen):
 
 
     def searchForItem(self, item):
-        self.resetButtons()
         self.searchResults = []
         Thread(target=self.findAndSort, args=(item,), daemon=True).start()
 
@@ -4605,48 +4574,132 @@ class MainScreen(Screen):
             return [values[0], values[1]]
 
 
-######Encryption Stuff + opening decrypted files######
-    def passToPipe(self, type, d, targetLoc, newName=None, endOfFolderList=False, op=True):     #Passes parameters to AES written in go.
+######Encryption Stuff + opening decrypted files + interface with go######
+    def encDec(self, encType, d, targetLoc, newName=None, op=True): # Encrypt and decrypt. A wrapper for the thread that will do it.
+        if self.encPop != None:
+            self.encPop.dismiss()
+            self.encPop = None
+
+        def encThread(encType, d, targetLoc, op=True):
+            if os.path.isdir(d):
+                if not os.path.exists(targetLoc):
+                    os.makedirs(targetLoc)
+                fileList, locList = self.getDirLists(encType, d, targetLoc)
+                self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op)
+                mainthread(self.encPop.open())
+                self.passToPipe(encType+"Dir", "\n".join(fileList), "\n".join(locList))
+            else:
+                size = os.path.getsize(d)
+                if size > 10000: # If larger than 10 kb, otherwise don't bother
+                    self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
+                    mainthread(self.encPop.open())
+                self.passToPipe(encType, d, targetLoc)
+
+            if encType == "y":
+                    self.resetButtons()
+
+            if op and encType == "n":
+                self.openFileTh(targetLoc, d)
+
+        return Thread(target=encThread, args=(encType, d, targetLoc, op,)).start()
+
+
+    def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
-            progname = "AES"
+            progname = "AES/AES"
 
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
-        out, err = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
-        if err != None:  # AES throws error when key is invalid.
-            raise ValueError("Key not valid.")
-
-        if endOfFolderList:
-            if self.encPop != None:
-                self.encPop.dismiss()
-                self.encPop = None
-            if type == "y":
-                self.refreshFiles()
-                print("Refreshing files.")
-
-        if type == "n" and op and endOfFolderList:
-            mainthread(self.openFileTh(targetLoc, d))
+        out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
         return out
 
+    ## Utilising passToPipe function
+    def getDirLists(self, encType, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
+        out = self.passToPipe("getLists"+encType, root, targ).decode()
+        out = out.split("--!--") # Separator
+        return out[0].split(",,"), out[1].split(",,")
+
+    def listDir(self, location):
+        out = self.passToPipe("listDir", location, "").decode()
+        out = out.split("--!--") # Separator
+        out = [out[0].split(",,"), out[1].split(",,")]
+        if out[0] == [""]:
+            out[0] = []
+        if out[1] == [""]:
+            out[1] = []
+        return out[0], out[1]
+
+    def encString(self, string):
+        out = self.passToPipe("encString", string, "").decode()
+        return out
+
+    def decString(self, string):
+        out = self.passToPipe("decString", string, "").decode()
+        return out
+
+    def encListString(self, list):
+        out = self.passToPipe("encList", "\n".join(list), "").decode()
+        return out.split(",,")
+
+    def sortSize(self, fileObjects):
+        out = self.passToPipe("sortSize", "\n".join([str(i.rawSize) for i in fileObjects]), "").decode()
+        out = [int(i) for i in out.split(",,")]
+        if len(out) != len(fileObjects):
+            raise ValueError("Length of sizes not the same as original:", len(out), len(fileObjects))
+        outList = []
+        for i in range(len(fileObjects)):
+            outList.append(-1)   # Initialize
+
+        for i in fileObjects:
+            outList[out.index(i.rawSize)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
+
+        return [i for i in outList if i != -1] # In case of any left-overs
+
+    def sortAlph(self, fileObjects):
+        out = self.passToPipe("sortAlph", "\n".join([str(i.name) for i in fileObjects]), "").decode()
+        out = [str(i) for i in out.split(",,")]
+        
+        return self.matchFileObjToName(fileObjects, out)
+
+    def sortSearch(self, searchResults):
+        out = self.passToPipe("sortSearch", "\n".join([str(i[0]) for i in searchResults]), "\n".join([i[1].name for i in searchResults])).decode()
+        out = [str(i) for i in out.split(",,")]
+
+        return self.matchFileObjToName([i[1] for i in searchResults], out)
+
+    def decListString(self, list):
+        out = self.passToPipe("decList", "\n".join(list), "").decode()
+        return out.split(",,")
+
+    def matchFileObjToName(self, fileObjects, listOfNames):    # Used when sorting file objects by name
+        if listOfNames == [""]:
+            return []
+        if len(listOfNames) != len(fileObjects):
+            print(listOfNames)
+            print(fileObjects)
+            raise ValueError("Length of names not the same as original:", len(listOfNames), len(fileObjects))
+        outList = []
+        for i in range(len(fileObjects)):
+            outList.append(-1)   # Initialize
+
+        for i in fileObjects:
+            outList[listOfNames.index(i.name)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
+
+        return [i for i in outList if i != -1] # In case of any left-overs
+
+
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
-        if self.fileSep == "\\":  # If on windows
+        if self.fileSep == "\\":      # If on windows
             goproc = Popen(self.startDir+"BLAKEWin.exe", stdin=PIPE, stdout=PIPE)
         elif self.fileSep == "/":
-            goproc = Popen(self.startDir+"BLAKE", stdin=PIPE, stdout=PIPE)
+            goproc = Popen(self.startDir+"BLAKE/BLAKE", stdin=PIPE, stdout=PIPE)
 
         out, err = goproc.communicate((location).encode())
         if err != None:
             raise ValueError(err)
 
         return out.decode()
-
-    def getFileExtension(self, fileName):
-        return fileName.split(".")[-1].lower()
-
-    def isImage(self, fileName):  # Used to get a file extension from a given file name.
-        extension = self.getFileExtension(fileName).lower()
-        return bool(extension == "png" or extension == "jpg")
 
     def getThumbnail(self, fileObj):
         if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
@@ -4659,51 +4712,6 @@ class MainScreen(Screen):
         thumb = Image(source=fileObj.thumbDir)
         return thumb
 
-
-    # Handles GUI while encrypting a single file, and parses parameters to passToPipe
-    def encDecTerminal(self, type, d, targetLoc, isPartOfFolder=False, endOfFolderList=False, newName=None, op=True): # Handels passToPipe and UI while encryption/decryption happens.
-        fileName = ""
-        if type == "y":     #The file name also needs to be encrypted
-            tempDir = d.split(self.fileSep)
-            fileName = tempDir[-1]
-            targetLoc = targetLoc.split(self.fileSep)
-            #replace file name with new hex
-            targetLoc[-1] = aesFName.encryptFileName(self.key, fileName)
-            thumbTarget = self.fileSep.join(targetLoc[:-1])+self.fileSep+self.thumbsName+self.fileSep+targetLoc[-1]
-
-            popText = "Encrypting..."
-            targetLoc = self.fileSep.join(targetLoc)
-            if os.path.exists(targetLoc):
-                if os.path.isdir(targetLoc):
-                    rmtree(targetLoc) # Imported from shutil
-                else:
-                    os.remove(targetLoc)
-
-        elif type == "n":   #Need to decrypt file name if decrypting
-            tempDir = d.split(self.fileSep)
-            fileName = tempDir[-1]
-            if newName == None:
-                targetLoc = targetLoc.split(self.fileSep)
-                newName = targetLoc[-1] #Stops you from doing it twice in decrypt()
-                targetLoc = self.fileSep.join(targetLoc)
-                fileName = newName
-            popText = "Decrypting..."
-
-        if not isPartOfFolder:   # If it is a single file, then open a popup. If it isn't, then a popup already exists.
-            self.encPop = mainSPops.encDecPop(self, type, popText, [d], [targetLoc], op=op) #self, labText, d, newLoc, **kwargs
-            mainthread(Clock.schedule_once(self.encPop.open, -1)) # Open the popup as soon as possible
-
-        if len(fileName) <= 112: #Any bigger than this and the file name is too long (os throws the error).
-            self.encryptProcess = Thread(target=self.passToPipe, args=(type, d, targetLoc, newName, endOfFolderList, op,), daemon=True)
-            self.encryptProcess.start()
-        else:
-            print("File name too long: ", fileName)
-            print("Dismissed?")
-            lab = Label(text="File name too long, skipping:\n"+fileName)
-            lab.bind(size=info.setter("text_size")) # Wrap to label.
-            pop = Popup(title="Invalid file name", content=lab, size_hint=(.4, .4), pos_hint={"x_center": .5, "y_center": .5})
-            pop.open()
-
     def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
         Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
 
@@ -4711,7 +4719,6 @@ class MainScreen(Screen):
         locationFolder = location.split(self.fileSep)
         nameOfOriginal = locationFolder[-1]
         locationFolder = self.fileSep.join(locationFolder[:-1])
-        startList = os.listdir(locationFolder)
         if self.fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) # Windows actually accepts forward slashes in terminal
@@ -4722,106 +4729,41 @@ class MainScreen(Screen):
         startCheckSum = self.getCheckSum(location) # Gets checksum of file before opening.
         os.system(command)# Using the same for both instead of os.startfile because os.startfile doesn't wait for file to close
         # After this line, the file has been closed.
-        if os.path.exists(locationFolder):            # If the vault is locked while the file is being edited, then the temporary files get deleted, so check it still exists.
-            endList = set(os.listdir(locationFolder)) # Get list of temp files afterwards, and encrypt any new ones (like doing save-as)
-            endCheckSum = self.getCheckSum(location)
-            print(startCheckSum, "START CHECK SUM")   # For debugging
-            print(endCheckSum, "END CHECK SUM")
-        else:
-            endList = []
-            endCheckSum = startCheckSum # Don't try and encrypt files that have been removed.
-
-        diffAdded = [d for d in endList if d not in startList] # Creates an array of differences between the list of files currently in the temp folder, and the original contents of the temp folder.
-        tempLoc = startLoc.split(self.fileSep)
-        for i in diffAdded:   # Encrypt any extra files in the temp folder that were not there before
-            print("Difference found:", i)
-            tempLoc = self.fileSep.join(tempLoc[:-1]) # Remove last file name
-            tempLoc += self.fileSep+i
-            self.encDecTerminal("y", locationFolder+self.fileSep+i, tempLoc)   #Is encrypted when program closes anyway
-
-        if nameOfOriginal in endList:
+        if os.path.exists(locationFolder) and nameOfOriginal in os.listdir(locationFolder):
             print("Original still here")
-            if endCheckSum != startCheckSum:
+            if self.getCheckSum(location) != startCheckSum:
                 print("Original file has changed.")
-                self.encDecTerminal("y", location, startLoc)
+                self.encDec("y", location, startLoc)
 
     def onFileDrop(self, window, filePath):  # For draging + dropping files into the window.
         self.checkCanEncrypt(filePath.decode())
         return "Done"
 
-    def decrypt(self, fileObj, op=True):
+    def decrypt(self, fileObj, op=True):            # Default decrypt for file. Manages opening files etc.
         if not os.path.isdir(self.osTemp+"FileMate"+self.fileSep):
             os.makedirs(self.osTemp+"FileMate"+self.fileSep)
         fileLoc = self.osTemp+"FileMate"+self.fileSep+fileObj.name  #Place in temporary files where it is going to be stored.
         if os.path.exists(fileLoc) and op:         #Checks file exits already in temp files, so it doesn't have to decrypt again.
             self.openFileTh(fileLoc, fileObj.hexPath)
         else:
-            self.encDecTerminal("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
-
-    def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
-        if os.path.exists(dir):
-            return True
-        else:
-            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
-            self.popup.open()
-            return False
-
-    def encDecDir(self, encType, d, targetLoc, op=True): # Encrypt and decrypt folders.
-        if self.encPop != None:
-            self.encPop.dismiss()
-            self.encPop = None
-
-        self.fileList = []
-        self.locList = []
-        self.encDecDirCore(encType, d, targetLoc)
-
-        labText = "Encrypting..."
-        if encType == "n":
-            labText = "Decrypting..."
-
-        self.encPop = mainSPops.encDecPop(self, encType, labText, self.fileList, self.locList, op=op) #self, labText, fileList, locList, **kwargs
-        mainthread(Clock.schedule_once(self.encPop.open, -1))
+            self.encDec("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
 
     def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
 
-    def encDecDirCore(self, encType, d, targetLoc): # Enc/decrypts whole directory.
-        fs = os.listdir(d)
-        targetLoc = targetLoc.split(self.fileSep)
-        if encType == "y": # Decrypt folder names
-            targetLoc[-1] = aesFName.encryptFileName(self.key, targetLoc[-1])
-        else:
-            targetLoc[-1] = aesFName.decryptFileName(self.key, targetLoc[-1])
-        targetLoc = self.fileSep.join(targetLoc)
-        for item in fs:
-            if os.path.isdir(d+item):
-                self.encDecDirCore(encType, d+item+self.fileSep, targetLoc+self.fileSep+item) #Recursive
-            else:
-                if encType == "n":
-                    name = aesFName.decryptFileName(self.key, item)
-                elif encType == "y":
-                    name = aesFName.encryptFileName(self.key, item)
-                else:
-                    name = item
-                try:
-                    self.createFolders(targetLoc+self.fileSep)
-                except PermissionError:
-                    pass
-                else:
-                    self.fileList.append(d+item)
-                    self.locList.append(targetLoc+self.fileSep+name)
-
     def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.
         if self.checkDirExists(inp):
-            if os.path.isdir(inp):
-                if inp[-1] != self.fileSep:
-                    inp += self.fileSep
-                inpSplit = inp.split(self.fileSep)
-                self.encDecDir("y", inp, self.currentDir+inpSplit[-2])
-            else:
-                inpSplit = inp.split(self.fileSep)
-                self.encDecTerminal("y", inp, self.currentDir+inpSplit[-1])
+            inpSplit = inp.split(self.fileSep)
 
+            if os.path.isdir(inp):
+                while inpSplit[-1] == "":       # Removes excess "/" from input
+                    inpSplit = inpSplit[:-1]
+                targ = self.currentDir+self.encString(inpSplit[-1])+self.fileSep
+                inp = self.fileSep.join(inpSplit)+self.fileSep
+            else:
+                targ = self.currentDir+self.encString(inpSplit[-1])
+                inp = self.fileSep.join(inpSplit)
+            self.encDec("y", inp, targ)
 
     def checkCanEncrypt(self, inp):  # Used for adding new files to the vault by the user.
         if "--" in inp: # Multiple files/folders input.
@@ -4831,15 +4773,14 @@ class MainScreen(Screen):
         else:
             self.checkCanEncryptCore(inp)
 
-        self.resetButtons()
 
-
-    def createFolders(self, targetLoc):   # Create a folder safely.
-        if not os.path.exists(targetLoc):
-            os.makedirs(targetLoc)
-            if self.thumbsName not in targetLoc: # If in the thumbnails folder, don't make a thumbnails folder.
-                os.makedirs(targetLoc+self.thumbsName)
-
+    def checkDirExists(self, dir):  #Handles UI for checking directory exits when file added.
+        if os.path.exists(dir):
+            return True
+        else:
+            self.popup = Popup(title="Invalid", content=Label(text=dir+" - Not a valid directory."), pos_hint={"center_x": .5, "center_y": .5}, size_hint=(.4, .4))
+            self.popup.open()
+            return False
 
     def clearUpTempFiles(self):     # Deletes temp files when the program is locked.
         print("Deleting temp files.")
@@ -4849,7 +4790,9 @@ class MainScreen(Screen):
             print("No temp files.")
 ```
 
-It has a fair amount of annotation, but I will still go through a few of the more confusing functions.
+`passToPipe` is used to pass commands through `stdin` to AES, and recieve results through `stdout`. There are many functions just below it dedicated to formatting data to be send through the pipe, for sorting files and many other functions. `encDec` is the function used in the program for encryption and decryption, while `decrypt` is a function used as a default operation to perform when a file is decrypted (open it, make a temporary folder etc).
+
+The temporary files are removed when the program is locked using `clearUpTempFiles`, called by `lock` when the BT server is closed, or when the lock button is pressed.
 
 `findAndSort` doesn't return anything, but instead edits `self.searchResults`. This is because it was easier to do it this way than pass it in every time, when it is needed by the rest of the program anyway. I just need to make sure i set it to `self.searchResults = []` before getting new results.
 
@@ -4986,10 +4929,9 @@ Here is the `.kv` file for MainScreen (`code/python-go/kivyStuff/kvFiles/mainSc.
                 size: 100, 133.54
                 allow_stretch: False
 
-
 ```
 
-The first three lines import the styling for the custom child widgets, which I will explain next.
+The first three lines import the styling for the custom child widgets, which I will go through next.
 
 
 ### Main Screen Buttons
@@ -5147,17 +5089,15 @@ from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
-import aesFName
 from configOperations import dirInputValid
 
 class encDecPop(Popup): #For single files
 
-    def __init__(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+    def __init__(self, outerScreen, encType, fileList, locList, op=True, **kwargs):
         super(Popup, self).__init__(**kwargs)
         self.outerScreen = outerScreen
         self.fileList = fileList
         self.locList = locList
-        self.done = False
 
         # Kivy stuff
         self.title = "Please wait..."
@@ -5175,6 +5115,9 @@ class encDecPop(Popup): #For single files
         self.outOf = Label(text="")
         self.pb = ProgressBar(value=0, max=os.path.getsize(self.fileList[0]), size_hint=(.9, .2))
         self.wholePb = ProgressBar(value=0, max=self.__getTotalSize(), size_hint=(.9, .2))
+        labText = "Encrypting..."
+        if encType == "n":
+            labText = "Decrypting..."
         self.grid.add_widget(Label(text=labText, size_hint=(1, .4)))
         self.grid.add_widget(self.currFile)
         self.subGrid.add_widget(self.per)
@@ -5219,7 +5162,13 @@ class encDecPop(Popup): #For single files
 
     def __getRelPathDec(self, path):   # Similar to decryptRelPath in fileClass
         splitPath = (path.replace(self.outerScreen.path, "")).split(self.outerScreen.fileSep)
-        return "/Vault/"+self.outerScreen.fileSep.join([aesFName.decryptFileName(self.outerScreen.key, i) for i in splitPath])
+        return "/Vault/"+self.outerScreen.fileSep.join(self.outerScreen.decListString(splitPath))
+
+    def __getMeanOfList(self, l):
+        out = 0
+        for i in l:
+            out += i
+        return out/len(l)
 
     def encDec(self, encType, op):
         total = 0
@@ -5231,14 +5180,11 @@ class encDecPop(Popup): #For single files
         perDelta = 0
         per = 0
         prevPer = 0
+        lastPerDeltas = [] # Stores 8 of the last percentage deltas so that a mean can be obtained.
         for i in range(len(self.fileList)):
             done = False
             self.pb.value = 0
             self.pb.max = os.path.getsize(self.fileList[i])
-            if i == len(self.fileList)-1:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, True, op=op)
-            else:
-                self.outerScreen.encDecTerminal(encType, self.fileList[i], self.locList[i], True, op=op)
 
             self.outOf.text = str(i)+"/"+str(len(self.fileList))
             if encType == "n":
@@ -5256,12 +5202,17 @@ class encDecPop(Popup): #For single files
                     timeDelta = a - timeLast     # Get time difference
                     if timeDelta >= 0.5:  # Update every 0.5 seconds
                         perDelta = per - prevPer   # Change in percentage in that time.
+                        if len(lastPerDeltas) == 8:
+                            lastPerDeltas = lastPerDeltas[1:]
+                        lastPerDeltas.append(perDelta)
+                        perDelta = self.__getMeanOfList(lastPerDeltas)
+
                         timeLast = a
                         sizeDelta = self.wholePb.value - lastSize  # Get change in size of the file being encrypted
                         speed = sizeDelta/timeDelta  # Get speed of encryption in bytes/second
 
                         if speed != 0:
-                            self.tim.text = self.__getGoodUnitTime((self.wholePb.max - self.wholePb.value)/speed)
+                            self.tim.text = self.__getGoodUnitTime((100 - (self.wholePb.value_normalized*100))/(perDelta/timeDelta))
                             self.spd.text = self.getGoodUnit(speed)
 
                         lastSize = self.wholePb.value
@@ -5269,16 +5220,16 @@ class encDecPop(Popup): #For single files
 
                     self.per.text = "{0:.2f}%".format(per)
 
-                if self.pb.value >= self.pb.max-32 or self.pb.value_normalized == 1:  # -32 is due to padding.
+                if self.pb.value >= self.pb.max-64:  # -64 is due to padding and key.
                     done = True
                 else:
-                    sleep(0.005) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
+                    sleep(0.01) # Reduces the rate the file is checked, so python doesn't use too much CPU. AES will still run the same regardless, the file just doesn't need to be checked as soon as possible.
 
             self.pb.value = self.pb.max
             totalPer += 100
             total += self.pb.max
 
-        self.dismiss()
+        mainthread(Clock.schedule_once(self.dismiss, -1))
 
 
 class btTransferPop(encDecPop):
@@ -5320,7 +5271,7 @@ class btTransferPop(encDecPop):
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
             os.makedirs(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep)
 
-        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc, fileObj.name, op=False)   #self, type, d, targetLoc, newName=None, endOfFolderList=False
+        self.outerScreen.passToPipe("n", fileObj.hexPath, newLoc)
 
         bufferSize = 1024
         buff = []
@@ -5357,13 +5308,13 @@ class decryptFileToLocPop(Popup): # Input box for location of where directory is
                 if not os.path.exists(inp):
                     os.makedirs(inp)
                 if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-                self.outerScreen.encDecDir("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
             else:
                 if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
                     if not os.path.exists(inp):
                         os.makedirs(inp)
                     inp += self.fileObj.name
-                self.outerScreen.encDecTerminal("n", self.fileObj.hexPath, inp, op=False)
+                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
 
     def getTitle(self):
         if self.fileObj.isDir:
@@ -5381,7 +5332,7 @@ class addNewFolderPop(Popup):
     def makeFolder(self, text):
         if dirInputValid(self.outerScreen.currentDir+text, self.outerScreen.fileSep):
             try:
-                os.makedirs(self.outerScreen.currentDir+aesFName.encryptFileName(self.outerScreen.key, text))
+                os.makedirs(self.outerScreen.currentDir+self.outerScreen.encString(text))
             except OSError as e:
                 if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
                     pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})
@@ -5403,7 +5354,6 @@ class addFilePop(Popup):     #The screen (it's actually a Popup) for adding fold
             self.fileScreen = fileScreen
             self.inputText = input
 
-
     def checkIfSure(self, input):
         self.ConfirmationPopup(self, input).open()
 ```
@@ -5413,13 +5363,13 @@ I have not got any styling for `encDecPop` or `btTransferPop` because I have to 
 I will break down the way `encDecPop` gets the statistics it needs:
 
 1. The encDecPop is created, and in `__init__` it starts a new thread which executes `self.encDec`.
-2. `encDec` goes through the list of files given (`self.fileList` and `self.locList` (which contains the loctations to enc/decrypt to)), calling `self.outerScreen.encDecTerminal(<parameters>)`.
-3. The maximum value of the status bar is set based on the size of the original file.
-4. While the file is enc/decrypting, it's size is monitored using `os.path.getsize(<file>)`, and the 1 or 2 progess bars' (depending on if multiple files are being operated on) values are updated with the new size.
+2. `encDec` goes through the list of files given (`self.fileList` and `self.locList` (which contains the loctations to enc/decrypt to)), while Go encrypts each file separately. As Go is encrypting the files, `encDec` monitors the size of the current file using `os.path.getsize(<file>)`, and monitors it while it's size is less than the size of the original file.
+3. The maximum value of the first status bar is set based on the size of the original file, while if enc/decrypting a folder, the second bar is based on the total size of all of the files in `fileList`.
+4. Every loop the values of the status bars are updated, while every 0.5 seconds, the statistics are updated using the time difference from the last update.
 5. The speed of the operation is obtained by getting the difference in size of the file in the time difference, divided by the time difference (or `sizeDelta/timeDelta`).
-6. The time remaining of the operation is obtained by dividing the total amount of data left by the speed (`(self.wholePb.max - self.wholePb.value)/speed`).
-7. Both of these values have a function to get a nice human-readable output (`_getGoodUnit` for the speed, and `_getGoodUnitTime` for the time remaining).
-8. The loop sleeps for 0.005 seconds to not max out the CPU, as it doesn't need to be updated that often (reduces usage to about 5%).
+6. The time remaining of the operation is obtained by dividing the percentage left of all the files by the time it takes to do 1 percent (`(100 - (self.wholePb.value_normalized*100))/(perDelta/timeDelta)`). The percentage delta (`perDelta`) is calculated by taking a mean of 8 of the last percentage deltas, as this smooths the time prediction so it is not as erratic. This makes for a more accurate time prediction reading.
+7. Both of these values have a function to get a nice human-readable output (`__getGoodUnit` for the speed, and `__getGoodUnitTime` for the time remaining).
+8. The whole loop sleeps for 0.01 seconds to not max out the CPU, as it doesn't need to be updated that often (reduces usage to about 3 to 7%).
 
 
 `btTransferPop` does works very similar to this, however since it is sending the data itself, it can get 100% accurate measurements of the statistics. Every time another batch of data is sent, the popup is updated.
@@ -5435,27 +5385,6 @@ Here is the styling for `mainSmallPops` (`code/python-go/kivyStuff/kvFiles/mainS
 
 ```cs
 #: import Clock kivy.clock.Clock
-
-<ConfirmationPopup@Popup>:
-    title: "Confirmation"
-    size_hint: .4, .4
-    pos_hint: {"center_x": .5, "center_y": .5}
-    auto_dismiss: False
-    FloatLayout:
-        Label:
-            text: "Are you sure?"
-            pos_hint: {"center_x": .5, "center_y": .7}
-        Button:
-            text: "No!!!"
-            pos_hint: {"center_x": .25, "center_y": .25}
-            size_hint: .4, .3
-            on_release: Clock.schedule_once(root.dismiss, -1)
-
-        Button:
-            text: "Yes"
-            pos_hint: {"center_x": .75, "center_y": .25}
-            size_hint: .4, .3
-            on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 
 <addNewFolderPop@Popup>:
     title: "Add New Folder"
@@ -5523,6 +5452,27 @@ Here is the styling for `mainSmallPops` (`code/python-go/kivyStuff/kvFiles/mainS
             text: "Submit"
             on_release: root.checkIfSure(root.ids.dirInp.text)
 
+
+<ConfirmationPopup@Popup>:
+    title: "Confirmation"
+    size_hint: .4, .4
+    pos_hint: {"center_x": .5, "center_y": .5}
+    auto_dismiss: False
+    FloatLayout:
+        Label:
+            text: "Are you sure?"
+            pos_hint: {"center_x": .5, "center_y": .7}
+        Button:
+            text: "No!!!"
+            pos_hint: {"center_x": .25, "center_y": .25}
+            size_hint: .4, .3
+            on_release: Clock.schedule_once(root.dismiss, -1)
+
+        Button:
+            text: "Yes"
+            pos_hint: {"center_x": .75, "center_y": .25}
+            size_hint: .4, .3
+            on_release: Clock.schedule_once(root.dismiss, -1);root.fileScreen.outerScreen.checkCanEncrypt(root.inputText)
 ```
 
 
@@ -6468,16 +6418,21 @@ And that is all of the code.
 # Testing
 
 
-For testing my program, I will mostly be doing black-box testing, with some white-box testing of important functions.
+For testing my program, I will mostly be doing black-box testing, with some unit testing of important functions.
 
-The key for the different types of data will be:
+The key for the different types of data (where applicable) will be:
 
 - T  =  Typical Data
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
 
-// TEMP  AES
+## Unit Tests
+
+The unit tests are only for the Go programs, as the `"testing"` package for Go makes testing very easy. Testing files in Go are made with the file name `<name-here>_test.go`. You may have noticed this in the 
+
+
+<!-- // TEMP  AES
 
 I have created a benchmark function in `aes.go` to measure the true speed of the operation:
 
@@ -6571,4 +6526,4 @@ ok    command-line-arguments  1.264s
 ```
 
 which (using the Python program I used while testing `aes.go`) is 59.42 MB/s, which is very decent. The results of BLAKE on the i7-3537U was `104655494 ns/op`, which is 33.92 MB/s.
-You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply.
+You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply. -->

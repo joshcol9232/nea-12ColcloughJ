@@ -1,8 +1,9 @@
 import os
 from shutil import move, disk_usage, rmtree
 from threading import Thread
-from functools import partial   # For parsing in functions with multiple arguments to widgets/threads
+from functools import partial   # For passing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
+from time import sleep
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -235,11 +236,11 @@ class MainScreen(Screen):
 
 ##Functions for changing screen within threads (used to prevent segmentation faults)
     @mainthread
-    def changeToMain(self):
+    def changeToMain(self):   # Has to be defined in a function because threads need a target function.
         self.manager.current = "Main"
 
     @mainthread
-    def changeToLogin(self):    #Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
+    def changeToLogin(self):    # Only used for checkServerStatus because you can only return a function or variable, and if i execute this within the thread then it causes a segmentation fault.
         self.manager.current = "Login"
 ##############################################
 
@@ -461,19 +462,16 @@ class MainScreen(Screen):
         self.remove_widget(self.scroll)
 
     def resetButtons(self): # Goes back to self.currentDir, different to refresh.
-        print("resetButtons")
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
         self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshFiles(self):   # Refreshes the files in the current directory
-        print("refreshFiles")
         self.removeButtons()
         self.createButtons(self.List(self.currentDir), sort=False)
 
     def refreshButtons(self): # Refreshes file list buttons currently displayed.
-        print("refreshButtons")
         self.removeButtons()
         self.createButtons(self.currentList, sort=False)
 
@@ -557,14 +555,18 @@ class MainScreen(Screen):
                 if not os.path.exists(targetLoc):
                     os.makedirs(targetLoc)
                 fileList, locList = self.getDirLists(encType, d, targetLoc)
-                self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op) #(self, outerScreen, encType, labText, fileList, locList, op=True, **kwargs):
+                self.encPop = mainSPops.encDecPop(self, encType, fileList, locList, op=op)
                 mainthread(self.encPop.open())
                 self.passToPipe(encType+"Dir", "\n".join(fileList), "\n".join(locList))
             else:
-                self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
-                mainthread(self.encPop.open())
+                size = os.path.getsize(d)
+                if size > 10000: # If larger than 10 kb, otherwise don't bother
+                    self.encPop = mainSPops.encDecPop(self, encType, [d], [targetLoc] , op=op)
+                    mainthread(self.encPop.open())
                 self.passToPipe(encType, d, targetLoc)
 
+            if encType == "y":
+                    self.resetButtons()
 
             if op and encType == "n":
                 self.openFileTh(targetLoc, d)
@@ -573,20 +575,16 @@ class MainScreen(Screen):
 
 
     def passToPipe(self, type, d, targetLoc):     #Passes parameters to AES written in go.
-        commandsNotNeedingKey = ["sortSize", "sortAlph"]
         if self.fileSep == "\\":
             progname = "AESWin.exe"
         else:
             progname = "AES/AES"
 
-        key = self.key
-        if type in commandsNotNeedingKey:
-            key = ""       # When the key is not needed, don't bother passing it.
-
         goproc = Popen(self.startDir+progname, stdin=PIPE, stdout=PIPE)
         out, _ = goproc.communicate((type+", "+d+", "+targetLoc+", "+self.key).encode()) # Send parameters to AES
         return out
 
+    ## Utilising passToPipe function
     def getDirLists(self, encType, root, targ):  # Communicates with AES to get list of files in a folder, and their target.
         out = self.passToPipe("getLists"+encType, root, targ).decode()
         out = out.split("--!--") # Separator
@@ -625,7 +623,6 @@ class MainScreen(Screen):
 
         for i in fileObjects:
             outList[out.index(i.rawSize)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
-        #print([x.name for x in fileObjects if x not in added])
 
         return [i for i in outList if i != -1] # In case of any left-overs
 
@@ -641,14 +638,17 @@ class MainScreen(Screen):
 
         return self.matchFileObjToName([i[1] for i in searchResults], out)
 
-
     def decListString(self, list):
         out = self.passToPipe("decList", "\n".join(list), "").decode()
         return out.split(",,")
 
-    def matchFileObjToName(self, fileObjects, listOfNames):
+    def matchFileObjToName(self, fileObjects, listOfNames):    # Used when sorting file objects by name
+        if listOfNames == [""]:
+            return []
         if len(listOfNames) != len(fileObjects):
-            raise ValueError("Length of names not the same as original:", len(out), len(fileObjects))
+            print(listOfNames)
+            print(fileObjects)
+            raise ValueError("Length of names not the same as original:", len(listOfNames), len(fileObjects))
         outList = []
         for i in range(len(fileObjects)):
             outList.append(-1)   # Initialize
@@ -670,9 +670,6 @@ class MainScreen(Screen):
             raise ValueError(err)
 
         return out.decode()
-
-    def getFileExtension(self, fileName):
-        return fileName.split(".")[-1].lower()
 
     def getThumbnail(self, fileObj):
         if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder

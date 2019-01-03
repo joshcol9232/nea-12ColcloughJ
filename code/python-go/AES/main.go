@@ -29,20 +29,15 @@ func main() {
 	var expandedKey [176]byte
 	var key []byte
 
-	if string(fields[3]) != "" { // If the key has been passed.
-		keyString := strings.Split(string(fields[3]), " ")
-		for i := 0; i < len(keyString); i++ {
-			a, err := strToInt(keyString[i])
-			if err != nil {
-				panic(err)
-			}
-			key = append(key, byte(a))
+	keyString := strings.Split(string(fields[3]), " ")
+	for i := 0; i < len(keyString); i++ {
+		a, err := strToInt(keyString[i])
+		if err != nil {
+			panic(err)
 		}
-		expandedKey = AES.ExpandKey(key)
-
-	} else {
-		log.Output(0, "EGG")
+		key = append(key, byte(a))
 	}
+	expandedKey = AES.ExpandKey(key)
 
 	if request == "y" {
 		AESfiles.EncryptFile(&expandedKey, string(fields[1]), string(fields[2]))
@@ -90,8 +85,4 @@ func main() {
 	} else {
 		panic("Invalid options.")
 	}
-
-	// out := encryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), "12345678901234567")
-	// fmt.Println(out, len(out))
-	// fmt.Println(decryptFileName(expandKey([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 49, 50, 51, 52, 53, 54}), out))
 }

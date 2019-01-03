@@ -153,9 +153,7 @@ class encDecPop(Popup): #For single files
             totalPer += 100
             total += self.pb.max
 
-        mainthread(Clock.schedule_once(self.dismiss, -1))
-        if encType == "y":
-            mainthread(self.outerScreen.resetButtons())
+        Clock.schedule_once(self.dismiss, -1)
 
 
 class btTransferPop(encDecPop):
