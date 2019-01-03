@@ -6,6 +6,8 @@ import (
   "runtime"   // For getting CPU core count
   "AES"
   "AES/AEScheckKey"
+  "log"
+  "fmt"
 )
 
 const DEFAULT_BUFFER_SIZE = 65536  // Define the default buffer size for enc/decrypt (is 2^16)
@@ -43,18 +45,6 @@ func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fi
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       AES.Decrypt(job.buff[i:i+16], expandedKey)
-      if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        var focus int = int(job.buff[i+15])
-        var focusCount int = 1
-        if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-          for j := 14; (int(job.buff[i+j]) == focus) && (j >= 0); j-- {
-            if int(job.buff[i+j]) == focus { focusCount++ }
-          }
-          if focus == focusCount {
-            job.buff = append(job.buff[:(i+16-focus)], job.buff[i+16:]...)  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-          }
-        }
-      }
     }
     results<- job  // Return job with decrypted buffer
   }
@@ -226,10 +216,28 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
     }
 
     if workingWorkers != 0 {
-      for i := 0; i < workingWorkers; i++ {
+      for i := 0; i < workingWorkers-1; i++ {  // Collect all but last block
         wk := <-results
         e.WriteAt(wk.buff, wk.offset)
       }
+      // Last block so check for padding
+      wk := <-results
+      log.Output()
+      var focus int = int(wk.buff[len(wk.buff)-1])
+      var focusCount int = 0
+      log.Output(0, fmt.Sprintf("Block: %v, Focus: %d", wk.buff, focus))
+      if focus < 16 {
+        for j := 1; (int(wk.buff[len(wk.buff)-j]) == focus) && (j <= 16); j++ {
+          if int(wk.buff[len(wk.buff)-j]) == focus { focusCount++ }
+          log.Output(0, fmt.Sprintf("FOCUS CURRENT: %d", focus))
+        }
+        log.Output(0, fmt.Sprintf("FOCUS: %d, FOCUS COUNT: %d", focus, focusCount))
+        if focus == focusCount {
+          wk.buff = wk.buff[:len(wk.buff)-focusCount]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+          log.Output(0, fmt.Sprintf("Buffer: %v", wk.buff))
+        }
+      }
+      e.WriteAt(wk.buff, wk.offset)
     }
     close(jobs)
     close(results)
