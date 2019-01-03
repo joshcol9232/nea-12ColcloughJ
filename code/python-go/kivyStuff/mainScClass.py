@@ -18,7 +18,6 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 
 from fileClass import File
-import sortsCy
 # Own kivy classes
 import mainBtns
 from settingsScreen import SettingsScreen
@@ -268,7 +267,7 @@ class MainScreen(Screen):
 
             return ("%.2f" % bytes) + divisions[divCount]
 
-    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Get a sorted list of files for display. Displays all folders before files.
+    def getSortedFoldersAndFiles(self, fileObjects, inverse=False): # Sorts list of fileObjects by folder/file and name
         folders = []
         files = []
         for i in range(len(fileObjects)):   #Separate into folders and files
@@ -277,8 +276,8 @@ class MainScreen(Screen):
             else:
                 files.append(fileObjects[i])
 
-        foldersSort = sortsCy.quickSortAlph(folders)   #Quick sort the list of folders and the list of files.
-        filesSort = sortsCy.quickSortAlph(files)
+        foldersSort = self.sortAlph(folders)   #Quick sort the list of folders and the list of files.
+        filesSort = self.sortAlph(files)
 
         if inverse: #If inverse
             foldersSort = foldersSort[::-1] #Invert the array
@@ -522,9 +521,9 @@ class MainScreen(Screen):
         self.findAndSortCore(self.currentDir, item)
 
         if len(self.unsorted) > 0:
-            sorted = sortsCy.quickSortTuples(self.unsorted)
+            sorted = self.sortSearch(self.unsorted)
             for i in sorted:
-                self.searchResults.append(i[1])
+                self.searchResults.append(i)
             mainthread(self.removeButtons())
             return mainthread(self.createButtons(self.searchResults, False))
 
@@ -624,18 +623,41 @@ class MainScreen(Screen):
         for i in range(len(fileObjects)):
             outList.append(-1)   # Initialize
 
-        added = []
         for i in fileObjects:
             outList[out.index(i.rawSize)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
-            added.append(i)
         #print([x.name for x in fileObjects if x not in added])
 
         return [i for i in outList if i != -1] # In case of any left-overs
+
+    def sortAlph(self, fileObjects):
+        out = self.passToPipe("sortAlph", "\n".join([str(i.name) for i in fileObjects]), "").decode()
+        out = [str(i) for i in out.split(",,")]
+        
+        return self.matchFileObjToName(fileObjects, out)
+
+    def sortSearch(self, searchResults):
+        out = self.passToPipe("sortSearch", "\n".join([str(i[0]) for i in searchResults]), "\n".join([i[1].name for i in searchResults])).decode()
+        out = [str(i) for i in out.split(",,")]
+
+        return self.matchFileObjToName([i[1] for i in searchResults], out)
 
 
     def decListString(self, list):
         out = self.passToPipe("decList", "\n".join(list), "").decode()
         return out.split(",,")
+
+    def matchFileObjToName(self, fileObjects, listOfNames):
+        if len(listOfNames) != len(fileObjects):
+            raise ValueError("Length of names not the same as original:", len(out), len(fileObjects))
+        outList = []
+        for i in range(len(fileObjects)):
+            outList.append(-1)   # Initialize
+
+        for i in fileObjects:
+            outList[listOfNames.index(i.name)] = i  # Insert the file object on the pace in outList that corresponds to where it's size is in the 'out' list.
+
+        return [i for i in outList if i != -1] # In case of any left-overs
+
 
     def getCheckSum(self, location):  # Communicates to BLAKE to get checksum.
         if self.fileSep == "\\":      # If on windows

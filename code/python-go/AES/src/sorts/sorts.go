@@ -12,6 +12,11 @@ type Tuple struct {
   B string
 }
 
+type SearchTuple struct {
+  pos int
+  name string
+}
+
 func UseQuickSortSize(inp []string) []string {  // Converts inputs so that QuickSortSize can be used.
   var nums []int64
   var out []string
@@ -23,6 +28,38 @@ func UseQuickSortSize(inp []string) []string {  // Converts inputs so that Quick
   nums = quickSort(nums)
   for i := 0; i < len(nums); i++ {
     out = append(out, strconv.FormatInt(nums[i], 10))
+  }
+  return out
+}
+
+func UseQuickSortAlph(inp []string) []string { // For sorting a list that has no encrypted name
+  var inpToAlph []Tuple
+  var out []string
+  for i := 0; i < len(inp); i++ {
+    inpToAlph = append(inpToAlph, Tuple{A: nil, B: inp[i]})
+  }
+
+  inpToAlph = QuickSortAlph(inpToAlph)
+  for i := 0; i < len(inpToAlph); i++ {
+    out = append(out, inpToAlph[i].B)
+  }
+  return out
+}
+
+func UseQuickSortSearch(posList, nameList []string) []string { // Returns names in order.
+  var inpToSort []SearchTuple
+  var out []string
+  if len(posList) != len(nameList) {
+    panic("Search result lists are different sizes.")
+  }
+  for i := 0; i < len(posList); i++ {
+    intPos, err := strconv.Atoi(posList[i])
+    if err != nil { panic(err) }
+    inpToSort = append(inpToSort, SearchTuple{pos: intPos, name: nameList[i]})
+  }
+  inpToSort = quickSortSearch(inpToSort)
+  for i := 0; i < len(inpToSort); i++ {
+    out = append(out, inpToSort[i].name)
   }
   return out
 }
@@ -80,6 +117,28 @@ func QuickSortAlph(inp []Tuple) []Tuple {  // Only used internally by AES
   }
   left = QuickSortAlph(left)
   right = QuickSortAlph(right)
+  return append(append(left, middle...), right...)
+}
+
+func quickSortSearch(inp []SearchTuple) []SearchTuple { // Sorts search results
+  if len(inp) < 2 {
+    return inp
+  }
+  var pivot int = inp[int(len(inp)/2)].pos
+  var left []SearchTuple
+  var middle []SearchTuple
+  var right []SearchTuple
+  for i := 0; i < len(inp); i++ {
+    if inp[i].pos < pivot {
+      left = append(left, inp[i])
+    } else if inp[i].pos > pivot {
+      right = append(right, inp[i])
+    } else {
+      middle = append(middle, inp[i])
+    }
+  }
+  left = quickSortSearch(left)
+  right = quickSortSearch(right)
   return append(append(left, middle...), right...)
 }
 

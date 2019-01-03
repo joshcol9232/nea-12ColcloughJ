@@ -1525,20 +1525,13 @@ code
     │   │   ├── mainScPops.kv
     │   │   └── settingsSc.kv
     │   ├── loginClass.py
+    │   ├── mainBtnsNew.py
     │   ├── mainBtns.py
     │   ├── mainScClass.py
     │   ├── mainSmallPops.py
     │   ├── settingsScreen.py
     │   └── ui.py
     ├── SHA.py
-    ├── sortsCy.c
-    ├── sortsCy.cpython-37m-x86_64-linux-gnu.so
-    ├── sortsCythonSource
-    │   ├── build
-    │   │   └── temp.linux-x86_64-3.7
-    │   │       └── sortsCy.o
-    │   ├── setup.py
-    │   └── sortsCy.pyx
     └── start.py
 ```
 
@@ -3129,17 +3122,56 @@ The file is called SHA.py, and is imported by LoginScreen (default login without
 
 ### BLAKE2b:
 
-Here is the code for BLAKE2b (`code/python-go/blake.go`):
+
+Unlike AES, BLAKE does not have any sub-packages (like `AESfiles`). Here is the file structure of BLAKE:
+
+```
+code/python-go/BLAKE/
+                    ├── BLAKE
+                    ├── BLAKE.test
+                    ├── build.sh
+                    ├── main.go
+                    ├── src
+                    │   └── BLAKE
+                    │       ├── blake.go
+                    │       ├── blake_test.go
+                    │       └── checksum.go
+                    ├── testBenchBLAKE.sh
+                    └── testBLAKE.sh
+
+                    2 directories, 9 files
+```
+
+It consists of two packages, `BLAKE` and `main`. `main` just communicates between Go and Python (like in AES). Here is the content of `code/python-go/BLAKE/main.go`:
 
 ```go
 package main
 
 import (
   "fmt"
-  "math"
   "os"
-  "io"
   "io/ioutil"
+  "BLAKE"
+)
+
+func main() {
+  bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
+  if err != nil { panic(err) }
+  f := string(bytes)
+
+  fmt.Printf("%x", BLAKE.GetChecksum(f, 64))
+}
+```
+
+It is a small package, as BLAKE only accepts a file location, then returns the checksum of that file. Line 15 `fmt.Printf("%x", BLAKE.GetChecksum(f, 64))` gets the hex representation of the bytes returned by GetChecksum, and returns it on `stdout`, back to Python.
+
+Here is the main part of the `BLAKE` package (`code/python-go/BLAKE/src/BLAKE/blake.go`):
+
+```go
+package BLAKE
+
+import (
+  "math"
 )
 
 
@@ -3174,80 +3206,95 @@ func check(e error) {     //Used for checking errors when reading/writing to fil
   }
 }
 
-func rotR64(in uint64, n int) uint64 {  // Rotates 64 bit words right by n amount.
+func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
-}
-
-func mix(v [16]uint64, a, b, c, d int, x, y uint64) [16]uint64 {
-  v[a] = v[a] + v[b] + x
-  v[d] = rotR64((v[d] ^ v[a]), 32)
-
-  v[c] = v[c] + v[d]
-  v[b] = rotR64((v[b] ^ v[c]), 24)
-
-  v[a] = v[a] + v[b] + y
-  v[d] = rotR64((v[d] ^ v[a]), 16)
-
-  v[c] = v[c] + v[d]
-  v[b] = rotR64((v[b] ^ v[c]), 63)
-
-  return v
 }
 
 func get64(in []uint64) uint64 {  // Gets a full 64-bit word from a list of 8 64-bit bytes.
   return uint64(in[0] ^ (in[1] << 8) ^ (in[2] << 16) ^ (in[3] << 24) ^ (in[4] << 32) ^ (in[5] << 40) ^ (in[6] << 48) ^ (in[7] << 56))
 }
 
+func blakeMix(v []uint64, a, b, c, d int, x, y *uint64) {
+  v[a] = v[a] + v[b] + *x
+  v[d] = rotR64((v[d] ^ v[a]), 32)
 
-func blakeCompress(h [8]uint64, block []uint64, t int, lastBlock bool) [8]uint64 {  // Compressing function
-  var v = [16]uint64{} // Current vector
-  for i := 0; i < 8; i++ {
-    v[i] = h[i]
-    v[i+8] = k[i]
-  }
-  v[12] = v[12] ^ uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
-  v[13] = v[13] ^ (uint64(t) >> 64)
+  v[c] = v[c] + v[d]
+  v[b] = rotR64((v[b] ^ v[c]), 24)
+
+  v[a] = v[a] + v[b] + *y
+  v[d] = rotR64((v[d] ^ v[a]), 16)
+
+  v[c] = v[c] + v[d]
+  v[b] = rotR64((v[b] ^ v[c]), 63)
+}
+
+func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Compressing function. Takes a block of 128 uint64s
+  v := make([]uint64, 16) // Current vector as a slice. This allows you to pass by reference
+
+  v[ 0], v[ 1], v[ 2], v[ 3],     // Doing this instead of for loop allows for marginal performance increase.
+  v[ 4], v[ 5], v[ 6], v[ 7],
+  v[ 8], v[ 9], v[10], v[11],
+  v[12], v[13], v[14], v[15] =
+
+  h[ 0], h[ 1], h[ 2], h[ 3],
+  h[ 4], h[ 5], h[ 6], h[ 7],
+  k[ 0], k[ 1], k[ 2], k[ 3],
+  k[ 4], k[ 5], k[ 6], k[ 7]
+
+  v[12] ^= uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
+  v[13] ^= (uint64(t) >> 64)
 
   if lastBlock {
-    v[14] = ^v[14] // NOT v[14]
+    v[14] = ^v[14] // NOT
   }
 
-  var m [16] uint64
+  var m [16]uint64
   for i := 0; i < 16; i++ {
     m[i] = get64(block[i*8:(i*8)+8])
   }
   for i := 0; i < 12; i++ {
-    // Mix
-    v = mix(v, 0, 4,  8, 12, m[sigma[i][0]], m[sigma[i][1]])
-    v = mix(v, 1, 5,  9, 13, m[sigma[i][2]], m[sigma[i][3]])
-    v = mix(v, 2, 6, 10, 14, m[sigma[i][4]], m[sigma[i][5]])
-    v = mix(v, 3, 7, 11, 15, m[sigma[i][6]], m[sigma[i][7]])
+    blakeMix(v, 0, 4,  8, 12, &m[sigma[i][0]], &m[sigma[i][1]])
+    blakeMix(v, 1, 5,  9, 13, &m[sigma[i][2]], &m[sigma[i][3]])
+    blakeMix(v, 2, 6, 10, 14, &m[sigma[i][4]], &m[sigma[i][5]])
+    blakeMix(v, 3, 7, 11, 15, &m[sigma[i][6]], &m[sigma[i][7]])
 
-    v = mix(v, 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]])   // Rows have been shifted
-    v = mix(v, 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]])
-    v = mix(v, 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]])
-    v = mix(v, 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]])
+    blakeMix(v, 0, 5, 10, 15, &m[sigma[i][ 8]], &m[sigma[i][ 9]])   // Rows have been shifted
+    blakeMix(v, 1, 6, 11, 12, &m[sigma[i][10]], &m[sigma[i][11]])
+    blakeMix(v, 2, 7,  8, 13, &m[sigma[i][12]], &m[sigma[i][13]])
+    blakeMix(v, 3, 4,  9, 14, &m[sigma[i][14]], &m[sigma[i][15]])
   }
 
   for i := 0; i < 8; i++ {
     h[i] ^= v[i]
     h[i] ^= v[i+8]
   }
-
-  return h
 }
+```
 
-func getNiceOutput(h [8]uint64) [64]byte {
-  var out [64]byte
-  for i := 0; i < 8; i++ {
-    for j := 8; j != 0; j-- {
-      out[i*8+(j-1)] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
-    }
-  }
-  return out
-}
+`get64` takes 8 bytes, and sticks them together to return a single 64-bit word. I know `get64` takes an array of 64-bit words `[]uint64`, however these are read from the file as bytes, and are changed into 64-bit words, but they are bytes so none of them are bigger than 255. Here is a small example:
 
-func BLAKEchecksum(f string, hashL int) [64]byte {
+```
+8 bytes: 0xaa 0xbb 0xcc 0xdd 0xee 0xff 0x1e 0x9d
+get64: 0xaabbccddeeff1e9d
+```
+
+`blakeMix` accepts the reference to the current working vector `v` (since it is a slice it is automatically passed by reference), the elements in `v` to change, and also a reference to tow elements from the message `m`, which is the block that has been converted using the `get64` method explained above.
+
+`h` is the current hash that is being worked on, and is also passed by reference to the compression function.
+Passing by reference increases speed about twofold compared to not passing by reference, as the function is called a lot it is more efficient to change one copy of the variable, rather than copying it and returning it every time the function is called.
+
+
+Here is the part of the `BLAKE` package that handles getting the checksum of a file (`code/python-go/BLAKE/src/BLAKE/checksum.go`):
+
+```go
+package BLAKE
+
+import (
+  "os"
+  "io"
+)
+
+func GetChecksum(f string, hashL int) [64]byte {
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key
 
@@ -3288,10 +3335,10 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
 
     for i := 0; i < bufferSize; i += 128 {
       if bytesLeft <= 128 {
-        h = blakeCompress(h, buff[i:i+128], bytesFed+bytesLeft, true)
+        BlakeCompress(&h, buff[i:i+128], bytesFed+bytesLeft, true)
       } else {
         bytesFed += 128
-        h = blakeCompress(h, buff[i:i+128], bytesFed, false)
+        BlakeCompress(&h, buff[i:i+128], bytesFed, false)
       }
       bytesLeft -= 128
     }
@@ -3300,177 +3347,38 @@ func BLAKEchecksum(f string, hashL int) [64]byte {
   }
   a.Close()
 
-  return getNiceOutput(h)
+  return getLittleEndian(h)
 }
 
-func main() {
-  bytes, err := ioutil.ReadAll(os.Stdin)  // Read file to hash from stdin
-  check(err)
-  f := string(bytes)
-
-  fmt.Printf("%x", BLAKEchecksum(f, 64))  // Returns the hex digest in hex form over stdout
+func getLittleEndian(h [8]uint64) [64]byte {
+  var out [64]byte
+  for i := 0; i < 8; i++ {
+    for j := 8; j != 0; j-- {
+      out[i*8+(j-1)] = byte(((h[i] << uint64(64 - uint64((j)*8))) & 0xFFFFFFFFFFFFFFFF) >> 56)
+    }
+  }
+  return out
 }
 ```
 
-The way that BLAKE2b goes through the file is very similar to AES, so I stole some of the code from my AES and adapted it slightly.
+The way that the `GetChecksum` function goes through the file is very similar to AES, however it cannot be easily parallelised like AES, as the checksum takes into account the order of the data. There is a way to make BLAKE parallel but I didn't really have the time to look into it.
 
-The `main()` function is much simpler than AES's `main()` function, as I am only receiving one input: the path of the file that needs to be hashed.
 
-`getNiceOutput` turns the array `h`, which contains 8 64-bit words, into an array of 64 bytes, that can then be turned into a hex output that is a bit more readable. The way it works is it generates a little-endian interpretation of the 64-bit words as bytes. So if I had the word $0D4D1C983FA580BA$ , the output of the function would return $BA 80 A5 3F 98 1C 4D 0D$. The function `getNiceOutput` uses bit masking (shifting the bits in the word around to leave the bits you want to change exposed) to get each byte of the 64-bit word, then appends the byte to the list in reverse order (since it is little-endian). Little-endian is just a way to store a number larger than a byte. Little-endian and big-endian are needed in computer systems because in memory, each address can only store a single byte, so if a number is bigger than that then the number needs to be split into separate bytes. For example, if I had the number `354`, then I would first convert that into binary: $2+32+64+256 = 354$, = $101100010$, however this is larger than 8 bits, so split it into two:
+`getLittleEndian` turns the array `h`, which contains 8 64-bit words, into an array of 64 bytes, that can then be turned into a hex output that is a bit more readable. The way it works is it generates a little-endian interpretation of the 64-bit words as bytes. So if I had the word $0D4D1C983FA580BA$ , the output of the function would return $BA 80 A5 3F 98 1C 4D 0D$. The function `getLittleEndian` uses bit masking (shifting the bits in the word around to leave the bits you want to change exposed) to get each byte of the 64-bit word, then appends the byte to the list in reverse order (since it is little-endian). Little-endian is just a way to store a number larger than a byte. Little-endian and big-endian are needed in computer systems because in memory, each address can only store a single byte, so if a number is bigger than that then the number needs to be split into separate bytes. For example, if I had the number `354`, then I would first convert that into binary: $2+32+64+256 = 354$, = $101100010$, however this is larger than 8 bits, so split it into two:
 
  $00000001$  and $01100010$, where the first byte starts at $2^8$. Little-endian arranges these bytes in memory like this:
 
 Address1: $01100010$, Address2: $0000001$
 
-It is called little-endian because the smaller (little) number is stored in the first address (the end). Big-endian is just the opposite way around.
-
-The `get64` function turns 8 64-bit words into 1 64-bit word, or 8 bytes.
-
-The executable itself (`BLAKE` or `BLAKEWin`)
-
-
-Now similar to `aes.go`, I wrote a benchmark function for `blake.go` that looks like this:
-
-```go
-import (
-  ...
-  "testing"
-)
-
-...
-
-func BenchmarkBLAKEchecksum(b *testing.B) {
-  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"
-  for n := 0; n < b.N; n++ {
-    BLAKEchecksum(f, 64)
-  }
-}
-```
-
-And the results on the i7-6600k were:
-
-```
-goos: linux
-goarch: amd64
-BenchmarkBLAKEchecksum-4          20    59748242 ns/op
-PASS
-ok    command-line-arguments  1.264s
-```
-
-which (using the Python program I used while testing `aes.go`) is 59.42 MB/s, which is very decent. The results of BLAKE on the i7-3537U was `104655494 ns/op`, which is 33.92 MB/s.
-You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply.
+It is called little-endian because the smaller part of the number (little) number is stored in the first address (the end). Big-endian is just the opposite way around.
 
 
 
 ### The Sorts:
 
-Here is the code for the sorts (`code/python-go/sortsCythonSource/sortsCy.pyx`):
-
-```python
-cpdef int compareStrings(fileObj, string2, fileObjects=True):  # Returns 0 if str1 < str2, 1 if str1 > str2, and 2 if str1 == str2
-    cdef int count = 0
-
-    if fileObjects:
-        string1 = fileObj.name
-    else:
-        string1 = fileObj
-
-    while not (count >= len(string1) or count >= len(string2)):-
-        if ord(string2[count].lower()) < ord(string1[count].lower()):
-            return 1
-        elif ord(string2[count].lower()) > ord(string1[count].lower()):
-            return 0
-        else:
-            if ord(string2[count]) < ord(string1[count]):    #if the same name but with capitals - e.g (Usb Backup) and (usb backup)
-                return 1
-            elif ord(string2[count]) > ord(string1[count]):
-                return 0
-            else:
-                if string2 == string1:
-                    return 2
-                else:
-                    count += 1
-    if len(string1) > len(string2):
-        return 1
-    elif len(string1) < len(string2):
-        return 0
-    else:
-        raise ValueError("Two strings are the same in compareStrings.")
+##################
 
 
-
-cpdef list quickSortAlph(list myList, fileObjects=True):  #Quick sorts alphabetically
-    cdef list left = []
-    cdef list right = []  #Make seperate l+r lists, and add on at the end.
-    cdef list middle = []
-    if len(myList) > 1:
-        pivot = myList[int(len(myList)/2)]
-        for item in myList:
-            if fileObjects:
-                leftSide = compareStrings(pivot, item.name)
-            else:
-                leftSide = compareStrings(pivot, item, False)
-            if leftSide == 2:
-                middle.append(item)
-            elif leftSide == 1:
-                left.append(item)
-            elif leftSide == 0:
-                right.append(item)
-
-        return quickSortAlph(left, fileObjects)+middle+quickSortAlph(right, fileObjects)
-    else:
-        return myList
-
-
-cpdef list quickSortSize(list fileObjects):
-    cdef list left = []
-    cdef list right = []  #Make seperate l+r lists, and add on at the end.
-    cdef list middle = []
-    cdef int pivotSize
-    if len(fileObjects) > 1:
-        pivot = fileObjects[int(len(fileObjects)/2)]
-        if pivot.rawSize == " -":
-            pivotSize = 0
-        else:
-            pivotSize = pivot.rawSize
-
-        for i in fileObjects:
-            if i.rawSize == " -":
-                left.append(i)
-            elif i.rawSize < pivotSize:
-                left.append(i)
-            elif i.rawSize > pivotSize:
-                right.append(i)
-            else:
-                middle.append(i)
-        return quickSortSize(left)+middle+quickSortSize(right)
-    else:
-        return fileObjects
-
-cpdef list quickSortTuples(list tuples):  #Quick sorts tuples (for search results).
-    cdef list left = []
-    cdef list right = []  #Make seperate l+r lists, and add on at the end.
-    cdef list middle = []
-    cdef int pivot
-    if len(tuples) > 1:
-        pivot = tuples[int(len(tuples)/2)][0]
-        for i in tuples:
-            if i[0] < pivot:
-                left.append(i)
-            elif i[0] > pivot:
-                right.append(i)
-            else:
-                middle.append(i)
-        return quickSortTuples(left)+middle+quickSortTuples(right)
-    else:
-        return tuples
-```
-
-The way Cython works, is that functions defined using `cpdef` are accessible by both Cython and Python, while variables can be defined using `cdef` internally, as they only need to be accessible via Cython.
-
-Cython speeds Python code up significantly, depending on how many variables have a declared variable type. If variables / functions are used a lot, then it is a good idea to declare their type. Variables that are not used so often do not need to be defined with their data type, as they may only be used a couple of times during the program.
-
-When you build the Cython program, you get a shared object file (.so), and a C file. You can import the name of the .c file in Python to use the module.
 
 `quickSortTuples` is used for sorting search results, as search results are collected along with the position that the search item was found in the word. For example, if I searched for "b" in a folder, and there was a file called "brian.png", then the search result would be (0, "brian.png"). `quickSortTuples` then sorts these results by the number. I need to use a tuple so that I know what string belongs to which number.
 
@@ -6390,7 +6298,7 @@ The key for the different types of data will be:
 - B  =  Boundary Data
 
 
-// TEMP 
+// TEMP  AES
 
 I have created a benchmark function in `aes.go` to measure the true speed of the operation:
 
@@ -6450,3 +6358,38 @@ There is no error checking or anything since I am the only person using it (and 
 
 The result is that on an i7-6600k, the speed of AES was 18.92 MB/s (187673212 ns/op for 10 operations), while on a laptop i7-3537U it was 10.21 MB/s.
 The speed is quite good, as when working on small files (< 2 MB), opening and editing files should be almost instant, and even opening larger files shouldn't take too long. At 18.92 MB/s a 2 GB file would take 105.7 seconds, or 1:45 minutes, which isn't too bad. I timed a 2 GB file (2,036,826,112 bytes precisely) and it actually took 2:00 minutes (yes, on the dot), probably due to background processes.
+
+
+// BLAKE
+
+
+Now similar to `aes.go`, I wrote a benchmark function for `blake.go` that looks like this:
+
+```go
+import (
+  ...
+  "testing"
+)
+
+...
+
+func BenchmarkBLAKEchecksum(b *testing.B) {
+  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"
+  for n := 0; n < b.N; n++ {
+    BLAKEchecksum(f, 64)
+  }
+}
+```
+
+And the results on the i7-6600k were:
+
+```
+goos: linux
+goarch: amd64
+BenchmarkBLAKEchecksum-4          20    59748242 ns/op
+PASS
+ok    command-line-arguments  1.264s
+```
+
+which (using the Python program I used while testing `aes.go`) is 59.42 MB/s, which is very decent. The results of BLAKE on the i7-3537U was `104655494 ns/op`, which is 33.92 MB/s.
+You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply.
