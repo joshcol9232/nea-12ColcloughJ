@@ -44,6 +44,7 @@ func TestBlakeMix(t *testing.T) {
   								0x726e4d94d076d220, 0xd55261f05e988e99, 0x47c5fed6073fff6f, 0xafdc6ec84b5122fd,
   								0x828789a16ddf8fcc, 0x9219a1cce5eaceb3, 0x81c389d523f73c81, 0xc518f0411804f255} // Randomly generated in python.
 
+  // Tested using working version
 	expectedResult := []uint64{0x24f71c9177a10424, 0x48221449c090c5cb, 0x1631bc17f31ed4ef, 0xdf4a6c4edfb6012e,
       											 0x216426a085db4092, 0xeca6fe4ecfbd235d,  0xc732f6aacdfed23, 0x6c59d3af929a71a7,
       											 0xaa69fe02ab573a54, 0xd55261f05e988e99, 0x47c5fed6073fff6f, 0xafdc6ec84b5122fd,
