@@ -2937,6 +2937,17 @@ This string would get passed to the standard input of the program.
 `aes.go` is compiled to `AES` for Linux/MacOS, and `AESWin.exe` for Windows.
 
 
+`build.sh` just compiles the main code. Here it is:
+
+```bash
+#!/bin/bash
+export GOPATH="/home/josh/nea-12ColcloughJ/code/python-go/AES/"
+go build
+```
+
+It exists because I am too lazy to paste the GOPATH environment variable into the terminal whenever I want to build it. Go requires that you set the GOPATH environment variable saying where the source code is to compile it. This bash script made it easier to go from building AES to building BLAKE.
+
+
 ### SHA256:
 
 Here is the code for SHA256 (`code/python-go/SHA.py`, `code/mobile/SHA.py`):
@@ -3183,11 +3194,6 @@ Here is the main part of the `BLAKE` package (`code/python-go/BLAKE/src/BLAKE/bl
 ```go
 package BLAKE
 
-import (
-  "math"
-)
-
-
 // Inital constants.
 var k = [8]uint64 {0x6A09E667F3BCC908,
                    0xBB67AE8584CAA73B,
@@ -3208,16 +3214,9 @@ var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 1
                             {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10},
                             {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5},
                             {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
-                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}}
+                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, // Same as first line
+                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}} // Same as second line
 
-// Research: https://tools.ietf.org/pdf/rfc7693.pdf
-
-func check(e error) {     //Used for checking errors when reading/writing to files.
-  if e != nil {
-    panic(e)
-  }
-}
 
 func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
@@ -3254,7 +3253,7 @@ func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Co
   k[ 0], k[ 1], k[ 2], k[ 3],
   k[ 4], k[ 5], k[ 6], k[ 7]
 
-  v[12] ^= uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
+  v[12] ^= uint64(t)
   v[13] ^= (uint64(t) >> 64)
 
   if lastBlock {
@@ -3262,9 +3261,10 @@ func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Co
   }
 
   var m [16]uint64
-  for i := 0; i < 16; i++ {
-    m[i] = get64(block[i*8:(i*8)+8])
+  for i, z := 0, 0; i < 121; i, z = i+8, z+1 { // Having z prevents having to divide by 8
+    m[z] = get64(block[i:i+8])
   }
+
   for i := 0; i < 12; i++ {
     blakeMix(v, 0, 4,  8, 12, &m[sigma[i][0]], &m[sigma[i][1]])
     blakeMix(v, 1, 5,  9, 13, &m[sigma[i][2]], &m[sigma[i][3]])
@@ -3306,6 +3306,12 @@ import (
   "os"
   "io"
 )
+
+func check(e error) {     //Used for checking errors when reading/writing to files.
+  if e != nil {
+    panic(e)
+  }
+}
 
 func GetChecksum(f string, hashL int) [64]byte {
   h := k  // Initialize h0-7 with initial values.
@@ -3385,6 +3391,14 @@ Address1: $01100010$, Address2: $0000001$
 
 It is called little-endian because the smaller part of the number (little) number is stored in the first address (the end). Big-endian is just the opposite way around.
 
+
+`build.sh` just compiles the main code. Here it is:
+
+```bash
+#!/bin/bash
+export GOPATH="/home/josh/nea-12ColcloughJ/code/python-go/BLAKE/"
+go build
+```
 
 
 ### The Sorts:
@@ -6427,13 +6441,6 @@ And that is all of the code.
 
 For testing my program, I will mostly be doing black-box testing, with some unit testing of important functions.
 
-The key for the different types of data (where applicable) will be:
-
-- T  =  Typical Data
-- E  =  Erroneous Data
-- B  =  Boundary Data
-
-
 
 ## Unit Tests
 
@@ -6915,125 +6922,33 @@ For most of the tests, the result of the command `b2sum` is hard coded rather th
 
 Here are the test results:
 
-
-
-
-
-
-
-
-
-
-
-<!-- // TEMP  AES
-
-
-`build.sh` just compiles the main code. Here it is:
-
-```bash
-#!/bin/bash
-export GOPATH="/home/josh/nea-12ColcloughJ/code/python-go/AES/"
-go build
 ```
-
-It exists because I am too lazy to paste the GOPATH environment variable into the terminal whenever I want to build it. Go requires that you set the GOPATH environment variable saying where the source code is to compile it. This bash script made it easier to go from building AES to building BLAKE.
-
-
-
-
-
-
-
-I have created a benchmark function in `aes.go` to measure the true speed of the operation:
-
-```go
-import (
-  ...       // Not actually a line of code, just skipping through the code
-  "testing"
-)
-
-...
-
-// BENCHMARK
-func BenchmarkEncryptFile(b *testing.B) {
-  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"   // This write up
-  w := "/home/josh/temp"  // Temporary location
-  key := []byte{0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69} // Random key
-  for n := 0; n < b.N; n++ {
-    encryptFile(key, f, w)
-  }
-}
-```
-
-Now if I run `go test aes_test.go -bench=.`, Go tests the function however many times it can in a certain period, and gives how long it took on average in nanoseconds. Here is an example output:
-
-```
+=== RUN   TestBLAKELarge
+--- PASS: TestBLAKELarge (1.68s)
+=== RUN   TestBLAKESmall
+--- PASS: TestBLAKESmall (0.00s)
+=== RUN   TestBlakeMix
+--- PASS: TestBlakeMix (0.00s)
 goos: linux
 goarch: amd64
-BenchmarkEncryptFile-4          10   187673212 ns/op
+pkg: BLAKE
+BenchmarkBLAKELarge-4            1  1676409286 ns/op  2198866712 B/op     7476 allocs/op
+BenchmarkBLAKESmall-4       300000        5282 ns/op      3264 B/op       10 allocs/op
 PASS
-ok    command-line-arguments  2.085s
+ok    BLAKE 5.004s
 ```
 
-I made a small Python program to work out the speed, and for the sake of transparency here it is:
-
-```python
-def getGoodUnit(bytes):       #Get a good unit for displaying the sizes of files.
-    if bytes == " -":
-        return " -"
-    else:
-        divCount = 0
-        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
-        while bytes > 1000:
-            bytes = bytes/1000
-            divCount += 1
-
-        return ("%.2f" % bytes) + divisions[divCount]
-
-def calc(time, data):
-    time = time * (10**-9)   # x10^-9 because it is in nano seconds
-    datTime = data/time
-    return getGoodUnit(datTime)
-
-print(calc(float(input("Time taken: ")), int(input("Num of bytes: ")))+"/s")
-```
-
-There is no error checking or anything since I am the only person using it (and because I'm lazy).
-
-The result is that on an i7-6600k, the speed of AES was 18.92 MB/s (187673212 ns/op for 10 operations), while on a laptop i7-3537U it was 10.21 MB/s.
-The speed is quite good, as when working on small files (< 2 MB), opening and editing files should be almost instant, and even opening larger files shouldn't take too long. At 18.92 MB/s a 2 GB file would take 105.7 seconds, or 1:45 minutes, which isn't too bad. I timed a 2 GB file (2,036,826,112 bytes precisely) and it actually took 2:00 minutes (yes, on the dot), probably due to background processes.
+All tests passed, and using the same Python script as in AES, the speed was `145.74 MB/s`. The speed is ok, however if you open and edit a very large file (> 145 MB), it will take more than 1 second to open and close, after decryption and before encryption. This is not much of an issue however, since not many people will be editing files that are that large it shouldn't be an issue for most people, since the checksum is not calculated when merely adding and removing files from the Vault.
 
 
-// BLAKE
+
+## Black-box tests
+
+The key for the different types of data (where applicable) will be:
+
+- T  =  Typical Data
+- E  =  Erroneous Data
+- B  =  Boundary Data
 
 
-Now similar to `aes.go`, I wrote a benchmark function for `blake.go` that looks like this:
 
-```go
-import (
-  ...
-  "testing"
-)
-
-...
-
-func BenchmarkBLAKEchecksum(b *testing.B) {
-  f := "/home/josh/nea-12ColcloughJ/Write-Up/Write-up.pdf"
-  for n := 0; n < b.N; n++ {
-    BLAKEchecksum(f, 64)
-  }
-}
-```
-
-And the results on the i7-6600k were:
-
-```
-goos: linux
-goarch: amd64
-BenchmarkBLAKEchecksum-4          20    59748242 ns/op
-PASS
-ok    command-line-arguments  1.264s
-```
-
-which (using the Python program I used while testing `aes.go`) is 59.42 MB/s, which is very decent. The results of BLAKE on the i7-3537U was `104655494 ns/op`, which is 33.92 MB/s.
-You will only really get a slowdown when opening and editing large files (> around 300MB), however the user is probably not likely to do that very often. If the user does not need to open the file, but just encrypt or decrypt it, then checksums aren't needed so the slowdown doesn't apply. -->
