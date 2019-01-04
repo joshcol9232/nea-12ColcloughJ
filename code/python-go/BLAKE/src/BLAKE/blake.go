@@ -1,10 +1,5 @@
 package BLAKE
 
-import (
-  "math"
-)
-
-
 // Inital constants.
 var k = [8]uint64 {0x6A09E667F3BCC908,
                    0xBB67AE8584CAA73B,
@@ -25,16 +20,9 @@ var sigma = [12][16]uint64 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 1
                             {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10},
                             {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5},
                             {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
-                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}}
+                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, // Same as first line
+                            {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}} // Same as second line
 
-// Research: https://tools.ietf.org/pdf/rfc7693.pdf
-
-func check(e error) {     //Used for checking errors when reading/writing to files.
-  if e != nil {
-    panic(e)
-  }
-}
 
 func rotR64(in uint64, n int) uint64 {  // For 64 bit words
   return (in >> uint(n)) ^ (in << (64 - uint(n)))
@@ -71,7 +59,7 @@ func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Co
   k[ 0], k[ 1], k[ 2], k[ 3],
   k[ 4], k[ 5], k[ 6], k[ 7]
 
-  v[12] ^= uint64(math.Mod(float64(t), 18446744073709552000)) //  2 ^ 64 = 18446744073709552000
+  v[12] ^= uint64(t)
   v[13] ^= (uint64(t) >> 64)
 
   if lastBlock {
@@ -79,9 +67,10 @@ func BlakeCompress(h *[8]uint64, block []uint64, t int, lastBlock bool) {  // Co
   }
 
   var m [16]uint64
-  for i := 0; i < 16; i++ {
-    m[i] = get64(block[i*8:(i*8)+8])
+  for i, z := 0, 0; i < 121; i, z = i+8, z+1 { // Having z prevents having to divide by 8
+    m[z] = get64(block[i:i+8])
   }
+
   for i := 0; i < 12; i++ {
     blakeMix(v, 0, 4,  8, 12, &m[sigma[i][0]], &m[sigma[i][1]])
     blakeMix(v, 1, 5,  9, 13, &m[sigma[i][2]], &m[sigma[i][3]])

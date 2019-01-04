@@ -5,6 +5,12 @@ import (
   "io"
 )
 
+func check(e error) {     //Used for checking errors when reading/writing to files.
+  if e != nil {
+    panic(e)
+  }
+}
+
 func GetChecksum(f string, hashL int) [64]byte {
   h := k  // Initialize h0-7 with initial values.
   h[0] = h[0] ^ (0x01010000 ^ uint64(hashL)) // Not using a key

@@ -31,7 +31,7 @@ func TestBLAKELarge(t *testing.T) {
 
 func TestBLAKESmall(t *testing.T) {
   actualResult := fmt.Sprintf("%x", GetChecksum(smallFile, 64))
-  expectedResult := "f545377b0ab74d283ff65ec5518bc00633d46125ec28bbd11f417da16949e8937759d8f1aa97556845e24edc676d8f288d49aae1bb195a12e5595525713427c4"
+  expectedResult := "0c8b815719e57e1e3529a20df69c31d8cabab90212bce1b7a3296c8f70f307d1a7e8e64ed5bb17fc7b7f3b9cc3150e4f59c4a70922a0d3b46bfda1652e735588"
 
   if actualResult != expectedResult {
     t.Fatalf("Expected %s but got %s", expectedResult, actualResult)
