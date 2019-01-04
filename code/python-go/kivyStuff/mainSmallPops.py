@@ -70,7 +70,7 @@ class encDecPop(Popup): #For single files
             bps = bps/1000
             divCount += 1
 
-        return ("%.2f" % bps) + divisions[divCount]
+        return ("%.2f" % bps) + " " + divisions[divCount]
 
     def __getGoodUnitTime(self, time):
         divCount = 0

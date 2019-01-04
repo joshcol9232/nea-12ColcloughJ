@@ -2372,23 +2372,10 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) { 
   }
 }
 
-// Worker that encrypts chunk given
 func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fileSize int) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       AES.Decrypt(job.buff[i:i+16], expandedKey)
-      if (fileSize - int(job.offset) - i) == 16 {     // If on the last block of whole file
-        var focus int = int(job.buff[i+15])
-        var focusCount int = 1
-        if focus < 16 {     // If the last number is less than 16 (the maximum amount of padding to add is 15)
-          for j := 14; (int(job.buff[i+j]) == focus) && (j >= 0); j-- {
-            if int(job.buff[i+j]) == focus { focusCount++ }
-          }
-          if focus == focusCount {
-            job.buff = append(job.buff[:(i+16-focus)], job.buff[i+16:]...)  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-          }
-        }
-      }
     }
     results<- job  // Return job with decrypted buffer
   }
@@ -2433,7 +2420,10 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   check(err)  // Check it opened correctly
 
   // Append key so that when decrypting, the key can be checked before decrypting the whole file.
-  var originalKey = expandedKey[:16]
+  originalKey := make([]byte, 16)
+  for i := 0; i < 16; i++ {
+    originalKey[i] = expandedKey[i]
+  }
   AES.Encrypt(originalKey, expandedKey)
   e.Write(originalKey)
   offset := 16
@@ -2531,7 +2521,7 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
 
   if AEScheckKey.CheckKey(expandedKey, firstBlock) { // If key is valid
     offset := 0
-    a.Seek(16, 0) // Move past key
+    a.Seek(16, 0) // Move past key in encrypted file
     for buffCount < fileSize{   // While the data done is less than the fileSize
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
@@ -2557,8 +2547,11 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
     }
 
     if workingWorkers != 0 {
-      for i := 0; i < workingWorkers; i++ {
+      for i := 0; i < workingWorkers; i++ {  // Collect all but last block
         wk := <-results
+        if int(wk.offset)+bufferSize >= fileSize {    // If the offset is the last block in file
+          wk.buff = checkForPadding(wk.buff)
+        }
         e.WriteAt(wk.buff, wk.offset)
       }
     }
@@ -2570,6 +2563,20 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   }
   a.Close()
   e.Close()
+}
+
+func checkForPadding(buffer []byte) []byte {  // Checks a block for padding
+  var focus byte = buffer[len(buffer)-1]
+  var focusCount byte = 0
+  if focus < 16 {
+    for j := 1; (buffer[len(buffer)-j] == focus) && (j <= 16); j++ {
+      if buffer[len(buffer)-j] == focus { focusCount++ }
+    }
+    if focus == focusCount {
+      buffer = buffer[:len(buffer)-int(focusCount)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+    }
+  }
+  return buffer
 }
 
 // For dealing with directories
@@ -2589,7 +2596,7 @@ func DecryptList(expandedKey *[176]byte, fileList []string, targetList []string)
 ```
 
 Enc/decryption of files is done in parallel (using multiple processes/CPU cores) by having 'workers' that accept jobs from a work channel, do work on each job given and return them in a results channel.
-The workers are really just a function that is run in a **g**oroutine (coroutines that are designed to be easy to use and low on memory), and each worker waits for a job on the job channel while the job channel is open. The job channel allows for the transfer of a 'work' struct to the goroutine, containing a full buffer of the original file, and what offset in the file that buffer was read from. The offset is important because each goroutine may finish at a different time, and the data has to be in the correct order, however it does not need to be written to the new file at the same time. As long as it is in order it is fine. 
+The workers are really just a function that is run in a **g**oroutine (coroutines that are designed to be easy to use and low on memory), and each worker waits for a job on the job channel while the job channel is open. The job channel allows for the transfer of a 'work' struct to the goroutine, containing a full buffer of the original file, and what offset in the file that buffer was read from. The offset is important because each goroutine may finish at a different time, and the data has to be in the correct order, however it does not need to be written to the new file at the same time. As long as it is in order it is fine.
 
 If on the last block of decryption, then the program checks for padding, which works the same as specified in the **Design** section. If the last element of the last block has a value less than 16, it counts how many of that number occur going back through the block, and if the number of occurrences matches the value itself, then the occurrences 
 
@@ -6791,25 +6798,50 @@ Here are the results of the tests (running `testBenchAES.sh`):
 PASS
 ok    AES 0.001s
 === RUN   TestEncDecMediumFile
-2019/01/03 22:34:31 initialHash: 9336f1fc79ff254c8644f1df83fccfd576388c5075754ae9142c2640dd9530c5e08403937296afc7ca8138cedaf0794117e78d247ce6949ee40304284c39b7ed  
-2019/01/03 22:34:32 finalHash: 9336f1fc79ff254c8644f1df83fccfd576388c5075754ae9142c2640dd9530c5e08403937296afc7ca8138cedaf0794117e78d247ce6949ee40304284c39b7ed  
+2019/01/04 12:06:00 initialHash: 9336f1fc79ff254c8644f1df83fccfd576388c5075754ae9142c2640dd9530c5e08403937296afc7ca8138cedaf0794117e78d247ce6949ee40304284c39b7ed  
+2019/01/04 12:06:01 finalHash: 9336f1fc79ff254c8644f1df83fccfd576388c5075754ae9142c2640dd9530c5e08403937296afc7ca8138cedaf0794117e78d247ce6949ee40304284c39b7ed  
 --- PASS: TestEncDecMediumFile (0.91s)
 === RUN   TestEncDecSmallFile
-2019/01/03 22:34:32 initialHash: 0c8b815719e57e1e3529a20df69c31d8cabab90212bce1b7a3296c8f70f307d1a7e8e64ed5bb17fc7b7f3b9cc3150e4f59c4a70922a0d3b46bfda1652e735588  
-2019/01/03 22:34:32 finalHash: 0c8b815719e57e1e3529a20df69c31d8cabab90212bce1b7a3296c8f70f307d1a7e8e64ed5bb17fc7b7f3b9cc3150e4f59c4a70922a0d3b46bfda1652e735588  
+2019/01/04 12:06:01 initialHash: 0c8b815719e57e1e3529a20df69c31d8cabab90212bce1b7a3296c8f70f307d1a7e8e64ed5bb17fc7b7f3b9cc3150e4f59c4a70922a0d3b46bfda1652e735588  
+2019/01/04 12:06:01 finalHash: 0c8b815719e57e1e3529a20df69c31d8cabab90212bce1b7a3296c8f70f307d1a7e8e64ed5bb17fc7b7f3b9cc3150e4f59c4a70922a0d3b46bfda1652e735588  
 --- PASS: TestEncDecSmallFile (0.01s)
 goos: linux
 goarch: amd64
 pkg: AES/AESfiles
-BenchmarkEncryptFileLarge-4            1  1885088899 ns/op  244321200 B/op      3765 allocs/op
-BenchmarkDecryptFileLarge-4            1  2045850213 ns/op  244321152 B/op      3764 allocs/op
-BenchmarkEncryptFileMedium-4           3   376577754 ns/op  48564000 B/op      762 allocs/op
-BenchmarkDecryptFileMedium-4           3   405783110 ns/op  48490554 B/op      761 allocs/op
+BenchmarkEncryptFileLarge-4            1  1871293107 ns/op  244325952 B/op      3790 allocs/op
+BenchmarkDecryptFileLarge-4            1  2042360853 ns/op  244320832 B/op      3757 allocs/op
+BenchmarkEncryptFileMedium-4           3   378539062 ns/op  48565877 B/op      769 allocs/op
+BenchmarkDecryptFileMedium-4           3   417413577 ns/op  48491632 B/op      768 allocs/op
 PASS
-ok    AES/AESfiles  9.558s
+ok    AES/AESfiles  9.640s
 ```
 
-Every test passed, and I can now calculate the speed of encryption and decryption using the 
+Every test passed, and I can now calculate the speed of encryption and decryption using the time taken on average for each operation (ns/op). I made a small Python script to do this (it isn't part of my project):
+
+```python
+def getGoodUnit(bytes):       #Get a good unit for displaying the sizes of files.
+    if bytes == " -":
+        return " -"
+    else:
+        divCount = 0
+        divisions = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+        while bytes > 1000:
+            bytes = bytes/1000
+            divCount += 1
+
+        return ("%.2f" % bytes) + " " + divisions[divCount]
+
+def calc(time, data):
+    time = time * (10**-9)  # 10^-9 because the time is in nano seconds.
+    datTime = data/time
+    return getGoodUnit(datTime)
+
+print(calc(float(input("Time taken: ")), int(input("Num of bytes: ")))+"/s")
+```
+
+It steals the `getGoodUnit` function from my project. There is no error checking because I am the only person who will be using it, and also I am lazy.
+
+The result (on an i5-6600k - 4 cores) is that when encrypting, the speed was `129.97 MB/s`, and when decrypting the speed was `119.63 MB/s` which is slightly slower (`10.34 MB/s`), probably because it has to check for padding. Before I changed my code to pass by reference, and also before I made AES parallel using goroutines, it had a performance of `18.92 MB/s` when encrypting. If I compare the single core performance (by dividing `129.97` by 4 (4 cores)), the single core performance of the new AES is `32.49 MB/s`, which is 1.72 times as fast, just by passing by reference.
 
 
 

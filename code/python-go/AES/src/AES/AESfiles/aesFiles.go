@@ -6,8 +6,6 @@ import (
   "runtime"   // For getting CPU core count
   "AES"
   "AES/AEScheckKey"
-  "log"
-  "fmt"
 )
 
 const DEFAULT_BUFFER_SIZE = 65536  // Define the default buffer size for enc/decrypt (is 2^16)
@@ -40,7 +38,6 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) { 
   }
 }
 
-// Worker that encrypts chunk given
 func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fileSize int) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
@@ -65,8 +62,8 @@ func EncryptFile(expandedKey *[176]byte, f, w string) {
   var workingWorkers int = 0
   var workerNum int = getNumOfCores()*2
 
-  jobs := make(chan work)     // Make two channels for go routines to communicate over.
-  results := make(chan work)  // Each has a buffer of length workerNum
+  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
+  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
     go workerEnc(jobs, results, expandedKey)   // Create the workers
@@ -167,8 +164,8 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   var workingWorkers int = 0
   var workerNum int = getNumOfCores()*2
 
-  jobs := make(chan work)     // Make two channels for go routines to communicate over.
-  results := make(chan work)  // Each has a buffer of length workerNum
+  jobs := make(chan work, workerNum)     // Make two channels for go routines to communicate over.
+  results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
     go workerDec(jobs, results, expandedKey, fileSize)
@@ -190,7 +187,7 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
 
   if AEScheckKey.CheckKey(expandedKey, firstBlock) { // If key is valid
     offset := 0
-    a.Seek(16, 0) // Move past key
+    a.Seek(16, 0) // Move past key in encrypted file
     for buffCount < fileSize{   // While the data done is less than the fileSize
       if bufferSize > (fileSize - buffCount) {
         bufferSize = fileSize - buffCount
@@ -216,28 +213,13 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
     }
 
     if workingWorkers != 0 {
-      for i := 0; i < workingWorkers-1; i++ {  // Collect all but last block
+      for i := 0; i < workingWorkers; i++ {  // Collect all but last block
         wk := <-results
+        if int(wk.offset)+bufferSize >= fileSize {    // If the offset is the last block in file
+          wk.buff = checkForPadding(wk.buff)
+        }
         e.WriteAt(wk.buff, wk.offset)
       }
-      // Last block so check for padding
-      wk := <-results
-      log.Output()
-      var focus int = int(wk.buff[len(wk.buff)-1])
-      var focusCount int = 0
-      log.Output(0, fmt.Sprintf("Block: %v, Focus: %d", wk.buff, focus))
-      if focus < 16 {
-        for j := 1; (int(wk.buff[len(wk.buff)-j]) == focus) && (j <= 16); j++ {
-          if int(wk.buff[len(wk.buff)-j]) == focus { focusCount++ }
-          log.Output(0, fmt.Sprintf("FOCUS CURRENT: %d", focus))
-        }
-        log.Output(0, fmt.Sprintf("FOCUS: %d, FOCUS COUNT: %d", focus, focusCount))
-        if focus == focusCount {
-          wk.buff = wk.buff[:len(wk.buff)-focusCount]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
-          log.Output(0, fmt.Sprintf("Buffer: %v", wk.buff))
-        }
-      }
-      e.WriteAt(wk.buff, wk.offset)
     }
     close(jobs)
     close(results)
@@ -247,6 +229,20 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   }
   a.Close()
   e.Close()
+}
+
+func checkForPadding(buffer []byte) []byte {  // Checks a block for padding
+  var focus byte = buffer[len(buffer)-1]
+  var focusCount byte = 0
+  if focus < 16 {
+    for j := 1; (buffer[len(buffer)-j] == focus) && (j <= 16); j++ {
+      if buffer[len(buffer)-j] == focus { focusCount++ }
+    }
+    if focus == focusCount {
+      buffer = buffer[:len(buffer)-int(focusCount)]  // If the number of bytes at the end is equal to the value of each byte, then remove them, as it is padding.
+    }
+  }
+  return buffer
 }
 
 // For dealing with directories
