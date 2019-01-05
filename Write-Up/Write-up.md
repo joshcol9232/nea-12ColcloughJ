@@ -4569,7 +4569,7 @@ class MainScreen(Screen):
         self.unsorted = []
         self.findAndSortCore(self.currentDir, item)
 
-        if len(self.unsorted) > 0:
+        if len(self.unsorted)+len(self.searchResults) > 0:
             sorted = self.sortSearch(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i)
@@ -4616,11 +4616,16 @@ class MainScreen(Screen):
                     mainthread(self.encPop.open())
                 self.passToPipe(encType, d, targetLoc)
 
+            if self.encPop != None:
+                mainthread(self.encPop.dismiss())
+                self.encPop = None
+
             if encType == "y":
                     self.resetButtons()
 
             if op and encType == "n":
                 self.openFileTh(targetLoc, d)
+
 
         return Thread(target=encThread, args=(encType, d, targetLoc, op,)).start()
 
@@ -5167,7 +5172,7 @@ class encDecPop(Popup): #For single files
             bps = bps/1000
             divCount += 1
 
-        return ("%.2f" % bps) + divisions[divCount]
+        return ("%.2f" % bps) + " " + divisions[divCount]
 
     def __getGoodUnitTime(self, time):
         divCount = 0
@@ -5250,8 +5255,6 @@ class encDecPop(Popup): #For single files
             totalPer += 100
             total += self.pb.max
 
-        mainthread(Clock.schedule_once(self.dismiss, -1))
-
 
 class btTransferPop(encDecPop):
 
@@ -5323,19 +5326,39 @@ class decryptFileToLocPop(Popup): # Input box for location of where directory is
         self.fileObj = fileObj
         super(Popup, self).__init__(**kwargs)
 
+    def makeDirs(self, dir):
+        try:
+            os.makedirs(dir)
+        except OSError as e:
+            if "[Errno 13]" in str(e): # OSError doesn't store the error code.
+                Popup(title="Invalid", content=Label(text="Can't decrypt here.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5}).open()
+                return False
+            elif "[Errno 36]" in str(e):
+                Popup(title="Invalid", content=Label(text="File name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5}).open()
+                return False
+        else:
+            return True
+
     def checkCanDec(self, inp):
+        valid = True
         if dirInputValid(inp, self.outerScreen.fileSep): # Re-use from settings pop, setting self as None because it isn't even used in the function, but is needed to run from within SettingsPop.
             if self.fileObj.isDir:
                 if not os.path.exists(inp):
-                    os.makedirs(inp)
+                    valid = self.makeDirs(inp)
                 if inp[-1] != self.outerScreen.fileSep: inp += self.outerScreen.fileSep
-                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
+
+                if valid:
+                    self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
             else:
                 if inp[-1] == self.outerScreen.fileSep:   # If ends with "/", then decrypt with it's file name.
                     if not os.path.exists(inp):
-                        os.makedirs(inp)
+                        valid = self.makeDirs(inp)
                     inp += self.fileObj.name
-                self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
+
+                if valid:
+                    self.outerScreen.encDec("n", self.fileObj.hexPath, inp, op=False)
+        else:
+            Popup(title="Invalid", content=Label(text="Can't decrypt here, path is invalid.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5}).open()
 
     def getTitle(self):
         if self.fileObj.isDir:
@@ -5356,11 +5379,12 @@ class addNewFolderPop(Popup):
                 os.makedirs(self.outerScreen.currentDir+self.outerScreen.encString(text))
             except OSError as e:
                 if "[Errno 36]" in str(e):  #OSError doesn't store the error code for some reason.
-                    pop = Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5})
-                    pop.open()
+                    Popup(title="Invalid Folder Name", content=Label(text="Folder name too long.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5}).open()
 
             self.outerScreen.refreshFiles()
             self.dismiss()
+        else:
+            Popup(title="Invalid", content=Label(text="Invalid folder name.", halign="center"), size_hint=(.3, .3), pos_hint={"x_center": .5, "y_center": .5}).open()
 
 class addFilePop(Popup):     #The screen (it's actually a Popup) for adding folders/files to the vault.
 
@@ -5374,6 +5398,7 @@ class addFilePop(Popup):     #The screen (it's actually a Popup) for adding fold
             super(Popup, self).__init__(**kwargs)
             self.fileScreen = fileScreen
             self.inputText = input
+
 
     def checkIfSure(self, input):
         self.ConfirmationPopup(self, input).open()

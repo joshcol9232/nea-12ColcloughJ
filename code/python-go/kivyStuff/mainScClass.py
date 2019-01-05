@@ -518,7 +518,7 @@ class MainScreen(Screen):
         self.unsorted = []
         self.findAndSortCore(self.currentDir, item)
 
-        if len(self.unsorted) > 0:
+        if len(self.unsorted)+len(self.searchResults) > 0:
             sorted = self.sortSearch(self.unsorted)
             for i in sorted:
                 self.searchResults.append(i)
@@ -565,11 +565,16 @@ class MainScreen(Screen):
                     mainthread(self.encPop.open())
                 self.passToPipe(encType, d, targetLoc)
 
+            if self.encPop != None:
+                mainthread(self.encPop.dismiss())
+                self.encPop = None
+
             if encType == "y":
                     self.resetButtons()
 
             if op and encType == "n":
                 self.openFileTh(targetLoc, d)
+
 
         return Thread(target=encThread, args=(encType, d, targetLoc, op,)).start()
 
