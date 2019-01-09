@@ -114,7 +114,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    ​	iiii. Change if the search in the file browser is recursive or not.
 
-   f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, etc).
+   f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, delete, etc).
 
    g. Have a secure login screen.
 
@@ -152,6 +152,12 @@ Another issue could be that if a file is deleted, the contents of the file might
 
   o. Allow the user to sort the files by name or by size.
 
+  p. Allow the user to configure default settings using a configuration file that is easy to use.
+
+  q. Allow the user to search for file names in the vault.
+
+  r. Not break when doing arbitrary tasks such as browsing the files.
+
 
 2. App should:
 
@@ -182,6 +188,8 @@ Another issue could be that if a file is deleted, the contents of the file might
    g. Files stored in the vault should not be accessible from outside of the app.
 
    h. Names of the files stored in the vault should also not be view-able from outside of the app (encrypt the name).
+
+   i. Allow the files/folders to be decrypted to an external location.
 
 ---
 
@@ -1584,8 +1592,11 @@ vaultDir--<file path here>
 searchRecursively--<True / False>
 bluetooth--<True / False>
 ```
-`vaultDir` is the path to the Vault that you would like to use to store all encrypted files and folders.
+
+`vaultDir` is the path to the Vault that you would like to use to store all encrypted files and folders. The file path can be done as an absolute path from the root of the file system (`/home/user/folder/`, or `C:\\Users\\user\\folder\\`), or can instead be done relatively from the folder that the program is in. For example, if the folder the code is stored in is `/home/josh/nea-12ColcloughJ/code/python-go/`, then it would remove `nea12-ColcloughJ/code/python-go/` from the file path to get `/home/josh/`, then adds the file path specified in the config file. If the relative path specified was `folder/vault`, then the full path would become `/home/josh/folder/vault/`.
+
 `searchRecursively` determines if the program should search for items recursively, as this may take a long time if you have a lot of files, and some people may just want to search within the current folder.
+
 `bluetooth` determines the default Login Screen to start when the program starts.
 
 I have used `--` to separate the setting name from it's set value, as it does not appear at the start of file paths, and should not be needed much in any settings that could possibly be added in the future.
@@ -1624,7 +1635,9 @@ def findConfigFile(startDir, fileSep):
     return config
 
 
-def readConfigFile(configLocation=None, lineNumToRead=None):
+def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=None):
+    if fSep == None:
+        fSep = getFileSep()
     if configLocation == None:
         fSep = getFileSep()
         configLocation = findConfigFile(getStartDir(fSep)[0], fSep)
@@ -1652,6 +1665,14 @@ def readConfigFile(configLocation=None, lineNumToRead=None):
                     raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
 
         configFile.close()
+
+        if path[0] != fSep:  # If vaultDir done relatively, then get path relative to the folder the program is in, rather than searching the folder.
+            if startDir == None:
+                startDir = osPath.dirname(osPath.realpath(__file__))+fSep
+            startDir = startDir.split(fSep)
+            path = fSep.join(startDir[:-4])+fSep+path # Removes "" and nea-12ColcloughJ/code/python-go folder names from list, then adds the Vault folder name to the end.
+            if path[-1] != fSep:
+                path += fSep # End with file separator
 
         return path, recurse, bt
 
@@ -1725,7 +1746,7 @@ def runConfigOperations():
     startDir, sharedAssets = getStartDir(fileSep)
 
     configLoc = findConfigFile(startDir, fileSep)
-    path, recurse, bt = readConfigFile(configLoc)
+    path, recurse, bt = readConfigFile(configLoc, fSep=fileSep, startDir=startDir)
     return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt, configLoc  # 8 Outputs in total.
 ```
 
@@ -6975,5 +6996,10 @@ The key for the different types of data (where applicable) will be:
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
+
+
+---
+
+# Evaluation
 
 

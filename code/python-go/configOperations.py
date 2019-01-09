@@ -26,7 +26,9 @@ def findConfigFile(startDir, fileSep):
     return config
 
 
-def readConfigFile(configLocation=None, lineNumToRead=None):
+def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=None):
+    if fSep == None:
+        fSep = getFileSep()
     if configLocation == None:
         fSep = getFileSep()
         configLocation = findConfigFile(getStartDir(fSep)[0], fSep)
@@ -54,6 +56,14 @@ def readConfigFile(configLocation=None, lineNumToRead=None):
                     raise ValueError("Bluetooth not configured correctly in config file: Not True or False.")
 
         configFile.close()
+
+        if path[0] != fSep:  # If vaultDir done relatively, then get path relative to the folder the program is in, rather than searching the folder.
+            if startDir == None:
+                startDir = osPath.dirname(osPath.realpath(__file__))+fSep
+            startDir = startDir.split(fSep)
+            path = fSep.join(startDir[:-4])+fSep+path # Removes "" and nea-12ColcloughJ/code/python-go folder names from list, then adds the Vault folder name to the end.
+            if path[-1] != fSep:
+                path += fSep # End with file separator
 
         return path, recurse, bt
 
@@ -127,5 +137,5 @@ def runConfigOperations():
     startDir, sharedAssets = getStartDir(fileSep)
 
     configLoc = findConfigFile(startDir, fileSep)
-    path, recurse, bt = readConfigFile(configLoc)
+    path, recurse, bt = readConfigFile(configLoc, fSep=fileSep, startDir=startDir)
     return fileSep, osTemp, startDir, sharedAssets, path, recurse, bt, configLoc  # 8 Outputs in total.
