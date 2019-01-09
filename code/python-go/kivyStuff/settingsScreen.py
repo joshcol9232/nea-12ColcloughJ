@@ -23,6 +23,13 @@ class SettingsScreen(Screen):
         return editConfTerm("bluetooth", str(value), self.config)
 
     def changeVault(self, inp):
+        if inp[0] != self.outerScreen.fileSep: # Relative path
+            temp = self.outerScreen.startDir.split(self.outerScreen.fileSep)
+            inp = self.outerScreen.fileSep.join(temp[:-4])+self.outerScreen.fileSep+inp
+            if inp[-1] != self.outerScreen.fileSep:
+                inp += self.outerScreen.fileSep # End with file separator
+
+
         if inp[len(inp)-1] != self.outerScreen.fileSep:
             inp += self.outerScreen.fileSep
         try:
