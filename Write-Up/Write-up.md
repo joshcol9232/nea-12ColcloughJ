@@ -7003,10 +7003,164 @@ The key for the different types of data (where applicable) will be:
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
-
+!!!! Test the download of files for issues with prototcol !!!!
 
 ---
 
 # Evaluation
 
 
+## Objectives
+
+In this section I will go through each of my objectives and comment on their completeness.
+
+---
+
+1. GUI should:
+
+   a. Be easy to use:
+
+   ​  i. Logically laid out.
+
+   ​  ii. Have simple options.
+
+    ***I feel that my program is quite easy to use due to the layout, the important buttons are the largest, and the file browser fills most of the screen, which is the most important part of the main screen. The settings screen is also quite easy to use, as the switches for the True/False configuration values are very straiht forward to change, and it is clear what each setting changes.***
+
+   b. Display the files currently stored in the vault, along with the file extension and the size of the file.
+
+   ***Works fine. The file extension is at the end of the file name anyway. The size is read from the file in the vault.***
+
+   c. Display the storage space remaining on the storage device the program is running on.
+
+   ***Works fine.***
+
+   d. The user should be able to easily encrypt and decrypt files:
+
+   ​  i. Using easy to access buttons in the UI.
+
+   ​  ii. Using drag and drop from outside of the program.
+
+    iii. Decrypt to a directory specified.
+
+    ***All of the above work, as long as you have drag+drop on your machine.***
+
+   e. Have an options menu, including the options to:
+
+   ​  i. Change security level (from 128 bit AES to 256 bit AES).
+
+      ***Didn't end up adding this, as it would require a lot more code and time for a feature that very few people would probably use.***
+
+   ​  ii. Change the location of the vault.
+
+      ***Can be changed relative to the program, or as an absolute path.***
+
+   ​  iii. Set the default login method (Bluetooth or no Bluetooth).
+
+     ***Done using a switch in the settings screen.***
+
+   ​  iiii. Change if the search in the file browser is recursive or not.
+
+     ***Done using a switch in the settings screen.***
+
+   f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, delete, etc).
+
+   ***I ran out of time to implement this, as Kivy buttons by default do not have a right click, and it is quite hard to implement. If I were to implement this, I would show a bubble above where the user right clicked, with multiple options to carry out on that file/folder.***
+
+   g. Have a secure login screen.
+
+   ​  i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
+
+   ​  ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
+
+    iii. Validate all input.
+
+   h. Look relatively good without being bloated.
+
+    i. Don't be costly on system resources when you are idle.
+
+    ii. Don't overdo animations.
+
+   i. Allow the user to easily read file names, and easily tell folders and files apart.
+
+   j. Let the user preview images without opening them (using thumbnails or an information screen).
+
+   k. Be resizeable, and all items on the screen should look ok.
+
+   l. Allow the user to switch between using Bluetooth and using regular login.
+
+   m. Make it easy for the user to return to the root folder of the Vault in case they get lost (a "panic" button).
+
+   n. Give the user statistics during files being enc/decrypted, including:
+
+    i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
+
+    ii. The current speed of enc/decryption.
+
+    iii. An estimate of how long it should take to finish enc/decryption.
+
+    iv. If part of a folder then show the progress of the current file.
+
+  o. Allow the user to sort the files by name or by size.
+
+  p. Allow the user to configure default settings using a configuration file that is easy to use.
+
+  q. Allow the user to search for file names in the vault.
+
+  r. Not break when doing arbitrary tasks such as browsing the files.
+
+
+2. App should:
+
+   a. Be easy to use.
+
+   ***The GUI could be improved on the mobile side, as the flow of the program is quite weird, going from the device screen, into the pad screen (this part is fine), and then into a blank screen with only one option. This last screen is a good idea if you have multiple options, however I only supply one, so it is a bit redundant. If I were to continue working on this project I would leave it in for future functionality. However, other than this each screen works well individually. The pad screen has large buttons with quite large font. The main screen is basic, but functional.***
+
+   b. Connect via Bluetooth to the PC.
+
+   c. Allow the user to input their pin code easily.
+
+   d. Tell the user if the pin code is invalid or not.
+
+   ***(b, c, d) Works fine.***
+
+   e. Make it easy to recover from mistakes (e.g invalid pin code, or if they make a typo).
+
+   ***In the pad screen, the key input is reset to be empty if it is incorrect, and the user can easily delete the last digit while entering the key. If the user does get the key incorrect, a small popup shows up telling them, and then they can easily dismiss it.***
+
+   f. Allow the user to see a list of files currently in the vault, and let the user download those files onto their mobile device.
+
+   ***The file browser is quite good, with a large scrollable list of files, however there is no way of distinguishing between files and folders at the moment. This is due to the protocol, as I decided against sending pickled objects between the PC and phone. I decided not to do this because I was using Python 2 for the mobile app, and Python 3 for the PC app. The way Python 2 handles bytes is quite different to Python 3, and so pickle had quite a few differences. If I was to continue working on this I would build the mobile app in Python 3, however at the time I was having issues building the app for Python 3. Other than this, the download feature is pretty good, as it is quite reliable (as far as I have tested).***
+
+3. File handling:
+
+   a. Store the encrypted contents in the location specified by the user.
+
+   ***Works fine.***
+
+   b. Encrypt and decrypt relatively quickly, while still being secure.
+
+   ***In Testing, I benchmark AES, and the speed is adequate. I have also tested my implementation against test vectors to ensure it has been implemented correctly.***
+
+   c. When the Bluetooth device goes out of range or disconnects (if using Bluetooth),  delete all decrypted files and lock the program until the pin code is input correctly again.
+
+   ***Works fine.***
+
+   e. Have a recycling bin so that the user can recover their files.
+
+   ***There is a recycling bin and it works fine, however it cannot restore files back to their original place in the vault. If I were to continue working on this project, I would save a pickled Python object in the recycling bin, that contains a class with attributes listing each file in the recycling bin with where they came from originally.***
+
+   f. When a file is opened, check for changes once it is closed.
+
+   ***Works well, and BLAKE is of adequate speed, as tested in Testing. I also tested my implementation of BLAKE against official test vectors, so that my implementation is accurate to avoid hash collisions.***
+
+   g. Files stored in the vault should not be accessible from outside of the app.
+
+   ***Could not open a file in the vault from my normal file manager (it worked).***
+
+   h. Names of the files stored in the vault should also not be view-able from outside of the app (encrypt the name).
+
+   ***Each file and folder name is encrypted, and encoded to base64. When the files are listed within the app, they are decoded, decrypted and then encoded into string again, and displayed.***
+
+   i. Allow the files/folders to be decrypted to an external location.
+
+   ***Works fine. Files can be decrypted to a new folder, with their original name, or they can be renamed when decrypting.***
