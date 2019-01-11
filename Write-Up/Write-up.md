@@ -3603,7 +3603,7 @@ func compareStrings(string1, string2 string) int {
 func main() {
   fmt.Println("a")
 }
-``` 
+```
 
 The `UseQuickSort____` functions are used for formatting input from `stdin` that Python has given us.
 
@@ -7003,7 +7003,8 @@ The key for the different types of data (where applicable) will be:
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
-!!!! Test the download of files for issues with prototcol !!!!
+
+
 
 ---
 
@@ -7056,7 +7057,7 @@ In this section I will go through each of my objectives and comment on their com
 
    ​  iii. Set the default login method (Bluetooth or no Bluetooth).
 
-     ***Done using a switch in the settings screen.***
+     ***Also done using a switch in the settings screen.***
 
    ​  iiii. Change if the search in the file browser is recursive or not.
 
@@ -7064,7 +7065,7 @@ In this section I will go through each of my objectives and comment on their com
 
    f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, delete, etc).
 
-   ***I ran out of time to implement this, as Kivy buttons by default do not have a right click, and it is quite hard to implement. If I were to implement this, I would show a bubble above where the user right clicked, with multiple options to carry out on that file/folder.***
+   ***I ran out of time to implement this, as Kivy buttons by default do not have a right click, and it is quite hard to implement. If I were to implement this, I would show a bubble above where the user right clicked, with multiple options to carry out on that file/folder. Alternatively, I could use the information popup to hold each of these options.***
 
    g. Have a secure login screen.
 
@@ -7072,41 +7073,51 @@ In this section I will go through each of my objectives and comment on their com
 
    ​  ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
-    iii. Validate all input.
+     iii. Validate all input.
+
+  ***All tested to be working.***
 
    h. Look relatively good without being bloated.
 
-    i. Don't be costly on system resources when you are idle.
-
-    ii. Don't overdo animations.
-
    i. Allow the user to easily read file names, and easily tell folders and files apart.
+
+   ***Files are coloured in a darker shade than regular files, and the file names are in medium-sized font (relative to the window).***
 
    j. Let the user preview images without opening them (using thumbnails or an information screen).
 
+   ***Works well, as AES decrypts the image quickly, then it is displayed in the information screen. I did not add thumbnails as I thought that it would probably drastically increase the loading time when opening folders containing images.***
+
    k. Be resizeable, and all items on the screen should look ok.
+
+   ***Also looked at in testing. Each widget uses a relative layout, so that when the window is resized, the widgets also resize themselves based on the proportions they were given.***
 
    l. Allow the user to switch between using Bluetooth and using regular login.
 
+   ***Works good.***
+
    m. Make it easy for the user to return to the root folder of the Vault in case they get lost (a "panic" button).
+
+   ***A home button is included on the main screen, and takes the user back to the root folder.***
 
    n. Give the user statistics during files being enc/decrypted, including:
 
-    i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
-
-    ii. The current speed of enc/decryption.
-
-    iii. An estimate of how long it should take to finish enc/decryption.
-
-    iv. If part of a folder then show the progress of the current file.
+  ***Works well. I cover how this works in the Technical Solution, and it is tested to give accurate readings in Testing. Gives the user a nice readable output, displaying all useful information.***
 
   o. Allow the user to sort the files by name or by size.
 
+  ***The user can do this using the two buttons above the list of files on the main screen.***
+
   p. Allow the user to configure default settings using a configuration file that is easy to use.
+
+  ***The configuration is relatively simple, and easy to edit manually in case of an issue.***
 
   q. Allow the user to search for file names in the vault.
 
+  ***Works well, however is quite slow because it is done in Python. I would have liked to do this in Go, however passing the file objects into Go would have been a pain, as they are not all in the same directory like the sorting buttons are (which is why I could do those in Go).***
+
   r. Not break when doing arbitrary tasks such as browsing the files.
+
+  ***See Testing.***
 
 
 2. App should:
@@ -7117,7 +7128,11 @@ In this section I will go through each of my objectives and comment on their com
 
    b. Connect via Bluetooth to the PC.
 
+   ***Connects seamlessly to the PC using pyjnius java classes.***
+
    c. Allow the user to input their pin code easily.
+
+   ***The Pad Screen is easy to use.***
 
    d. Tell the user if the pin code is invalid or not.
 
@@ -7164,3 +7179,26 @@ In this section I will go through each of my objectives and comment on their com
    i. Allow the files/folders to be decrypted to an external location.
 
    ***Works fine. Files can be decrypted to a new folder, with their original name, or they can be renamed when decrypting.***
+
+
+
+## Things I would do to improve the project
+
+- Parallelise BLAKE (use multiple CPU cores)
+  - Would improve overall speed, which is essential for editing very large files.
+  - Would make editing smaller files more seamless too, as the waiting time would be reduced by a small amount, but it will be slightly noticeable.
+
+- Make it so you can right click on files to view more options, those being:
+  - Move the file to another location in the vault.
+  - Copy the file to another location in the vault.
+  - Delete the file (move to recycling).
+
+- Improve the recycling bin so that it recovers files to their original location using a pickled class (serialised object), that contains information about each of the files in the recycling bin.
+
+- Change the Bluetooth protocol I made to use serialised objects, to reduce the likelyhood that a pattern used in the protocol will appear in the file, and to also send more data more reliably, such as file metadata.
+
+- Make it so that when you change vault location, you can enter a key you would like to set, or if there are files that already exist, logout and ask the user to log in again.
+
+- Display the current status of file transfer in the mobile app while downloading.
+
+- Be able to send files from your phone to the PC app to encrypt to the vault.
