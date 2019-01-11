@@ -191,38 +191,6 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    i. Allow the files/folders to be decrypted to an external location.
 
----
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Design
 
@@ -2623,7 +2591,7 @@ If on the last block of decryption, then the program checks for padding, which w
 
 Here is a visual representation of this process:
 
-<img src="TechSolution/AES/dataBlockWorkers.png" style="zoom:80%"/>
+<img src="TechSolution/AES/dataBlockWorkers.png" style="zoom:65%"/>
 
 
 The number of workers is determined by the number of cores, and is then multiplied by 2 because I wanted the CPU usage to be about 85-90%, using a lot of cpu usage but also leaving room for other processes.
@@ -7006,7 +6974,16 @@ The key for the different types of data (where applicable) will be:
 
 
 
----
+
+
+
+
+
+
+
+
+
+
 
 # Evaluation
 
