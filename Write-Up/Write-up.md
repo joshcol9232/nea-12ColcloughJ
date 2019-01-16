@@ -102,7 +102,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    ​	ii. Using drag and drop from outside of the program.
 
-    iii. Decrypt to a directory specified.
+   ​	iii. Decrypt to a directory specified.
 
    e. Have an options menu, including the options to:
 
@@ -122,13 +122,13 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
-    iii. Validate all input.
+   ​	iii. Validate all input.
 
    h. Look relatively good without being bloated.
 
-    i. Don't be costly on system resources when you are idle.
+   ​	i. Don't be costly on system resources when you are idle.
 
-    ii. Don't overdo animations.
+   ​	ii. Don't overdo animations.
 
    i. Allow the user to easily read file names, and easily tell folders and files apart.
 
@@ -142,13 +142,13 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    n. Give the user statistics during files being enc/decrypted, including:
 
-    i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
+   ​	i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
 
-    ii. The current speed of enc/decryption.
+   ​	ii. The current speed of enc/decryption.
 
-    iii. An estimate of how long it should take to finish enc/decryption.
+   ​	iii. An estimate of how long it should take to finish enc/decryption.
 
-    iv. If part of a folder then show the progress of the current file.
+   ​	iv. If part of a folder then show the progress of the current file.
 
   o. Allow the user to sort the files by name or by size.
 
