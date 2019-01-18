@@ -37,7 +37,11 @@ def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=
     if lineNumToRead == None:
         for line in configFile:
             lineSplit = line.split("--")
-            lineSplit[1] = lineSplit[1].replace("\n", "")
+            nl = "\n"
+##            if fSep == "\\":
+##                nl = "\r\n"
+##            print("\\"+nl)
+            lineSplit[1] = lineSplit[1].replace(nl, "")
             if lineSplit[0] == "vaultDir":
                 path = lineSplit[1]
             elif lineSplit[0] == "searchRecursively":
@@ -46,6 +50,7 @@ def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=
                 elif lineSplit[1] == "False":
                     recurse = False
                 else:
+                    print(lineSplit[1])
                     raise ValueError("Recursive search settings not set correctly in config file: Not True or False.")
             elif lineSplit[0] == "bluetooth":
                 if lineSplit[1] == "True":
@@ -57,7 +62,7 @@ def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=
 
         configFile.close()
 
-        if path[0] != fSep:  # If vaultDir done relatively, then get path relative to the folder the program is in, rather than searching the folder.
+        if (path[0] != fSep and fSep == "/") or (path[1] != ":" and fSep == "\\"):  # If vaultDir done relatively, then get path relative to the folder the program is in, rather than searching the folder.
             if startDir == None:
                 startDir = osPath.dirname(osPath.realpath(__file__))+fSep
             startDir = startDir.split(fSep)
