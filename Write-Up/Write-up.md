@@ -19,8 +19,8 @@ The user experience has to be pretty good. Good design practice will have to be 
 
 ## Client:
 
-An example client for my project could be a teacher/school, as they have to keep files about students secure. For example, pupil details, exam results and other important student details. 
- My program aims to help the teacher/school keep the pupil’s files safe, and prevent the files from being accessed if their device is stolen. It will encrypt files given to the program, and be secured by a pin code that is transferred over Bluetooth to the computer from a mobile device. Once the mobile device is unpaired from the computer, the app will lock again. This will prevent someone from having access to the files if the computer is unlocked and is stolen, as the mobile device will go out of range of the computer, so the computer will lock.
+An example client for my project could be a teacher/school, as they have to keep files about students secure. For example, pupil details, exam results and other important student details.
+ My program aims to help the teacher/school keep the pupil’s files safe, and prevent the files from being accessed if their device is stolen. It will encrypt files given to the program, and be secured by a pin code that is transferred over Bluetooth to the computer from a mobile device. Once the mobile device is unpaired from the computer, the app will lock again. This will prevent someone from having access to the files if the computer is unlocked and is stolen, as the mobile device will go out of range of the computer, so the app on the computer will lock.
 
 I sent a questionnaire to a member of the IT office at my school to ask what regulations there were about keeping a teacher’s files safe, and what encryption they would suggest for keeping the files secure.
 
@@ -53,7 +53,7 @@ Are there any standards or laws about what encryption method I should be using f
 
 I will be using this information as guidance for what I have to take into consideration. I will keep in mind the data protection laws when I am storing the user’s files, and make sure I am within the regulations.
 
-The EU General Data Protection Regulations consist of (As of 25/05/18): 
+The EU General Data Protection Regulations consist of (As of 25/05/18):
 
 ### Breach Notification:
 
@@ -76,9 +76,85 @@ The data subject should be allowed to ask to receive the data, and they should a
 Tells the controllers of the data to only use the data absolutely necessary for the purposes they need it for. For example, an advertisement company might use your cookies to target ads to you, however they can’t then use your location unless they are also using that to target ads. Basically don’t take more than you need.
 
 For my project, as the user is the data controller, then they already have the right to access, the right to be forgotten and data portability. For the breach notification, they will probably know it has happened as someone needs to have physical access to where the data is stored to breach it.
-However, with privacy by design, I will not be using any of the user’s data for advertising, or any other agenda. I will make this clear to the user when they first use the program. Also the security will be 
+However, with privacy by design, I will not be using any of the user’s data for advertising, or any other agenda. I will make this clear to the user when they first use the program. Also the security will be
 
 Another issue could be that if a file is deleted, the contents of the file might still remain. To fully remove the file I may have to use a one way function that ruins the data before deletion so that it cannot be accessed after it is deleted.
+
+
+
+---
+
+
+## Choosing the right algorithms:
+
+When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security.
+
+### Hashing:
+
+When hashing the key when it is input, the algorithm has to be very secure, and speed does not matter as much. A member of the SHA2 family of algorithms would be a good algorithm to do this, as it is quite slow, but it is very secure (SHA1 was found to have a lot of hash collisions). Speed does not matter as much for the key, as the input data will only ever be less than 16 bytes. A faster algorithm will only provide a few milliseconds over SHA, so there is no point compromising on security for a negligible time decrease.
+
+For getting the checksum of files, the algorithm has to be very fast, as it will be done on the data in the file before and after the file is opened to check for changes. If this algorithm is slow, then the overall user experience will be much worse if the algorithm takes ages to open and close files. I will test each algorithm I am thinking of using for hashing and compare them using this algorithm (Python):
+
+```python
+import hashlib        # Library of hashing algorithms.
+from random import randint  # Used to generate the data.
+from time import time   # Used to measure how long the operation takes.
+
+def generate(times, size):  # Generates data, each block of length "size", and "times" number of blocks.
+    data = []
+    for i in range(times):
+        for j in range(size):
+            data.append(randint(0, 255))  # Randomly generate a byte.
+    return bytearray(data)
+
+def test(times, size):
+    data = generate(times, size)    # Generate the data
+    start = time()          # Get the start time
+    for i in range(times):
+        hashlib.sha256(data[i*size:(i+1)*size]).hexdigest() # Do the hash (in this case SHA256)
+
+    return (times*size)/(time()-start)    # Return the bytes per second.
+
+print(test(1000, 128))  # Run the program.
+```
+
+I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
+
+#### Here are the results:
+
+Megabytes per second for each hash function (using 1000 blocks of 128 bytes (128 kilobytes)):
+
+<img src="Graphs/hashFunctionSpeed.png" width=500px/>
+
+For my next tests, I will do data hashed against time. For this I will be using different sized files that I will make using this function:
+
+```python
+def generateFile(name, totalSize):
+    fo = open(name, "wb")
+    a = bytearray()
+    for i in range(totalSize):
+        a.append(randint(0, 255))
+    fo.write(a)
+    fo.close()
+```
+
+First I will test each hash function with encrypting very small data (<= 1 KiB). These were the results:
+
+![](Graphs/hashFunctionDiffBytes.png)
+
+Here is the start of the graph, as that is the most interesting bit:
+
+<img src="Graphs/hashFunctionDiffBytesSmall.png" style="zoom:80%"/>
+
+Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. From these results I think I will use SHA256 for hashing the key, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
+
+The BLAKE algorithms were designed for big data, which is what I am going to look at next:
+
+![](Graphs/hashFunctionDiffAmounts.png)
+
+In this graph, the gradient (rate of change) of each line is the ratio of seconds to megabytes of each function (so $\frac{x}{y} = megabytes/second$). So the less steep the line is, the faster the operation.
+
+SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is quite slow, and this is because BLAKE2s is designed for 32-bit CPU architectures, and my CPU is 64-bit. MD5 and SHA1 are both the fastest, and have similar performance, but have security problems. BLAKE2b was the fastest out of the secure functions, so I will be using BLAKE2b for checksums in the program, as checksums need to be calculated quickly, as discussed before.
 
 ---
 
@@ -106,7 +182,7 @@ Another issue could be that if a file is deleted, the contents of the file might
 
    e. Have an options menu, including the options to:
 
-   ​	i. Change security level (from 128 bit AES to 256 bit AES).
+   ​	i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
    ​	ii. Change the location of the vault.
 
@@ -190,6 +266,8 @@ Another issue could be that if a file is deleted, the contents of the file might
    h. Names of the files stored in the vault should also not be view-able from outside of the app (encrypt the name).
 
    i. Allow the files/folders to be decrypted to an external location.
+
+   <div style="page-break-after: always;"></div> 
 
 
 # Design
@@ -291,13 +369,13 @@ Once the full file is sent, an end header is sent to tell the program that the f
 
 ## File Storage:
 
-For storing the files, I will store the encrypted files in a directory set by the user.
-The directory will be managed using a tree structure, where the root folder contains folders for each file, with the name of every folder and file being encrypted, as otherwise anyone can see the name of your file.
+For storing the files, I will store the encrypted files in a directory set by the user (I will call this the 'vault' from now on).
+The files will be stored just like regular files, however the names of the folders and files within the vault will all be encrypted, and encoded to base 64 (better than encoding to hexidecimal as there is a file name limit on most operating systems, so this allows for longer file names as each byte will be represented by less characters).
 
-The encryption method I will use AES 128 bit, as it will slightly compromise security over using 256 bit, however it will be faster to decrypt files for use, giving the user a better experience, however I might add an option to use 256 in the settings if the user needs more security over performance.
+The encryption method I will use AES 128 bit, as it will slightly compromise security over using 256 bit, however it will be faster to decrypt files for use, giving the user a better experience, however I can add an option to use 256 in the settings if the user needs more security over performance.
 For the encryption key, the key will be set up every time a new vault is created (this includes first starting the program). It will tell the user to enter the new key, and then from that moment forwards in that vault, that key will remain the same, and will be used every time a file is encrypted/decrypted in the vault.
 
-When a file is encrypted, the key is appended to the start of the data, and is then encrypted. This is so that when the data is decrypted, only the first block has to be decrypted and compared with the key entered to check if the key entered was correct, rather than decrypting the whole file just to find out that the key was incorrect. This will also be used to check the key entered at login, where the login will try to find the first file it can within the vault, decrypt the first block of that file and compare it with the input.
+When a file is encrypted, the key is appended to the start of the data, and is then encrypted. This is so that when the data is decrypted, only the first block has to be decrypted and compared with the key entered to check if the key entered was correct, rather than decrypting the whole file just to find out that the file can't open, or is corrupted. This will also be used to check the key entered at login, where the login will try to find the first file it can within the vault, decrypt the first block of that file and compare it with the input.
 
 The key will have to be hashed if I send it over Bluetooth, as it may get intercepted, and it is also a good idea to hash it on the computer program as well, as if someone somehow manages to get the key, it will not be the user’s original input, so if the user uses it for something else, their other accounts will be fine.
 
@@ -328,80 +406,6 @@ Where `getCheckSum` will get the BLAKE2b checksum of the file. The hexPath and t
 
 ---
 
-## Choosing the right algorithms:
-
-When encrypting, decrypting and hashing data in my program, I want it to be as fast as possible without compromising too much on security. 
-
-### Hashing:
-
-When hashing the key when it is input, the algorithm has to be very secure, and speed does not matter as much. A member of the SHA2 family of algorithms would be a good algorithm to do this, as it is quite slow, but it is very secure (SHA1 was found to have a lot of hash collisions). Speed does not matter as much for the key, as the input data will only ever be less than 16 bytes. A faster algorithm will only provide a few milliseconds over SHA, so there is no point compromising on security for a negligible time decrease.
-
-For getting the checksum of files, the algorithm has to be very fast, as it will be done on the data in the file before and after the file is opened to check for changes. If this algorithm is slow, then the overall user experience will be much worse if the algorithm takes ages to open and close files. I will test each algorithm I am thinking of using for hashing and compare them using this algorithm (Python):
-
-```python
-import hashlib				# Library of hashing algorithms.
-from random import randint  # Used to generate the data.
-from time import time		# Used to measure how long the operation takes.
-
-def generate(times, size):	# Generates data, each block of length "size", and "times" number of blocks.
-    data = []
-    for i in range(times):
-        for j in range(size):
-            data.append(randint(0, 255))	# Randomly generate a byte.
-    return bytearray(data)
-
-def test(times, size):
-    data = generate(times, size)    # Generate the data
-    start = time()					# Get the start time
-    for i in range(times):
-        hashlib.sha256(data[i*size:(i+1)*size]).hexdigest()	# Do the hash (in this case SHA256)
-
-    return (times*size)/(time()-start)		# Return the bytes per second.
-
-print(test(1000, 128))	# Run the program.
-```
-
-I will run this algorithm on the same computer and make sure background tasks are closed, so that the results are not affected by other programs.
-
-#### Here are the results:
-
-Megabytes per second for each hash function (using 1000 blocks of 128 bytes (128 kilobytes)):
-
-<img src="Graphs/hashFunctionSpeed.png" width=500px/>
-
-For my next tests, I will do data hashed against time. For this I will be using different sized files that I will make using this function:
-
-```python
-def generateFile(name, totalSize):
-    fo = open(name, "wb")
-    a = bytearray()
-    for i in range(totalSize):
-        a.append(randint(0, 255))
-    fo.write(a)
-    fo.close()
-```
-
-First I will test each hash function with encrypting very small data (<= 1 KiB). These were the results:
-
-![](Graphs/hashFunctionDiffBytes.png)
-
-This image can be found larger in the <b>Large Images</b> section as <b>Figure 3</b>.
-
-Here is the start of the graph, as that is the most interesting bit:
-
-<img src="Graphs/hashFunctionDiffBytesSmall.png" width=500px/>
-
-The axis on this graph are the same as the one before it.
-
-Here we can see that SHA256 is the fastest at hashing 16 bytes, but is quickly surpassed by most of the algorithms. Both BLAKE algorithms had a bad performance at the start, but after 64 bytes both were doing alright. MD5 is the quickest overall out of the group. From these results I think I will use SHA256 for hashing the key, since the key is 16 bytes in length, and also because SHA is more aimed at security than BLAKE, and MD5 and SHA1 are obsolete in terms of security.
-
-The BLAKE algorithms were designed for big data, which is what I am going to look at next:
-
-![](Graphs/hashFunctionDiffAmounts.png)
-
-In this graph, the gradient (rate of increase) of each line is the ratio of seconds to megabytes of each function (so $\frac{x}{y} = megabytes/second$). So the less steep the line is, the faster the operation.
-
-SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is quite slow, and this is because BLAKE2s is designed for 32-bit CPU architectures, and my CPU is 64-bit. MD5 and SHA1 are both the fastest, and have similar performance, but have security problems. BLAKE2b was the fastest out of the secure functions, so I will be using BLAKE2b for checksums in the program, as checksums need to be calculated quickly, as discussed before.
 
 ### Encryption:
 
@@ -470,18 +474,18 @@ function expandKey(inputKey)
 	bytesGenerated := 16
 	rconIteration  := 1
 	temp := uint8[4]
-	
+
 	while bytesGenerated < 176
 		temp = expanded[bytesGenerated - 4:bytesGenerated]
-		
+
 		if bytesGenerated MOD 16 == 0 then
 			temp[0], temp[1], temp[2], temp[3] = temp[1], temp[2], temp[3], temp[0]
 			temp[0], temp[1], temp[2], temp[3] = sBox[temp[0]], sBox[temp[1]], sBox[temp[2]], sBox[temp[3]]
-			
+
 			temp[0] = temp[0] XOR rcon[rconIteration]
 			rconIteration = rconIteration + 1
 		end if
-		
+
 		for i := 0 to 4
 			expanded[bytesGenerated] = expanded[bytesGenerated - 16] XOR temp[y]
 			bytesGenerated = bytesGenerated + 1
@@ -542,7 +546,7 @@ Sub bytes substitutes each byte in the state with it's corresponding value in th
 
 <img src="Diagrams/aes_sbox.jpg" width=350px/>
 
-When using the sub-box, you have to think of each byte as hexadecimal (0xYZ). 
+When using the sub-box, you have to think of each byte as hexadecimal (0xYZ).
 Each row of the sub box is the value of the Y value (16s) in the hexadecimal representation of the byte.
 Each column of the sub box is the value of the Z value (1s) in the hexadecimal representation of the byte.
 
@@ -575,27 +579,27 @@ Here is the algorithm for **Shift Rows**:
 ```pseudocode
 function shiftRows(state)
 	temp := []
-	
+
 	temp[ 0] = state[ 0]
 	temp[ 1] = state[ 5]
 	temp[ 2] = state[10]
 	temp[ 3] = state[15]
-	
+
 	temp[ 4] = state[ 4]
 	temp[ 5] = state[ 9]
 	temp[ 6] = state[14]
 	temp[ 7] = state[ 3]
-	
+
 	temp[ 8] = state[ 8]
 	temp[ 9] = state[13]
 	temp[10] = state[ 2]
 	temp[11] = state[ 7]
-	
+
 	temp[12] = state[12]
 	temp[13] = state[ 1]
 	temp[14] = state[ 6]
 	temp[15] = state[11]
-	
+
 	return temp
 ```
 
@@ -718,7 +722,7 @@ $$
 
 But hang on a second, the answer to $d4 * 3$  and $d4 * 2$ both have a $x^8$ term, which means it's bigger than 255 (since $2^8$ = 256), so it is no longer a byte, which means that it no longer fits in with 128 bit AES.
 
-To fix this, we replace all of the $x^8$ terms with this pre-determined polynomial (Rijndael's finite field),  reducing by MOD2 as we go along: 
+To fix this, we replace all of the $x^8$ terms with this pre-determined polynomial (Rijndael's finite field),  reducing by MOD2 as we go along:
 $$
 x^8 \equiv x^4 + x^3 + x + 1
 $$
@@ -775,12 +779,12 @@ This makes the pseudocode for **Mix Columns** very simple:
 // mul2 and mul3 are the pre-defined tables talked about above.
 function mixColumns(state)
 	temp := []
-	
+
 	temp[ 0] = mul2[state[0]] XOR mul3[state[1]] XOR state[2] XOR state[3]
 	temp[ 1] = state[0] XOR mul2[state[1]] XOR mul3[state[2]] XOR state[3]
 	temp[ 2] = state[0] XOR state[1] XOR mul2[state[2]] XOR mul3[state[3]]
 	temp[ 3] = mul3[state[0]] XOR state[1] XOR state[2] XOR mul2[state[3]]
-	
+
 	temp[ 4] =  mul2[state[4]] XOR mul3[state[5]] XOR state[6] XOR state[7]
     temp[ 5] =  state[4] XOR mul2[state[5]] XOR mul3[state[6]] XOR state[7]
     temp[ 6] = state[4] XOR state[5] XOR mul2[state[6]] XOR mul3[state[7]]
@@ -795,7 +799,7 @@ function mixColumns(state)
     temp[13] = state[12] XOR mul2[state[13]] XOR mul3[state[14]] XOR state[15]
     temp[14] = state[12] XOR state[13] XOR mul2[state[14]] XOR mul3[state[15]]
     temp[15] = mul3[state[12]] XOR state[13] XOR state[14] XOR mul2[state[15]]
-    
+
     return temp
 }
 
@@ -1070,7 +1074,7 @@ $$
 \begin{align*}
 &A = 10010111011011111000110111011101\\
 &\Sigma_0 = (10010111011011111000110111011101 >>> 2) \oplus (10010111011011111000110111011101 >>> 13) \oplus\\&... (10010111011011111000110111011101 >>> 22)\\
-&(10010111011011111000110111011101 >>> 2) = 01100101110110111110001101110111 \\ 
+&(10010111011011111000110111011101 >>> 2) = 01100101110110111110001101110111 \\
 &\text{The two bits at the end have been moved to the front one by one.}\\
 &(10010111011011111000110111011101 >>> 13) = 11110001101110111011001011101101\\
 &(10010111011011111000110111011101 >>> 22) = 01110111011001011101101111100011\\
@@ -1391,7 +1395,7 @@ Here is a prototype I made in Processing (A java based "software sketchbook):
 
 <img src="Diagrams/appPrototype.png" width=200px/>
 
-It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum. 
+It is very minimal, as I decided to keep it as minimal as possible so that the user doesn't get confused, and to keep clutter at a minimum.
 
 Once the vault is unlocked, the user should be given the option to browse files in the vault from their phone, and select files to download, or instead just minimise the app and continue using their phone. The vault should only close once the user has exited the app, rather than when they minimise the app.
 
@@ -1517,7 +1521,7 @@ I have taken out all of the `__pycache__` folders that Python generates.
 
 This is the output of `tree code` in my projects' `code` directory. You can find my project at https://github.com/Lytchett-Minster/nea-12ColcloughJ.
 
-The `code` directory, surprisingly, holds the code for my project. Inside is one folder for the mobile app (`mobile`), and one folder for the PC app (`python-go`). The PC app is started by running `start.py` . `start.py` imports `kivyStuff/ui.py` and runs it. This means that any Python files in `kivyStuff` can import any of the files that are in the same directory as `start.py` (`python-go`), and any Python files in `kivyStuff`. It also makes it easier to find the start script, as it isn't as buried. 
+The `code` directory, surprisingly, holds the code for my project. Inside is one folder for the mobile app (`mobile`), and one folder for the PC app (`python-go`). The PC app is started by running `start.py` . `start.py` imports `kivyStuff/ui.py` and runs it. This means that any Python files in `kivyStuff` can import any of the files that are in the same directory as `start.py` (`python-go`), and any Python files in `kivyStuff`. It also makes it easier to find the start script, as it isn't as buried.
 
 The `assets` directory holds all the images needed for the GUI of the PC program (the images on the buttons). Here is a `tree` of the `assets` folder:
 
@@ -1652,7 +1656,7 @@ def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=
 def getFileSep():
     if platform.startswith("win32"): # Find out what operating system is running.
         return "\\"
-    else:          #windows bad
+    else:
         return "/"
 
 def getStartDir(fileSep=None):
@@ -1783,7 +1787,7 @@ It is easy to distinguish between files and folders, and doesn't feel cluttered.
 
 When you click a folder, you change directory to that folder, and the contents of that folder are displayed on the screen. If it is a file, it is decrypted to `<systems_temp_folder>/FileMate/<fileName>`, where it is then opened with the system's default application and can be renamed and edited.
 
-When you click to add a new folder, you get the exact same popup as in the **Information Tab** when you decrypt an item to a location. 
+When you click to add a new folder, you get the exact same popup as in the **Information Tab** when you decrypt an item to a location.
 
 #### The Information Tab
 
@@ -2587,7 +2591,7 @@ func DecryptList(expandedKey *[176]byte, fileList []string, targetList []string)
 Enc/decryption of files is done in parallel (using multiple processes/CPU cores) by having 'workers' that accept jobs from a work channel, do work on each job given and return them in a results channel.
 The workers are really just a function that is run in a **g**oroutine (coroutines that are designed to be easy to use and low on memory), and each worker waits for a job on the job channel while the job channel is open. The job channel allows for the transfer of a 'work' struct to the goroutine, containing a full buffer of the original file, and what offset in the file that buffer was read from. The offset is important because each goroutine may finish at a different time, and the data has to be in the correct order, however it does not need to be written to the new file at the same time. As long as it is in order it is fine.
 
-If on the last block of decryption, then the program checks for padding, which works the same as specified in the **Design** section. If the last element of the last block has a value less than 16, it counts how many of that number occur going back through the block, and if the number of occurrences matches the value itself, then the occurrences 
+If on the last block of decryption, then the program checks for padding, which works the same as specified in the **Design** section. If the last element of the last block has a value less than 16, it counts how many of that number occur going back through the block, and if the number of occurrences matches the value itself, then the occurrences
 
 Here is a visual representation of this process:
 
@@ -3129,7 +3133,7 @@ def getSHA128of16(data):
 
 Each byte is made into an array of bits. Doing it this way made it easier to debug, however probably made the algorithm much slower than it needed to be. However, I don't really care too much about how fast SHA is, as it is only used a few times in the program, and only ever works on very small amounts of data, so it will probably be unnoticeable for the user.
 
-The file is called SHA.py, and is imported by LoginScreen (default login without Bluetooth), which is in `code/kivyStuff/loginClass.py`, for use when the key is entered. 
+The file is called SHA.py, and is imported by LoginScreen (default login without Bluetooth), which is in `code/kivyStuff/loginClass.py`, for use when the key is entered.
 
 
 
@@ -3575,7 +3579,7 @@ func main() {
 
 The `UseQuickSort____` functions are used for formatting input from `stdin` that Python has given us.
 
-`QuickSortAlph` is used by `AESstring` 
+`QuickSortAlph` is used by `AESstring`
 
 `quickSortSearch` is used for sorting search results, as search results are collected along with the position that the search item was found in the word. For example, if I searched for "b" in a folder, and there was a file called "brian.png", then the search result would be (0, "brian.png"). `quickSortSearch` then sorts these results by the number. I need to use a tuple so that I know what string belongs to which number.
 
@@ -4674,7 +4678,7 @@ class MainScreen(Screen):
     def sortAlph(self, fileObjects):
         out = self.passToPipe("sortAlph", "\n".join([str(i.name) for i in fileObjects]), "").decode()
         out = [str(i) for i in out.split(",,")]
-        
+
         return self.matchFileObjToName(fileObjects, out)
 
     def sortSearch(self, searchResults):
@@ -4737,7 +4741,7 @@ class MainScreen(Screen):
         if self.fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) # Windows actually accepts forward slashes in terminal
-            command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
+            command = "START /wait "+'"" '+'"'+location+'"'
         else:
             command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
 
@@ -5693,7 +5697,7 @@ All of the mobile code is in Python 2, other than SHA, which is Python 3.
 
 ### The root of the GUI
 
-The main file of the program is `main.py` in `code/mobile/main.py`. 
+The main file of the program is `main.py` in `code/mobile/main.py`.
 Here is the code of `main.py`:
 
 ```python
@@ -6038,7 +6042,7 @@ class PadScreen(Screen, FloatLayout):
         else:
             print u"Can't connect to device."
             Popup(self, title="Can't connect.",
-                  content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate program."), 
+                  content=Label(text="Can't connect to device\nplease make sure the\ndevice has Bluetooth on,\nis in range, and is\nrunning the FileMate program."),
                   title_align="center",
                   size_hint=(.6, .6),
                   pos_hint={"x_center": .5, "y_center": .5},
@@ -6085,7 +6089,7 @@ Modules used in the `.kv` file, that are not from Kivy, have to be imported here
 
 This screen is where the can browse the folders in the Vault, or download files from it instead.
 
-I have used the protocol in the **Design** section to recieve both the list of files and to download files. 
+I have used the protocol in the **Design** section to recieve both the list of files and to download files.
 
 Here is the code for recieving a list of files, and for recieving a file (`code/mobile/btShared.py`):
 
@@ -6097,7 +6101,7 @@ from kivy.uix.popup import Popup
 
 #Shared methods
 def recieveFileList(rStream, buffAlreadyKnown=[]):
-    buff = buffAlreadyKnown    # If called from other places, some of they data may already 
+    buff = buffAlreadyKnown    # If called from other places, some of they data may already
     data = ""
 
     endList = [126, 33, 33, 69, 78, 68, 76, 73, 83, 84, 33]          #~!!ENDLIST!
@@ -7024,7 +7028,7 @@ In this section I will go through each of my objectives and comment on their com
 
    e. Have an options menu, including the options to:
 
-   ​  i. Change security level (from 128 bit AES to 256 bit AES).
+   ​  i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
       ***Didn't end up adding this, as it would require a lot more code and time for a feature that very few people would probably use.***
 

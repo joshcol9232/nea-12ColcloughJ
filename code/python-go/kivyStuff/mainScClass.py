@@ -697,7 +697,7 @@ class MainScreen(Screen):
         if self.fileSep == "\\":
             location = location.split("\\")
             location = "/".join(location) # Windows actually accepts forward slashes in terminal
-            command = "cmd /k start "+'"" '+'"'+location+'"'+" /D"
+            command = "START /wait "+'"" '+'"'+location+'"'
         else:
             command = "xdg-open "+'"'+location+'"'      # Quotation marks for if the dir has spaces in it
 

@@ -80,7 +80,7 @@ def readConfigFile(configLocation=None, lineNumToRead=None, fSep=None, startDir=
 def getFileSep():
     if platform.startswith("win32"): # Find out what operating system is running.
         return "\\"
-    else:          #windows bad
+    else:
         return "/"
 
 def getStartDir(fileSep=None):
