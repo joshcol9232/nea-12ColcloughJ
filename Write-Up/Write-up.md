@@ -267,7 +267,9 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
    i. Allow the files/folders to be decrypted to an external location.
 
-   <div style="page-break-after: always;"></div> 
+4. Overall system should work on Windows, MacOS and Linux.
+
+<div style="page-break-after: always;"></div> 
 
 
 # Design
@@ -1252,7 +1254,7 @@ My program will need a quick sort for sorting the files by:
 - Size
 - Name
 
-I have chosen quick sort because it is quicker than most sorts (it's in the name!) with a big-O notation of $O(n \log n)$ on average, with the worst case being $O(n^2)$. Merge sort has a big-O notation of $O(n \log n)$, and worst case of $O(n \log n)$, so why am I not using merge sort? Merge sort is supposed to be quicker mathematically, however merge sort has to access the array of items more often, usually resulting in putting more strain on the hardware, and also slows the overall process down because getting items from memory takes a fair amount of time. Here is a good video comparing merge sort and quick sort (along with a few other algorithms): https://youtu.be/ZZuD6iUe3Pc
+I have chosen quick sort because it is quicker than most sorts (it's in the name!) with a big-O notation of $O(n \log n)$ on average, with the worst case being $O(n^2)$. Merge sort has a big-O notation of $O(n \log n)$, and worst case of $O(n \log n)$, so why am I not using merge sort? Merge sort is supposed to be quicker mathematically, however merge sort has to access the array of items more often, which puts more strain on the memory of the computer, which is considerably slower in comparison to the CPU in the majority of computers. Here is a good video comparing merge sort and quick sort (along with a few other algorithms): https://youtu.be/ZZuD6iUe3Pc
 
 The algorithm goes like this (using a list of items to be sorted):
 
@@ -1267,22 +1269,23 @@ Here is the pseudocode of the algorithm:
 function quickSort(list)
 	if length(list) <= 1 then
 		return list
-	else
-		left   = []
-		middle = []
-		right  = []
-		pivot  = list[int(length(list)/2)]
-		for i = 0 to length(list) do
-			if list[i] < pivot then
-				left.append(list[i])
-			else if list[i] > pivot then
-				right.append(list[i])
-			else
-				middle.append(list[i])
-			end
+  end
+
+	left   = []
+	middle = []
+	right  = []
+	pivot  = list[int(length(list)/2)]
+	for i = 0 to length(list) do
+		if list[i] < pivot then
+			left.append(list[i])
+		else if list[i] > pivot then
+			right.append(list[i])
+		else
+			middle.append(list[i])
 		end
-		return quickSort(left)+middle+quickSort(right)
 	end
+
+	return quickSort(left)+middle+quickSort(right)
 end
 ```
 
@@ -1878,7 +1881,7 @@ Once you press submit, a popup opens telling you if the key was correct or not, 
 
 <img src="TechSolution/GUI/Mobile/mainScreen.png" style="zoom:15%"/>
 
-From here you can either close the app and leave it running in the background, or browse files. If you close the app completely, the app on the PC locks. **NOTE TO MR REGHIF: I will make a YouTube video here at some point showing the full process. Btw have a nice christmas.**
+From here you can either close the app and leave it running in the background, or browse files. If you close the app completely, the app on the PC locks.
 
 Here is what the app looks like while you are browsing files:
 
@@ -1895,7 +1898,7 @@ If you want to download a file, a popup opens on the PC app showing the current 
 Now you can find that file in your devices "Download" folder.
 
 
-
+Here is a video of the whole process (type this into your web browser's address bar): https://youtu.be/FNt5Vsaf4UM
 
 
 ## Key Algorithms
@@ -6975,17 +6978,7 @@ The key for the different types of data (where applicable) will be:
 - E  =  Erroneous Data
 - B  =  Boundary Data
 
-
-
-
-
-
-
-
-
-
-
-
+<div style="page-break-after: always;"></div> 
 
 
 
@@ -7161,6 +7154,9 @@ In this section I will go through each of my objectives and comment on their com
 
    ***Works fine. Files can be decrypted to a new folder, with their original name, or they can be renamed when decrypting.***
 
+4. Overall system should work on Windows, MacOS and Linux.
+
+***Works great on Linux, so it should work on MacOS too, however I have no way of checking this as I do not own a computer that runs MacOS. The program works well on Windows as well, however I had issues installing PyBluez for the Bluetooth capability (it was asking for the Windows SDK, and even after I installed it, it still asked for it...). The rest of the program worked fine, as you can see in this video (type the link into the top bar on your web browser): https://youtu.be/2dcJAWGE_IE***
 
 
 ## Things I would do to improve the project
