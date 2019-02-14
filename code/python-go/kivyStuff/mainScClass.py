@@ -3,7 +3,7 @@ from shutil import move, disk_usage, rmtree
 from threading import Thread
 from functools import partial   # For passing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
-from time import sleep
+from time import sleep, time
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -23,6 +23,7 @@ from fileClass import File
 import mainBtns
 from settingsScreen import SettingsScreen
 import mainSmallPops as mainSPops
+import recycleInfo
 
 try:
     from bluetooth import *
@@ -47,6 +48,7 @@ class MainScreen(Screen):
         self.lastPathSent = ""
         self.recycleFolder = ""
         self.recycleName = ""
+        self.recycleDataName = ""
         self.thumbsName = ""
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
@@ -57,12 +59,14 @@ class MainScreen(Screen):
         self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
+            [self.recycleName, self.recycleDataName, self.thumbsName] = self.encListString([".$recycling", ".$data", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
             self.recycleFolder = self.path+self.recycleName+self.fileSep
+            self.recycleDataFolder = self.recycleFolder+self.recycleDataName+self.fileSep
 
             if not os.path.exists(self.recycleFolder):
                 print("Recycling folder not found in directory, making one now.")
                 os.makedirs(self.recycleFolder)
+                os.makedirs(self.recycleDataFolder)
 
             self.entered = True
 
@@ -304,7 +308,7 @@ class MainScreen(Screen):
     def createButtonsCore(self, array): # Makes each file button with it's information and adds it to the scroll view.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling" and item.name != ".$thumbs": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
+            if item.name != ".$recycling" and item.name != ".$thumbs" and item.name != ".$data": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
                 back = (1, 1, 1, 1)
                 if item.isDir:   # Colour folders darker than files
                     back = (0.3, 0.3, 0.3, 1)   # Works as a tint rather than a colour.
@@ -335,7 +339,7 @@ class MainScreen(Screen):
         self.createButtonsCore(fileObjects)
 
     def traverseButton(self, fileObj):  # Function when file is clicked.
-        if self.recycleFolder not in self.currentDir:
+        if (self.recycleFolder not in self.currentDir) or (fileObj.isDir):
             if fileObj.isDir:   #If is a folder, then display files within that folder.
                 self.previousDir = self.currentDir
                 self.currentDir = fileObj.hexPath
@@ -343,7 +347,7 @@ class MainScreen(Screen):
                 self.resetButtons()
             else:   # If is a file, decrypt the file and open it.
                 self.decrypt(fileObj)
-        else:
+        elif not fileObj.isDir:
             print("Recovering this file to path:", fileObj.name)
             move(fileObj.hexPath, self.path) # Imported from shutil
             self.refreshFiles()
@@ -411,9 +415,33 @@ class MainScreen(Screen):
         self.sendFile.open()
 
     def moveFileToRecycling(self, fileObj):
-        print("Moving", fileObj.hexPath)
         if os.path.exists(fileObj.hexPath):
-            move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
+            if os.path.exists(self.recycleFolder+fileObj.hexName):  # Check if it already exists in the recycling folder.
+                if os.path.isdir(self.recycleFolder+fileObj.hexName):
+                    rmtree(self.recycleFolder+fileObj.hexName)
+                else:
+                    os.remove(self.recycleFolder+fileObj.hexName)
+
+            if not fileObj.isDir:
+                fileInfo = recycleInfo.RecycleData(fileObj.hexPath, time())
+                fileFol = self.fileSep.join(fileObj.relPath.split(self.fileSep)[:-1]) # Gets all of relPath apart from the file name itself.
+                folder = self.recycleDataFolder+fileFol
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+
+                recycleInfo.pickleRecData(fileInfo, self.recycleDataFolder+fileObj.relPath, self.recycleDataFolder+fileFol)
+
+                move(fileObj.hexPath, self.recycleDataFolder+fileObj.relPath) # Imported from shutil
+            else:
+                if not os.path.exists(self.recycleDataFolder+fileObj.relPath):
+                    os.makedirs(self.recycleDataFolder+fileObj.relPath)
+
+                fl = self.List(fileObj.hexPath)
+                for f in fl:
+                    self.moveFileToRecycling(f)
+
+                rmtree(fileObj.hexPath)
+                
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.") # Doesn't exist, so issue with code somewhere.
 
@@ -421,12 +449,7 @@ class MainScreen(Screen):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
             if self.recycleFolder not in self.currentDir:   # If outside of recycling bin.
                 print("Moving", fileObj.hexPath)
-                if os.path.exists(self.recycleFolder+fileObj.hexName):
-                    if os.path.isdir(self.recycleFolder+fileObj.hexName):
-                        rmtree(self.recycleFolder+fileObj.hexName)
-                    else:
-                        os.remove(self.recycleFolder+fileObj.hexName)
-                move(fileObj.hexPath, self.recycleFolder) # Imported from shutil
+                self.moveFileToRecycling(fileObj)
             else:
                 print("Deleting:", fileObj.hexPath, "and checking temp.")
                 if os.path.exists(self.osTemp+"FileMate"+self.fileSep+fileObj.name):  # If removing permanently, check that the file is not decrypted in <system_temp>.
@@ -444,10 +467,7 @@ class MainScreen(Screen):
     def goBackFolder(self):     #Go up a folder.
         if self.currentDir != self.path:    #Can't go further past the vault dir.
             self.previousDir = self.currentDir
-            if self.recycleFolder in self.currentDir:
-                self.goHome()
-            else:
-                self.currentDir = self.getPathBack(self.currentDir)
+            self.currentDir = self.getPathBack(self.currentDir)
             self.resetButtons()
         else:
             print("Can't go further up.")
