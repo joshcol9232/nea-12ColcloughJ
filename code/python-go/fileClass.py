@@ -34,9 +34,10 @@ class File:
         self.relPath = self.hexPath.replace(self.outerScreen.path, "")   # Encrypted path relative to root folder of Vault
 
     def __getNormDir(self, hexDir):          # Private functions as they are usually only needed once and should only be callable from within the class
-        dir = self.fileSep.join(self.outerScreen.decListString(hexDir.replace(self.outerScreen.path, "").split(self.fileSep)[:-1]))+self.name
-        if self.isDir:
+        dir = self.fileSep.join(self.outerScreen.decListString(hexDir.replace(self.outerScreen.path, "").split(self.fileSep)[:-1]))#+self.fileSep+self.name
+        if dir != "" and dir[-1] != self.fileSep:
             dir += self.fileSep
+        dir = self.outerScreen.path+dir+self.name
         return dir
 
     def __getFileSize(self, recurse=True):

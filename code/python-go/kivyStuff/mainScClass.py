@@ -54,6 +54,8 @@ class MainScreen(Screen):
 
         Window.bind(on_dropfile=self.onFileDrop)    #Binding the function to execute when a file is dropped into the window.
         self.currentDir = self.path
+        self.currDirDec = self.currentDir
+        self.ids.currDir.text = self.getRelPath()
 
 
     def on_enter(self): # When the screen is started.
@@ -228,7 +230,6 @@ class MainScreen(Screen):
         print("[BT]: Sent full list, now sent end.")
         self.clientSock.send("~!!ENDLIST!")
 
-
     def getListForSend(self, path):
         if not path:
             return False
@@ -333,7 +334,7 @@ class MainScreen(Screen):
 
         self.grid = GridLayout(cols=3, size_hint_y=None)
         self.grid.bind(minimum_height=self.grid.setter("height"))
-        self.scroll = ScrollView(size_hint=(.99, .79), pos_hint={"x": .005, "y": 0}) #Grid is added to the scroll view.
+        self.scroll = ScrollView(size_hint=(.99, .745), pos_hint={"x": .005, "y": 0.045}) #Grid is added to the scroll view.
         self.scroll.add_widget(self.grid)
 
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
@@ -344,6 +345,8 @@ class MainScreen(Screen):
             if fileObj.isDir:   #If is a folder, then display files within that folder.
                 self.previousDir = self.currentDir
                 self.currentDir = fileObj.hexPath
+                self.currDirDec = fileObj.path
+                self.updateRelPathReadout()
                 self.ascending = True
                 self.resetButtons()
             else:   # If is a file, decrypt the file and open it.
@@ -352,6 +355,13 @@ class MainScreen(Screen):
             print("Recovering this file to path:", fileObj.name)
             self.recoverFromRecycling(fileObj)
             self.refreshFiles()
+
+    def getRelPath(self):
+        rel = self.currDirDec.replace(self.path, " /")
+        return rel
+
+    def updateRelPathReadout(self):
+        self.ids.currDir.text = self.getRelPath()
 
     def openAddFilePop(self):     # Needs to be asigned to self.smallPop because if the screen is closed with the popup open (only possible when using Bluetooth), all crucial popups need to be closed.
         self.smallPop = mainSPops.addFilePop(self)
@@ -389,7 +399,7 @@ class MainScreen(Screen):
         infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
 
         infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text="/Vault/"+fileObj.decryptRelPath(), halign="left", valign="middle"))
+        infoGrid.add_widget(self.infoLabel(text="/"+fileObj.decryptRelPath(), halign="left", valign="middle", shorten=True, shorten_from="left", split_str=self.fileSep))
 
         infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
         infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
@@ -544,6 +554,8 @@ class MainScreen(Screen):
             self.previousDir = self.currentDir
             self.currentDir = self.getPathBack(self.currentDir)
             self.resetButtons()
+            self.currDirDec = self.getPathBack(self.currDirDec)
+            self.updateRelPathReadout()
         else:
             print("Can't go further up.")
             return False
@@ -572,6 +584,8 @@ class MainScreen(Screen):
 
     def goHome(self):   #Takes the user back to the vault dir.
         self.currentDir = self.path
+        self.currDirDec = self.path 
+        self.ids.currDir.text = " /"
         self.refreshFiles()
 
     def List(self, dir):    # Lists a directory, returning File objects.
@@ -626,8 +640,11 @@ class MainScreen(Screen):
 
 
     def searchForItem(self, item):
-        self.searchResults = []
-        Thread(target=self.findAndSort, args=(item,), daemon=True).start()
+        if item == "":
+            self.searchResults = self.currentList
+        else:
+            self.searchResults = []
+            Thread(target=self.findAndSort, args=(item,), daemon=True).start()
 
 
 ####Progress Bar Information####

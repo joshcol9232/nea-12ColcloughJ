@@ -7,7 +7,7 @@
     RelativeLayout:                 #Adds background in case fade transition breaks.
         canvas.before:
             Color:
-                rgba: 0,0,0,2
+                rgba: 0,0,0,1
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -120,4 +120,24 @@
                 center_y: self.parent.center_y
                 size: 100, 133.54
                 allow_stretch: False
+
+		Label:
+			canvas.before:
+				Color:
+					rgba: 0.33, 0.33, 0.33, 1
+				Rectangle:
+					pos: self.pos
+					size: self.size
+
+			id: currDir
+			size_hint: 1, .04
+			pos_hint: {"x": 0, "y": 0}
+			text_size: self.size
+			halign: "left"
+			valign: "middle"
+
+			shorten: True
+			shorten_from: "left"
+			split_str: root.fileSep   # Shortens every word rather than splitting a word in half when shortening.
+			
 

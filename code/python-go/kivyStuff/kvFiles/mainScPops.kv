@@ -58,6 +58,7 @@
             id: dirInp
             pos_hint: {"center_x": 0.5, "center_y": 0.7}
             multiline: False
+			on_text_validate: root.checkIfSure(root.ids.dirInp.text)
 
         Button:
             id: submitDirs
