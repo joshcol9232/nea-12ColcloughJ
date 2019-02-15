@@ -294,7 +294,7 @@ class MainScreen(Screen):
     def openRecycling(self):  # Open the recycling folder.
         if not os.path.exists(self.recycleFolder):
             print("Recycling folder doesn't exist, making one now.")
-            makedirs(self.recycleFolder)
+            os.makedirs(self.recycleFolder)
 
         Popup(title="Changed Mode",
               content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."),
