@@ -81,6 +81,43 @@ However, with privacy by design, I will not be using any of the user’s data fo
 Another issue could be that if a file is deleted, the contents of the file might still remain. To fully remove the file I may have to use a one way function that ruins the data before deletion so that it cannot be accessed after it is deleted.
 
 
+---
+
+## Existing Programs
+
+The main program has to be designed to be easy to use, and actions that are used a lot should be easily accessible. I think I will go for a similar layout to a program that already exists, SanDisk Secure Access:
+
+![](Diagrams/sanDisk.png)
+
+SanDisk Secure Access did inspire this project, however I do not want to make a carbon copy of it. I will take what SanDisk have done right, and improve the areas they lacked on.
+
+<b>SanDisk did these things right:</b>
+
+- The layout is pretty good because all buttons you would need regularly are available, and it doesn't differ too much in design from the Windows file explorer, so it feels familiar to it's users.
+- Shows the user how much space is left on their device.
+- Shows useful information about each file.
+- The user can easily sort the list of files however they want.
+- More options are hidden unless needed regularly.
+- Allows the user to search the vault for a file.
+- I can easily drag files in and out of the program.
+
+<b>What I personally think SanDisk did not do too well:</b>
+
+- Looks a bit cluttered with all the extra stuff at the bottom. If I wanted to see other files on my computer I would open my file manager, and if I wanted to add files to the vault I can just drag it in easily.
+
+- Faded pictures in the background are distracting.
+
+- Some buttons are quite small, so may be hard for some users to click.
+
+- Aesthetically alright but could be better.
+
+- Some icons are confusing when first using the program (like the folder with the green arrow inside of it; too much going on).
+
+- Size is displayed in kilobytes, which is alright but is kind of hard to read for files larger than 1 megabyte.
+
+
+I will take these into account when I come to designing my GUI.
+
 
 ---
 
@@ -1303,38 +1340,7 @@ For the UI of both apps, I will use Kivy (a Python module) to make both the mobi
 
 ### Main Program (on PC):
 
-The main program has to be designed to be easy to use, and actions that are used a lot should be easily accessible. I think I will go for a similar layout to a program that already exists, SanDisk Secure Access:
-
-![](Diagrams/sanDisk.png)
-
-SanDisk Secure Access did inspire this project, however I do not want to make a carbon copy of it. I will take what SanDisk have done right, and improve the areas they lacked on.
-
-<b>SanDisk did these things right:</b>
-
-- The layout is pretty good because all buttons you would need regularly are available, and it doesn't differ too much in design from the Windows file explorer, so it feels familiar to it's users.
-- Shows the user how much space is left on their device.
-- Shows useful information about each file.
-- The user can easily sort the list of files however they want.
-- More options are hidden unless needed regularly.
-- Allows the user to search the vault for a file.
-- I can easily drag files in and out of the program.
-
-<b>What I think SanDisk did not do too well:</b>
-
-- Looks a bit cluttered with all the extra stuff at the bottom. If I wanted to see other files on my computer I would open my file manager, and if I wanted to add files to the vault I can just drag it in easily.
-
-- Faded pictures in the background are distracting.
-
-- Some buttons are quite small, so may be hard for some users to click.
-
-- Aesthetically alright but could be better.
-
-- Some icons are confusing when first using the program (like the folder with the green arrow inside of it; too much going on).
-
-- Size is displayed in kilobytes, which is alright but is kind of hard to read for files larger than 1 megabyte.
-
-
-Taking all of these points into consideration, here is a possible design for the UI of my program:
+Taking all of the points in my **Analysis** into consideration, here is a possible design for the UI of my program:
 
 ![](Design/mainProgramDesign.png)
 
@@ -6968,7 +6974,11 @@ ok    BLAKE 5.004s
 
 All tests passed, and using the same Python script as in AES, the speed was `145.74 MB/s`. The speed is ok, however if you open and edit a very large file (> 145 MB), it will take more than 1 second to open and close, after decryption and before encryption. This is not much of an issue however, since not many people will be editing files that are that large it shouldn't be an issue for most people, since the checksum is not calculated when merely adding and removing files from the Vault.
 
+---
 
+Here is a summary of the unit tests:
+
+<div style="page-break-after: always;"></div> 
 
 ## Black-box tests
 
