@@ -304,6 +304,7 @@ class MainScreen(Screen):
         self.removeButtons()
         print(self.currentDir, "current dir")
         self.createButtons(self.List(self.currentDir))
+        self.updateRelPathReadout()
 
 
 #######Button Creation and button functions#######
@@ -371,55 +372,63 @@ class MainScreen(Screen):
         self.smallPop = mainSPops.addNewFolderPop(self)
         self.smallPop.open()
 
-    def onFileInfoClose(self, fileObj, _):  # _ is me discarding the popup object.
-        if os.path.exists(fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail
-            os.remove(fileObj.thumbDir)
+    def openFileInfoPop(self, *args):
+        self.smallPop = mainSPops.fileInfoPop(self, *args)
+        self.smallPop.open()
+
+    def getImgPreview(self, fileObj):
+        if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
+            if self.thumbsName not in os.listdir(self.currentDir): # Checks that there is a thumbnail folder in this directory.
+                os.makedirs(self.currentDir+self.thumbsName)
+                print("Made thumbnail directory since it wasn't there")
+
+        fileObj.thumbDir = self.currentDir+self.thumbsName+self.fileSep+fileObj.hexName
+        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail temporarily. Is deleted once program is finished displaying it.
+        preview = Image(source=fileObj.thumbDir)
+        return preview
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
-        size = (.7, .4)  # Size of popup
-        if fileObj.extension == "png" or fileObj.extension == "jpg":
-            thumb = self.getThumbnail(fileObj)
-            size = (.8, .5)  # Increase size of popup to display image preview.
+        self.openFileInfoPop(fileObj)
 
-        # Works as: internalLayout -> scrolView + (Image?)
-        # scrollView contains infoGrid with all of the file's information.
-        internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
-        scrolView = ScrollView()
-        self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
-        self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
-
-        infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
-        scrolView.add_widget(infoGrid)
-        internalLayout.add_widget(scrolView)
-
-        if fileObj.extension == "png" or fileObj.extension == "jpg":
-            internalLayout.add_widget(thumb)
-
-        infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
-
-        infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text="/"+fileObj.decryptRelPath(), halign="left", valign="middle", shorten=True, shorten_from="left", split_str=self.fileSep))
-
-        infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
-        infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
-
-        delText = "Delete"
-        if self.recycleFolder in self.currentDir:    # If in the recycling folder, then delete the item permanently.
-           delText = "Delete Permanently"
-
-        infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
-
-        decBtnText = "Decrypt File"
-        if fileObj.isDir:
-            decBtnText = "Decrypt Folder"
-
-        if fileObj.rawSize > 0:
-            decBtn = Button(text=decBtnText, halign="left", valign="middle")
-            decBtn.bind(on_release=partial(self.decryptFileToLoc, fileObj))
-            infoGrid.add_widget(decBtn)
-
-        self.infoPopup.open()
+        # # Works as: internalLayout -> scrolView + (Image?)
+        # # scrollView contains infoGrid with all of the file's information.
+        # internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
+        # scrolView = ScrollView()
+        # self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
+        # self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
+        #
+        # infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
+        # scrolView.add_widget(infoGrid)
+        # internalLayout.add_widget(scrolView)
+        #
+        # if fileObj.extension == "png" or fileObj.extension == "jpg":
+        #     internalLayout.add_widget(thumb)
+        #
+        # infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
+        # infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
+        #
+        # infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
+        # infoGrid.add_widget(self.infoLabel(text="/"+fileObj.decryptRelPath(), halign="left", valign="middle", shorten=True, shorten_from="left", split_str=self.fileSep))
+        #
+        # infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
+        # infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
+        #
+        # delText = "Delete"
+        # if self.recycleFolder in self.currentDir:    # If in the recycling folder, then delete the item permanently.
+        #    delText = "Delete Permanently"
+        #
+        # infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
+        #
+        # decBtnText = "Decrypt File"
+        # if fileObj.isDir:
+        #     decBtnText = "Decrypt Folder"
+        #
+        # if fileObj.rawSize > 0:
+        #     decBtn = Button(text=decBtnText, halign="left", valign="middle")
+        #     decBtn.bind(on_release=partial(self.decryptFileToLoc, fileObj))
+        #     infoGrid.add_widget(decBtn)
+        #
+        # self.infoPopup.open()
 
     def makeSendFile(self, fileObj, buttonInstance=None):
         self.sendFile = mainSPops.btTransferPop(self, fileObj)
@@ -544,8 +553,6 @@ class MainScreen(Screen):
                 else:
                     os.remove(fileObj.hexPath)
             self.refreshFiles()
-            self.infoPopup.dismiss()
-
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't delete.")
 
@@ -584,7 +591,7 @@ class MainScreen(Screen):
 
     def goHome(self):   #Takes the user back to the vault dir.
         self.currentDir = self.path
-        self.currDirDec = self.path 
+        self.currDirDec = self.path
         self.ids.currDir.text = " /"
         self.refreshFiles()
 
@@ -788,17 +795,6 @@ class MainScreen(Screen):
 
         return out.decode()
 
-    def getThumbnail(self, fileObj):
-        if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
-            if self.thumbsName not in os.listdir(self.currentDir): # Checks that there is a thumbnail folder in this directory.
-                os.makedirs(self.currentDir+self.thumbsName)
-                print("Made thumbnail directory since it wasn't there")
-
-        fileObj.thumbDir = self.currentDir+self.thumbsName+self.fileSep+fileObj.hexName
-        self.passToPipe("n", fileObj.hexPath, fileObj.thumbDir) # Decrypts thumnail temporarily. Is deleted once program is finished displaying it.
-        thumb = Image(source=fileObj.thumbDir)
-        return thumb
-
     def openFileTh(self, fileLoc, startLoc):   # Creates a thread to open a file (stops program locking up)
         Thread(target=self.openFile, args=(fileLoc, startLoc,), daemon=True).start()
 
@@ -835,7 +831,7 @@ class MainScreen(Screen):
         else:
             self.encDec("n", fileObj.hexPath, fileLoc, newName=fileObj.name, op=op)
 
-    def decryptFileToLoc(self, fileObj, button):   # Decrypt a file/folder to a location (just handles the input)
+    def decryptFileToLoc(self, fileObj):   # Decrypt a file/folder to a location (just handles the input)
         mainSPops.decryptFileToLocPop(self, fileObj).open()
 
     def checkCanEncryptCore(self, inp): # Used for adding new files to the vault by the user.

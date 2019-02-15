@@ -14,6 +14,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
 from configOperations import dirInputValid
+from mainBtns import deleteButton, decButton
 
 class encDecPop(Popup): #For single files
 
@@ -300,3 +301,45 @@ class addFilePop(Popup):     #The screen (it's actually a Popup) for adding fold
 
     def checkIfSure(self, input):
         self.ConfirmationPopup(self, input).open()
+
+class fileInfoPop(Popup):
+
+    def __init__(self, mainScreen, fileObj, **kwargs):
+        self.outerScreen = mainScreen
+        self.fileObj = fileObj
+        super(fileInfoPop, self).__init__(**kwargs)
+
+        if fileObj.extension == "png" or fileObj.extension == "jpg":
+            self.preview = self.outerScreen.getImgPreview(self.fileObj)
+            self.size_hint = (.8, .5)
+
+            self.ids.fileInfoBox.add_widget(self.preview)
+
+        self.loadInfo()
+
+        self.ids.infoGrid.add_widget( deleteButton(self, self.outerScreen, fileObj, text="Delete") )
+        self.ids.infoGrid.add_widget( decButton(self, self.outerScreen, fileObj, text=self.getDecButtonText()) )
+
+    def on_dismiss(self):
+        if os.path.exists(self.fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail
+            os.remove(self.fileObj.thumbDir)
+
+    def loadInfo(self):
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="File Name:") )
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text=self.fileObj.name) )
+
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="Location:") )
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="/"+self.fileObj.decryptRelPath(),
+                                                                 shorten=True, shorten_from="left",
+                                                                 split_str=self.outerScreen.fileSep))
+
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="Size:") )
+        self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text=self.fileObj.size) )
+    
+    def getDecButtonText(self):
+        if self.fileObj.isDir:
+            return "Decrypt Folder"
+        else:
+            return "Decrypt File"
+
+

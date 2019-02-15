@@ -36,4 +36,8 @@
         size: 20, 20
 
 <deleteButton@Button>:
-    on_release: root.outerScreen.deleteFile(self.fileObj)
+    on_release: root.outerScreen.deleteFile(self.fileObj); self.pop.dismiss()
+
+<decButton@Button>:
+    on_release: root.outerScreen.decryptFileToLoc(root.fileObj); self.pop.dismiss()
+

@@ -65,9 +65,13 @@ class infoButton(Button):       #The button that displays information about the 
         self.fileObj = fileObj
 
 
-class deleteButton(Button):
-
-    def __init__(self, mainScreen, fileObj, **kwargs):
-        super(Button, self).__init__(**kwargs)
+class decButton(Button):
+    
+    def __init__(self, parentPop, mainScreen, fileObj, **kwargs):
         self.outerScreen = mainScreen
         self.fileObj = fileObj
+        self.pop = parentPop
+        super(decButton, self).__init__(**kwargs)
+
+class deleteButton(decButton):
+    pass
