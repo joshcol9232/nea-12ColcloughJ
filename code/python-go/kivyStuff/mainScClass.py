@@ -4,6 +4,7 @@ from threading import Thread
 from functools import partial   # For passing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
 from time import sleep, time
+from pickle import load as pickleLoad
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -28,7 +29,7 @@ import recycleInfo
 try:
     from bluetooth import *
 except:
-    pass
+    pass                # User may not want to use bluetooth at all.
 
 class MainScreen(Screen):
 
@@ -349,7 +350,7 @@ class MainScreen(Screen):
                 self.decrypt(fileObj)
         elif not fileObj.isDir:
             print("Recovering this file to path:", fileObj.name)
-            move(fileObj.hexPath, self.path) # Imported from shutil
+            self.recoverFromRecycling(fileObj)
             self.refreshFiles()
 
     def openAddFilePop(self):     # Needs to be asigned to self.smallPop because if the screen is closed with the popup open (only possible when using Bluetooth), all crucial popups need to be closed.
@@ -430,8 +431,13 @@ class MainScreen(Screen):
                     os.makedirs(folder)
 
                 recycleInfo.pickleRecData(fileInfo, self.recycleDataFolder+fileObj.relPath, self.recycleDataFolder+fileFol)
+                movePath = self.recycleFolder+fileObj.relPath
+                moveFolder = self.fileSep.join(movePath.split(self.fileSep)[:-1])
 
-                move(fileObj.hexPath, self.recycleDataFolder+fileObj.relPath) # Imported from shutil
+                if not os.path.exists(moveFolder):
+                    os.makedirs(moveFolder)
+
+                move(fileObj.hexPath, movePath) # Imported from shutil
             else:
                 if not os.path.exists(self.recycleDataFolder+fileObj.relPath):
                     os.makedirs(self.recycleDataFolder+fileObj.relPath)
@@ -441,9 +447,78 @@ class MainScreen(Screen):
                     self.moveFileToRecycling(f)
 
                 rmtree(fileObj.hexPath)
-                
+
+        else:
+            raise FileNotFoundError(fileObj.hexPath, "Does not exist, can't move to recycling.") # Doesn't exist, so issue with code somewhere.
+
+    def recoverFromRecycling(self, fileObj):    # File object of the file you want to recover.
+        if os.path.exists(fileObj.hexPath):
+            if fileObj.isDir:
+                fl = self.List(fileObj.hexPath)
+                for f in fl:
+                    self.recoverFromRecycling(f)
+                rmtree(fileObj.hexPath)
+                self.currentDir = self.removeParentFoldersIfEmpty(fileObj.hexPath, self.recycleFolder)
+
+            else:
+                data, dataPath = self.getRecycleData(fileObj)
+                os.remove(dataPath)
+                self.removeParentFoldersIfEmpty(dataPath, self.recycleDataFolder)
+
+                if os.path.exists(data.originalLoc):
+                    os.remove(data.originalLoc)
+
+                move(fileObj.hexPath, data.originalLoc)
+                self.currentDir = self.removeParentFoldersIfEmpty(fileObj.hexPath, self.recycleFolder)
+
         else:
             raise FileNotFoundError(fileObj.hexPath, "Not a file, can't move to recycling.") # Doesn't exist, so issue with code somewhere.
+
+    def getRecycleData(self, fileObj):
+        dataPath = self.recycleDataFolder[:-1]+(fileObj.relPath.replace(self.recycleName, ""))
+        print(dataPath)
+        if os.path.exists(dataPath):
+            return pickleLoad(open(dataPath, "rb")), dataPath
+        else:
+            print("Recycling data not found for this file.")
+            return recycleInfo.RecycleData(self.path, 0)
+
+    def removeParentFoldersIfEmpty(self, path, lastStop):   # lastStop is where to stop searching
+        if path[-1] == self.fileSep:
+            path = path[:-1]     # If ends with a file separator then remove it
+
+        parentFolder = self.fileSep.join(path.split(self.fileSep)[:-1])+self.fileSep
+        print(parentFolder, "parent folder")
+        dir = self.currentDir
+        last = path
+        while (self.checkFolderIsEmpty(parentFolder)) and (lastStop in parentFolder):
+            print(parentFolder, "was empty")
+            last = parentFolder
+            parentFolder = self.fileSep.join(parentFolder.split(self.fileSep)[:-2])+self.fileSep
+            dir = parentFolder
+
+        if (last != path) and (os.path.isdir(last)):
+            rmtree(last)
+
+        return dir
+
+    def checkFolderIsEmpty(self, path, empty=True):   # Checks if folder is empty. if folders are found, search those too.
+    	if not empty:
+    		return False
+
+    	fl = os.listdir(path)
+    	if len(fl) == 0:
+    		return True
+    	else:
+    		for i in fl:
+    			if os.path.isdir(path+i+self.fileSep):
+    				empty = self.checkFolderIsEmpty(path+i+self.fileSep, empty)
+    				if not empty:
+    					return False    # Don't want to break loop if it is still not found
+    			else:
+    				return False
+
+    		return True
 
     def deleteFile(self, fileObj):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
@@ -654,7 +729,7 @@ class MainScreen(Screen):
     def sortAlph(self, fileObjects):
         out = self.passToPipe("sortAlph", "\n".join([str(i.name) for i in fileObjects]), "").decode()
         out = [str(i) for i in out.split(",,")]
-        
+
         return self.matchFileObjToName(fileObjects, out)
 
     def sortSearch(self, searchResults):
