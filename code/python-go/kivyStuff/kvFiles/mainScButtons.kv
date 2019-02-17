@@ -35,9 +35,8 @@
         center_y: self.parent.center_y
         size: 20, 20
 
-<deleteButton@Button>:
-    on_release: root.outerScreen.deleteFile(self.fileObj); self.pop.dismiss()
-
-<decButton@Button>:
-    on_release: root.outerScreen.decryptFileToLoc(root.fileObj); self.pop.dismiss()
-
+<emptyRecyclingButton@Button>:
+	size_hint: .16, .16
+	pos_hint: {"right": 1, "top": 1}
+	text: "Empty Recycling"
+	on_release: root.emptyRecycling()

@@ -3,7 +3,7 @@ from shutil import move, disk_usage, rmtree
 from threading import Thread
 from functools import partial   # For passing in functions with multiple arguments to widgets/threads
 from subprocess import Popen, PIPE
-from time import sleep, time
+from time import sleep, strftime
 from pickle import load as pickleLoad
 
 from kivy.uix.scrollview import ScrollView
@@ -42,6 +42,7 @@ class MainScreen(Screen):
         self.ascending = True       # Sort order
         self.key = ""
         self.encPop = None
+        self.clearRecBtn = None
         self.entered = False
         self.validBTKey = False
         self.useBTTemp = self.useBT
@@ -62,7 +63,7 @@ class MainScreen(Screen):
         self.key = self.manager.get_screen("Login").key  # Fetch the key from the Login Screen.
         if not self.entered:
             self.setupSortButtons() #Put sort buttons in place.
-            [self.recycleName, self.recycleDataName, self.thumbsName] = self.encListString([".$recycling", ".$data", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
+            [self.recycleName, self.recycleDataName, self.thumbsName] = self.encListString([".$recycling", ".$metadata", ".$thumbs"])    # Prepare recycling and thumbnail folder names for use in the program.
             self.recycleFolder = self.path+self.recycleName+self.fileSep
             self.recycleDataFolder = self.recycleFolder+self.recycleDataName+self.fileSep
 
@@ -74,7 +75,9 @@ class MainScreen(Screen):
             self.entered = True
 
         if self.recycleFolder in self.currentDir:
+            self.currentDir = self.path
             self.createButtons(self.List(self.path), sort=False)     # Don't want to log into the recycling bin, as the user might get confused.
+            self.checkIfRemoveClearRecBtn()
         else:
             self.createButtons(self.List(self.currentDir), sort=False) # Loads previous directory.
 
@@ -297,6 +300,9 @@ class MainScreen(Screen):
             print("Recycling folder doesn't exist, making one now.")
             os.makedirs(self.recycleFolder)
 
+        self.clearRecBtn = mainBtns.emptyRecyclingButton(self)
+        self.add_widget(self.clearRecBtn)
+
         Popup(title="Changed Mode",
               content=Label(text="You are now in the\nrecycling folder.\nClick files to restore, and \nenter the INFO menu\nto see more information,\nor delete the file permanently."),
               pos_hint={"x_center": .5, "y_center": .5}, size_hint=(.4, .4)).open()
@@ -306,12 +312,15 @@ class MainScreen(Screen):
         self.createButtons(self.List(self.currentDir))
         self.updateRelPathReadout()
 
+    def checkIfRemoveClearRecBtn(self):
+        if (self.recycleFolder not in self.currentDir) and (self.clearRecBtn != None):
+            self.remove_widget(self.clearRecBtn)
 
 #######Button Creation and button functions#######
     def createButtonsCore(self, array): # Makes each file button with it's information and adds it to the scroll view.
         self.currentList = array
         for item in array:
-            if item.name != ".$recycling" and item.name != ".$thumbs" and item.name != ".$data": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
+            if item.name != ".$recycling" and item.name != ".$thumbs" and item.name != ".$metadata": # If the folder is the recycling folder or thumbnail temporary folder, don't draw it.
                 back = (1, 1, 1, 1)
                 if item.isDir:   # Colour folders darker than files
                     back = (0.3, 0.3, 0.3, 1)   # Works as a tint rather than a colour.
@@ -340,6 +349,7 @@ class MainScreen(Screen):
 
         self.add_widget(self.scroll)    #Scroll view is added to the float layout of MainScreen.
         self.createButtonsCore(fileObjects)
+        self.checkIfRemoveClearRecBtn()
 
     def traverseButton(self, fileObj):  # Function when file is clicked.
         if (self.recycleFolder not in self.currentDir) or (fileObj.isDir):
@@ -372,10 +382,6 @@ class MainScreen(Screen):
         self.smallPop = mainSPops.addNewFolderPop(self)
         self.smallPop.open()
 
-    def openFileInfoPop(self, *args):
-        self.smallPop = mainSPops.fileInfoPop(self, *args)
-        self.smallPop.open()
-
     def getImgPreview(self, fileObj):
         if self.thumbsName not in self.currentDir:    # Only check this when not in the thumbnail folder
             if self.thumbsName not in os.listdir(self.currentDir): # Checks that there is a thumbnail folder in this directory.
@@ -388,47 +394,8 @@ class MainScreen(Screen):
         return preview
 
     def getFileInfo(self, fileObj):     #Get information about a file/folder.
-        self.openFileInfoPop(fileObj)
-
-        # # Works as: internalLayout -> scrolView + (Image?)
-        # # scrollView contains infoGrid with all of the file's information.
-        # internalLayout = BoxLayout(orientation="horizontal", size_hint=(1, 1))
-        # scrolView = ScrollView()
-        # self.infoPopup = Popup(title="File Information", content=internalLayout, pos_hint={"center_x": .5, "center_y": .5}, size_hint=size)
-        # self.infoPopup.bind(on_dismiss=partial(self.onFileInfoClose, fileObj, ))
-        #
-        # infoGrid = GridLayout(cols=2, size_hint_y=None, row_default_height=40)
-        # scrolView.add_widget(infoGrid)
-        # internalLayout.add_widget(scrolView)
-        #
-        # if fileObj.extension == "png" or fileObj.extension == "jpg":
-        #     internalLayout.add_widget(thumb)
-        #
-        # infoGrid.add_widget(self.infoLabel(text="File Name:", halign="left", valign="middle"))
-        # infoGrid.add_widget(self.infoLabel(text=fileObj.name, halign="left", valign="middle"))
-        #
-        # infoGrid.add_widget(self.infoLabel(text="Current Location:", halign="left", valign="middle"))
-        # infoGrid.add_widget(self.infoLabel(text="/"+fileObj.decryptRelPath(), halign="left", valign="middle", shorten=True, shorten_from="left", split_str=self.fileSep))
-        #
-        # infoGrid.add_widget(self.infoLabel(text="Size:", halign="left", valign="middle"))
-        # infoGrid.add_widget(self.infoLabel(text=str(fileObj.size), halign="left", valign="middle"))
-        #
-        # delText = "Delete"
-        # if self.recycleFolder in self.currentDir:    # If in the recycling folder, then delete the item permanently.
-        #    delText = "Delete Permanently"
-        #
-        # infoGrid.add_widget(mainBtns.deleteButton(self, fileObj,text=delText))
-        #
-        # decBtnText = "Decrypt File"
-        # if fileObj.isDir:
-        #     decBtnText = "Decrypt Folder"
-        #
-        # if fileObj.rawSize > 0:
-        #     decBtn = Button(text=decBtnText, halign="left", valign="middle")
-        #     decBtn.bind(on_release=partial(self.decryptFileToLoc, fileObj))
-        #     infoGrid.add_widget(decBtn)
-        #
-        # self.infoPopup.open()
+        self.smallPop = mainSPops.fileInfoPop(self, fileObj)
+        self.smallPop.open()
 
     def makeSendFile(self, fileObj, buttonInstance=None):
         self.sendFile = mainSPops.btTransferPop(self, fileObj)
@@ -443,7 +410,7 @@ class MainScreen(Screen):
                     os.remove(self.recycleFolder+fileObj.hexName)
 
             if not fileObj.isDir:
-                fileInfo = recycleInfo.RecycleData(fileObj.hexPath, time())
+                fileInfo = recycleInfo.RecycleData(fileObj.hexPath, strftime("%H:%M on %d/%m/%y"))
                 fileFol = self.fileSep.join(fileObj.relPath.split(self.fileSep)[:-1]) # Gets all of relPath apart from the file name itself.
                 folder = self.recycleDataFolder+fileFol
                 if not os.path.exists(folder):
@@ -495,23 +462,19 @@ class MainScreen(Screen):
 
     def getRecycleData(self, fileObj):
         dataPath = self.recycleDataFolder[:-1]+(fileObj.relPath.replace(self.recycleName, ""))
-        print(dataPath)
         if os.path.exists(dataPath):
             return pickleLoad(open(dataPath, "rb")), dataPath
         else:
-            print("Recycling data not found for this file.")
-            return recycleInfo.RecycleData(self.path, 0)
+            return recycleInfo.RecycleData(self.path, "Not known.")
 
     def removeParentFoldersIfEmpty(self, path, lastStop):   # lastStop is where to stop searching
         if path[-1] == self.fileSep:
             path = path[:-1]     # If ends with a file separator then remove it
 
         parentFolder = self.fileSep.join(path.split(self.fileSep)[:-1])+self.fileSep
-        print(parentFolder, "parent folder")
         dir = self.currentDir
         last = path
         while (self.checkFolderIsEmpty(parentFolder)) and (lastStop in parentFolder):
-            print(parentFolder, "was empty")
             last = parentFolder
             parentFolder = self.fileSep.join(parentFolder.split(self.fileSep)[:-2])+self.fileSep
             dir = parentFolder
@@ -575,7 +538,7 @@ class MainScreen(Screen):
         self.scroll.clear_widgets()
         self.remove_widget(self.scroll)
 
-    def resetButtons(self): # Goes back to self.currentDir, different to refresh.
+    def resetButtons(self):
         self.removeButtons()
         self.nameSort.text = "^"
         self.sizeSort.text = ""
@@ -770,8 +733,6 @@ class MainScreen(Screen):
         if listOfNames == [""]:
             return []
         if len(listOfNames) != len(fileObjects):
-            print(listOfNames)
-            print(fileObjects)
             raise ValueError("Length of names not the same as original:", len(listOfNames), len(fileObjects))
         outList = []
         for i in range(len(fileObjects)):

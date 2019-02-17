@@ -1,3 +1,8 @@
+from os import path as osPath
+from os import listdir
+from os import remove as osRemove
+from shutil import rmtree
+
 from kivy.uix.button import Button
 from kivy.uix.image import Image
 
@@ -73,5 +78,28 @@ class decButton(Button):
         self.pop = parentPop
         super(decButton, self).__init__(**kwargs)
 
+    def on_release(self):
+        self.outerScreen.decryptFileToLoc(self.fileObj)
+        self.pop.dismiss()
+
 class deleteButton(decButton):
-    pass
+    
+    def on_release(self):
+       self.outerScreen.deleteFile(self.fileObj)
+       self.pop.dismiss()
+
+class emptyRecyclingButton(Button):
+
+	def __init__(self, mainScreen, **kwargs):
+		super(Button, self).__init__(**kwargs)
+		self.outerScreen = mainScreen
+	
+	def emptyRecycling(self):
+		for i in listdir(self.outerScreen.recycleFolder):
+			p = self.outerScreen.recycleFolder+i
+			if osPath.isdir(p):
+				rmtree(p)
+			else:
+				osRemove(p)
+
+		self.outerScreen.refreshFiles()

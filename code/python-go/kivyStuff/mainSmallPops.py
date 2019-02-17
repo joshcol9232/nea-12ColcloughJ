@@ -308,8 +308,13 @@ class fileInfoPop(Popup):
         self.outerScreen = mainScreen
         self.fileObj = fileObj
         super(fileInfoPop, self).__init__(**kwargs)
+        self.recData = None
 
-        if fileObj.extension == "png" or fileObj.extension == "jpg":
+        self.inRec = self.outerScreen.recycleFolder in self.fileObj.hexPath   # Bool value of if the file is in recycling
+        if self.inRec and not self.fileObj.isDir:
+            self.recData, _ = self.outerScreen.getRecycleData(self.fileObj)
+
+        if self.fileObj.extension == "png" or self.fileObj.extension == "jpg":
             self.preview = self.outerScreen.getImgPreview(self.fileObj)
             self.size_hint = (.8, .5)
 
@@ -317,8 +322,8 @@ class fileInfoPop(Popup):
 
         self.loadInfo()
 
-        self.ids.infoGrid.add_widget( deleteButton(self, self.outerScreen, fileObj, text="Delete") )
-        self.ids.infoGrid.add_widget( decButton(self, self.outerScreen, fileObj, text=self.getDecButtonText()) )
+        self.ids.infoGrid.add_widget( deleteButton(self, self.outerScreen, self.fileObj, text="Delete") )
+        self.ids.infoGrid.add_widget( decButton(self, self.outerScreen, self.fileObj, text=self.getDecButtonText()) )
 
     def on_dismiss(self):
         if os.path.exists(self.fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail
@@ -335,6 +340,11 @@ class fileInfoPop(Popup):
 
         self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="Size:") )
         self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text=self.fileObj.size) )
+
+        if self.inRec and not self.fileObj.isDir:
+            self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text="Date deleted:") )
+            self.ids.infoGrid.add_widget( self.outerScreen.infoLabel(text=self.recData.dateDeleted) )
+            
     
     def getDecButtonText(self):
         if self.fileObj.isDir:
