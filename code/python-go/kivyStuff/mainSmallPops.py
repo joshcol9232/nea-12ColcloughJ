@@ -310,6 +310,10 @@ class fileInfoPop(Popup):
         super(fileInfoPop, self).__init__(**kwargs)
         self.recData = None
 
+        self.ids.infoGrid.bind(minimum_height=self.ids.infoGrid.setter("height"))
+
+        print(self.ids.scrollV.size, self.ids.scrollV.pos)
+
         self.inRec = self.outerScreen.recycleFolder in self.fileObj.hexPath   # Bool value of if the file is in recycling
         if self.inRec and not self.fileObj.isDir:
             self.recData, _ = self.outerScreen.getRecycleData(self.fileObj)
@@ -322,8 +326,8 @@ class fileInfoPop(Popup):
 
         self.loadInfo()
 
-        self.ids.infoGrid.add_widget( deleteButton(self, self.outerScreen, self.fileObj, text="Delete") )
-        self.ids.infoGrid.add_widget( decButton(self, self.outerScreen, self.fileObj, text=self.getDecButtonText()) )
+        self.ids.mainBtnsBox.add_widget( deleteButton(self, self.outerScreen, self.fileObj, text="Delete") )
+        self.ids.mainBtnsBox.add_widget( decButton(self, self.outerScreen, self.fileObj, text=self.getDecButtonText()) )
 
     def on_dismiss(self):
         if os.path.exists(self.fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail

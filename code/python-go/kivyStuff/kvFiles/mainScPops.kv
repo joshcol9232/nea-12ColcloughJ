@@ -94,13 +94,24 @@
 	size_hint: .7, .4
 
     BoxLayout:
-		id: fileInfoBox
-		orientation: "horizontal"
-		size_hint: 1, 1
+        id: fileInfoBox
+        orientation: "horizontal"
+        size_hint: 1, 1
 
-		ScrollView:
-			GridLayout:
-                id: infoGrid
-				cols: 2
-				size_hint_y: None
-				row_default_height: 40
+        BoxLayout:     # For separating delete button from scroll view
+            orientation: "vertical"
+
+            ScrollView:
+                id: scrollV
+                size_hint: 1, 0.8
+
+                GridLayout:
+                    id: infoGrid
+                    cols: 2
+                    size_hint_y: None
+                    row_default_height: 40
+                    row_force_default: True
+
+            BoxLayout:
+                id: mainBtnsBox
+                size_hint: 1, 0.2
