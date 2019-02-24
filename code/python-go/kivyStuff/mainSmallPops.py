@@ -14,7 +14,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 
 from configOperations import dirInputValid
-from mainBtns import deleteButton, decButton
+from mainBtns import deleteButton, decButton, restoreButton
 
 class encDecPop(Popup): #For single files
 
@@ -327,7 +327,12 @@ class fileInfoPop(Popup):
         self.loadInfo()
 
         self.ids.mainBtnsBox.add_widget( deleteButton(self, self.outerScreen, self.fileObj, text="Delete") )
-        self.ids.mainBtnsBox.add_widget( decButton(self, self.outerScreen, self.fileObj, text=self.getDecButtonText()) )
+
+        if self.inRec:
+            self.ids.mainBtnsBox.add_widget( restoreButton(self, self.outerScreen, self.fileObj) )
+        else:
+            self.ids.mainBtnsBox.add_widget( decButton(self, self.outerScreen, self.fileObj, text=self.getDecButtonText()) )
+
 
     def on_dismiss(self):
         if os.path.exists(self.fileObj.thumbDir):  # Remove temporary thumnail directory once done with thumbnail

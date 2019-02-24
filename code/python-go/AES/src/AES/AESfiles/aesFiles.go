@@ -38,7 +38,7 @@ func workerEnc(jobs <-chan work, results chan<- work, expandedKey *[176]byte) { 
   }
 }
 
-func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte, fileSize int) {
+func workerDec(jobs <-chan work, results chan<- work, expandedKey *[176]byte) {
   for job := range jobs {
     for i := 0; i < len(job.buff); i += 16 {
       AES.Decrypt(job.buff[i:i+16], expandedKey)
@@ -168,7 +168,7 @@ func DecryptFile(expandedKey *[176]byte, f, w string) {
   results := make(chan work, workerNum)  // Each has a buffer of length workerNum
 
   for i := 0; i < workerNum; i++ {
-    go workerDec(jobs, results, expandedKey, fileSize)
+    go workerDec(jobs, results, expandedKey)
   }
 
   if fileSize < bufferSize {

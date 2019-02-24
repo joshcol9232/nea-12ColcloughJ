@@ -85,8 +85,17 @@ class decButton(Button):
 class deleteButton(decButton):
     
     def on_release(self):
-       self.outerScreen.deleteFile(self.fileObj)
-       self.pop.dismiss()
+        self.outerScreen.deleteFile(self.fileObj)
+        self.pop.dismiss()
+
+class restoreButton(decButton):
+
+    def __init__(self, *args, **kwargs):
+        super(restoreButton, self).__init__(*args, **kwargs)   # args are any regular arguments, kwargs are keyword arguments, like size_hint=(1, 0.5)
+        self.text = "Restore"
+
+    def on_release(self):
+        return self.outerScreen.recoverFromRecycling(self.fileObj)
 
 class emptyRecyclingButton(Button):
 

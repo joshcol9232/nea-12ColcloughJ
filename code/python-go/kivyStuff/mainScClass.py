@@ -448,11 +448,15 @@ class MainScreen(Screen):
 
             else:
                 data, dataPath = self.getRecycleData(fileObj)
-                os.remove(dataPath)
-                self.removeParentFoldersIfEmpty(dataPath, self.recycleDataFolder)
 
+                if dataPath != "":
+                    os.remove(dataPath)
+                    self.removeParentFoldersIfEmpty(dataPath, self.recycleDataFolder)
+                
                 if os.path.exists(data.originalLoc):
                     os.remove(data.originalLoc)
+                else:
+                    os.makedirs(data.originalLoc.split(self.fileSep)[:-1])
 
                 move(fileObj.hexPath, data.originalLoc)
                 self.currentDir = self.removeParentFoldersIfEmpty(fileObj.hexPath, self.recycleFolder)
@@ -465,7 +469,7 @@ class MainScreen(Screen):
         if os.path.exists(dataPath):
             return pickleLoad(open(dataPath, "rb")), dataPath
         else:
-            return recycleInfo.RecycleData(self.path, "Not known.")
+            return recycleInfo.RecycleData(self.path, "Not known."), ""
 
     def removeParentFoldersIfEmpty(self, path, lastStop):   # lastStop is where to stop searching
         if path[-1] == self.fileSep:
