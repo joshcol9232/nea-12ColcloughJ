@@ -188,7 +188,6 @@ class btTransferPop(encDecPop):
         # File data is sent right afterwards, ending with ~!!ENDF!
         # Overall, it is sent as: !NAME!#!!<name here>!!~<datahere>~!!ENDF!
         self.outerScreen.clientSock.send("!NAME!{}~~!~~".format(fileObj.name))
-        #print("!NAME!{}~~!~~".format(fileObj.name), "Sent")
 
         newLoc = self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep+fileObj.name
         if not os.path.isdir(self.outerScreen.osTemp+"FileMate"+self.outerScreen.fileSep):
@@ -311,8 +310,6 @@ class fileInfoPop(Popup):
         self.recData = None
 
         self.ids.infoGrid.bind(minimum_height=self.ids.infoGrid.setter("height"))
-
-        print(self.ids.scrollV.size, self.ids.scrollV.pos)
 
         self.inRec = self.outerScreen.recycleFolder in self.fileObj.hexPath   # Bool value of if the file is in recycling
         if self.inRec and not self.fileObj.isDir:

@@ -77,6 +77,7 @@ class decButton(Button):
         self.fileObj = fileObj
         self.pop = parentPop
         super(decButton, self).__init__(**kwargs)
+        self.height = 30
 
     def on_release(self):
         self.outerScreen.decryptFileToLoc(self.fileObj)
@@ -95,20 +96,22 @@ class restoreButton(decButton):
         self.text = "Restore"
 
     def on_release(self):
-        return self.outerScreen.recoverFromRecycling(self.fileObj)
+        self.outerScreen.recoverFromRecycling(self.fileObj)
+        self.outerScreen.refreshFiles()
+        self.pop.dismiss()
 
 class emptyRecyclingButton(Button):
 
-	def __init__(self, mainScreen, **kwargs):
-		super(Button, self).__init__(**kwargs)
-		self.outerScreen = mainScreen
-	
-	def emptyRecycling(self):
-		for i in listdir(self.outerScreen.recycleFolder):
-			p = self.outerScreen.recycleFolder+i
-			if osPath.isdir(p):
-				rmtree(p)
-			else:
-				osRemove(p)
+    def __init__(self, mainScreen, **kwargs):
+        super(Button, self).__init__(**kwargs)
+        self.outerScreen = mainScreen
+    
+    def emptyRecycling(self):
+        for i in listdir(self.outerScreen.recycleFolder):
+            p = self.outerScreen.recycleFolder+i
+            if osPath.isdir(p):
+                rmtree(p)
+            else:
+                osRemove(p)
 
-		self.outerScreen.refreshFiles()
+        self.outerScreen.refreshFiles()
