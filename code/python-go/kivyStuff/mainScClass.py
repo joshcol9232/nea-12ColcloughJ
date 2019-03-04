@@ -141,80 +141,76 @@ class MainScreen(Screen):
         fileSelectCommand = [33, 70, 73, 76, 69, 83, 69, 76, 69, 67, 84, 33]  # !FILESELECT!
         endHeader =  [126, 33, 69, 78, 68, 83, 69, 76, 69, 67, 84, 33]        # ~!ENDSELECT!
 
-        try:
-            while len(data) > -1:
-                data = self.clientSock.recv(1024) # Recieve 1kb of data
-                print("[BT]: Received data.")
-                if not self.validBTKey:                 # If the key is not valid yet, BT server has to wait for key
-                    numbers.append(str(data, "utf-8"))
-                    if b"~" in data:    # End of key message
-                        append = False
-                        tempNums = "".join(numbers)
-                        tempNums = tempNums.replace("#", "")
-                        tempNums = tempNums.replace("~", "")
-                        if self.manager.get_screen("Login").checkKey(tempNums):   # Check the key in login.
-                            numbers = []
-                            self.clientSock.send("1")
-                            print("[BT]: Send true.")
-                            self.validBTKey = True
-                            [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])  # Set so that file list can be sent
-                            self.sendFileList(self.getListForSend(self.path))
-                            mainthread(self.changeToMain())   # Exit thread and change screen to main.
-                        else:
-                            numbers = []
-                            self.clientSock.send("0")
-                            print("[BT]: Send false.")
-                            self.validBTKey = False
+        while len(data) > -1:
+            data = self.clientSock.recv(1024) # Recieve 1kb of data
+            print("[BT]: Received data.")
+            if not self.validBTKey:                 # If the key is not valid yet, BT server has to wait for key
+                numbers.append(str(data, "utf-8"))
+                if b"~" in data:    # End of key message
+                    append = False
+                    tempNums = "".join(numbers)
+                    tempNums = tempNums.replace("#", "")
+                    tempNums = tempNums.replace("~", "")
+                    if self.manager.get_screen("Login").checkKey(tempNums):   # Check the key in login.
+                        numbers = []
+                        self.clientSock.send("1")
+                        print("[BT]: Send true.")
+                        self.validBTKey = True
+                        [self.recycleName, self.thumbsName] = self.encListString([".$recycling", ".$thumbs"])  # Set so that file list can be sent
+                        self.sendFileList(self.getListForSend(self.path))
+                        mainthread(self.changeToMain())   # Exit thread and change screen to main.
+                    else:
+                        numbers = []
+                        self.clientSock.send("0")
+                        print("[BT]: Send false.")
+                        self.validBTKey = False
 
-                else:
-                    for i in data:
-                        buff.append(i)
+            else:
+                for i in data:
+                    buff.append(i)
 
-                    if buff[:6] == backCommand:   # Buffer is reset every time a header is found
-                        pathBack = self.getPathBack(self.lastPathSent)
-                        if (not pathBack) or (pathBack.replace(self.path, "") == pathBack):    # If you can't go further back (if pathBack has less than path, then remove returns the original string).
-                            print("[BT]: Can't go further back.")
-                            self.clientSock.send("!ENDOFTREE!")
-                        else:
-                            self.sendFileList(self.getListForSend(pathBack))
+                if buff[:6] == backCommand:   # Buffer is reset every time a header is found
+                    pathBack = self.getPathBack(self.lastPathSent)
+                    if (not pathBack) or (pathBack.replace(self.path, "") == pathBack):    # If you can't go further back (if pathBack has less than path, then remove returns the original string).
+                        print("[BT]: Can't go further back.")
+                        self.clientSock.send("!ENDOFTREE!")
+                    else:
+                        self.sendFileList(self.getListForSend(pathBack))
+                    buff = []
+
+                elif buff[:12] == fileSelectCommand:  # If the command is fileSelect
+                    commandParams = buff[12:]         # Get parameters (buffer will not be reset)
+                    if commandParams[-12:] == endHeader:  # If end of the buffer is the endHeader, then proceed.
+                        fileWantedList = commandParams[:-12]
+                        fileWanted = ""
+                        for letter in fileWantedList:
+                            fileWanted += chr(letter)
+
+                        print("[BT]:", fileWanted, "fileWanted")
                         buff = []
+                        filesInPath = self.List(self.lastPathSent)  # Get list of files at directory requested.
 
-                    elif buff[:12] == fileSelectCommand:  # If the command is fileSelect
-                        commandParams = buff[12:]         # Get parameters (buffer will not be reset)
-                        if commandParams[-12:] == endHeader:  # If end of the buffer is the endHeader, then proceed.
-                            fileWantedList = commandParams[:-12]
-                            fileWanted = ""
-                            for letter in fileWantedList:
-                                fileWanted += chr(letter)
+                        f = 0
+                        fileObj = None
+                        while (f < len(filesInPath)) and (fileObj == None): # Searches for the file in the path
+                            if filesInPath[f].name == fileWanted:
+                                fileObj = filesInPath[f]
+                            f += 1
 
-                            print("[BT]:", fileWanted, "fileWanted")
-                            buff = []
-                            filesInPath = self.List(self.lastPathSent)  # Get list of files at directory requested.
-
-                            f = 0
-                            fileObj = None
-                            while (f < len(filesInPath)) and (fileObj == None): # Searches for the file in the path
-                                if filesInPath[f].name == fileWanted:
-                                    fileObj = filesInPath[f]
-                                f += 1
-
-                            if fileObj != None:    # If the file was found, then send it
-                                if fileObj.isDir:  # If it was a directory then send the list of files in that directory.
-                                    self.sendFileList(self.getListForSend(fileObj.hexPath))
-                                else:
-                                    self.makeSendFile(fileObj) # Otherwise send the file.
-
+                        if fileObj != None:    # If the file was found, then send it
+                            if fileObj.isDir:  # If it was a directory then send the list of files in that directory.
+                                self.sendFileList(self.getListForSend(fileObj.hexPath))
                             else:
-                                print("[BT]: Couldn't find that file :/")
-                                self.clientSock.send("!NOTFOUND!")
+                                self.makeSendFile(fileObj) # Otherwise send the file.
+
+                        else:
+                            print("[BT]: Couldn't find that file :/")
+                            self.clientSock.send("!NOTFOUND!")
 
 
-                    elif len(buff) > 12: # Clear buffer and wait for next command.
-                        buff = []
+                elif len(buff) > 12: # Clear buffer and wait for next command.
+                    buff = []
 
-
-        except IOError as e:
-            print(e)        # Will be caused when app on mobile closes.
 
         print("[BT]: Closed.")
 
@@ -443,20 +439,21 @@ class MainScreen(Screen):
                 fl = self.List(fileObj.hexPath)
                 for f in fl:
                     self.recoverFromRecycling(f)
-                rmtree(fileObj.hexPath)
                 self.currentDir = self.removeParentFoldersIfEmpty(fileObj.hexPath, self.recycleFolder)
 
             else:
                 data, dataPath = self.getRecycleData(fileObj)
 
-                if dataPath != "":
+                if dataPath != "":      # Remove the recycle data object.
                     os.remove(dataPath)
                     self.removeParentFoldersIfEmpty(dataPath, self.recycleDataFolder)
                 
                 if os.path.exists(data.originalLoc):
                     os.remove(data.originalLoc)
                 else:
-                    os.makedirs(data.originalLoc.split(self.fileSep)[:-1])
+                    folder = self.fileSep.join(data.originalLoc.split(self.fileSep)[:-1])
+                    if not os.path.exists(folder):
+                        os.makedirs(folder)
 
                 move(fileObj.hexPath, data.originalLoc)
                 self.currentDir = self.removeParentFoldersIfEmpty(fileObj.hexPath, self.recycleFolder)
@@ -478,7 +475,7 @@ class MainScreen(Screen):
         parentFolder = self.fileSep.join(path.split(self.fileSep)[:-1])+self.fileSep
         dir = self.currentDir
         last = path
-        while (self.checkFolderIsEmpty(parentFolder)) and (lastStop in parentFolder):
+        while (os.path.exists(parentFolder)) and (self.checkFolderIsEmpty(parentFolder)) and (lastStop in parentFolder):
             last = parentFolder
             parentFolder = self.fileSep.join(parentFolder.split(self.fileSep)[:-2])+self.fileSep
             dir = parentFolder
@@ -489,22 +486,22 @@ class MainScreen(Screen):
         return dir
 
     def checkFolderIsEmpty(self, path, empty=True):   # Checks if folder is empty. if folders are found, search those too.
-    	if not empty:
-    		return False
+        if not empty:
+            return False
 
-    	fl = os.listdir(path)
-    	if len(fl) == 0:
-    		return True
-    	else:
-    		for i in fl:
-    			if os.path.isdir(path+i+self.fileSep):
-    				empty = self.checkFolderIsEmpty(path+i+self.fileSep, empty)
-    				if not empty:
-    					return False    # Don't want to break loop if it is still not found
-    			else:
-    				return False
+        fl = os.listdir(path)
+        if len(fl) == 0:
+            return True
+        else:
+            for i in fl:
+                if os.path.isdir(path+i+self.fileSep):
+                    empty = self.checkFolderIsEmpty(path+i+self.fileSep, empty)
+                    if not empty:
+                        return False    # Don't want to break loop if it is still not found
+                else:
+                    return False
 
-    		return True
+            return True
 
     def deleteFile(self, fileObj):
         if os.path.exists(fileObj.hexPath): #Checks file actually exists before trying to delete it.
