@@ -76,7 +76,7 @@ The data subject should be allowed to ask to receive the data, and they should a
 Tells the controllers of the data to only use the data absolutely necessary for the purposes they need it for. For example, an advertisement company might use your cookies to target ads to you, however they can’t then use your location unless they are also using that to target ads. Basically don’t take more than you need.
 
 For my project, as the user is the data controller, then they already have the right to access, the right to be forgotten and data portability. For the breach notification, they will probably know it has happened as someone needs to have physical access to where the data is stored to breach it.
-However, with privacy by design, I will not be using any of the user’s data for advertising, or any other agenda. I will make this clear to the user when they first use the program. Also the security will be
+However, with privacy by design, I will not be using any of the user’s data for advertising, or any other agenda, as I do not store any data about the user externally, the only data being stored is on their machine, and is only stored if necessary for the functionality of the program.
 
 Another issue could be that if a file is deleted, the contents of the file might still remain. To fully remove the file I may have to use a one way function that ruins the data before deletion so that it cannot be accessed after it is deleted.
 
@@ -6990,7 +6990,19 @@ The key for the different types of data (where applicable) will be:
 
 <div style="page-break-after: always;"></div> 
 
+### Failed tests:
 
+Test 7 failed, however it was was not a complete failure, as the file was still recovered, just to the wrong location. I will be fixing it in the next sub-section.
+
+Test 24.7 failed, and was an erroneous test. This test scenario will not happen in real world use very often, and can be fixed by simply logging out, and logging back in again with the correct key. I may fix this in the next section.
+
+
+### Fixing failed tests:
+
+
+
+
+<div style="page-break-after: always;"></div> 
 
 # Evaluation
 
@@ -7013,7 +7025,7 @@ In this section I will go through each of my objectives and comment on their com
 
    b. Display the files currently stored in the vault, along with the file extension and the size of the file.
 
-   ***Works fine. The file extension is at the end of the file name anyway. The size is read from the file in the vault.***
+   ***Works fine. The file extension is at the end of the file name anyway. The size is read from the encrypted file in the vault.***
 
    c. Display the storage space remaining on the storage device the program is running on.
 
@@ -7033,7 +7045,7 @@ In this section I will go through each of my objectives and comment on their com
 
    ​  i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
-      ***Didn't end up adding this, as it would require a lot more code and time for a feature that very few people would probably use.***
+      ***128 bit was added, meeting the requirement. 256 bit was an optional feature to take it beyond A-Level standard, but was not included due to time constraints and due to the amount of extra code for a feature that would probably not be used very often.***
 
    ​  ii. Change the location of the vault.
 
@@ -7069,7 +7081,7 @@ In this section I will go through each of my objectives and comment on their com
 
    j. Let the user preview images without opening them (using thumbnails or an information screen).
 
-   ***Works well, as AES decrypts the image quickly, then it is displayed in the information screen. I did not add thumbnails as I thought that it would probably drastically increase the loading time when opening folders containing images.***
+   ***Works well, as AES decrypts the image quickly, then it is displayed in the information screen. I did not add thumbnails as I thought that it would probably drastically increase the loading time when opening folders containing a large number of images.***
 
    k. Be resizeable, and all items on the screen should look ok.
 
@@ -7108,7 +7120,7 @@ In this section I will go through each of my objectives and comment on their com
 
    a. Be easy to use.
 
-   ***The GUI could be improved on the mobile side, as the flow of the program is quite weird, going from the device screen, into the pad screen (this part is fine), and then into a blank screen with only one option. This last screen is a good idea if you have multiple options, however I only supply one, so it is a bit redundant. If I were to continue working on this project I would leave it in for future functionality. However, other than this each screen works well individually. The pad screen has large buttons with quite large font. The main screen is basic, but functional.***
+   ***The GUI could be improved on the mobile side, as the flow of the program is quite weird, going from the device screen, into the pad screen (this part is fine), and then into a blank screen with only one option (main screen). This main screen is a good idea if you have multiple options, however I only supply one, so it is a bit redundant. If I were to continue working on this project I would leave it in for future functionality. However, other than this each screen works well individually. The pad screen has large buttons with quite large font. The file browsing screen is basic, but functional.***
 
    b. Connect via Bluetooth to the PC.
 
@@ -7116,7 +7128,7 @@ In this section I will go through each of my objectives and comment on their com
 
    c. Allow the user to input their pin code easily.
 
-   ***The Pad Screen is easy to use.***
+   ***The pad screen is easy to use.***
 
    d. Tell the user if the pin code is invalid or not.
 
