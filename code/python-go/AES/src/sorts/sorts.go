@@ -1,7 +1,6 @@
 package sorts
 
 import (
-  "fmt"
   "os"
   "strconv"
 )
@@ -169,8 +168,4 @@ func compareStrings(string1, string2 string) int {
   } else {
     panic("Strings are the exact same!")
   }
-}
-
-func main() {
-  fmt.Println("a")
 }

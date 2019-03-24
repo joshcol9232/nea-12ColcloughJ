@@ -3580,10 +3580,6 @@ func compareStrings(string1, string2 string) int {
     panic("Strings are the exact same!")
   }
 }
-
-func main() {
-  fmt.Println("a")
-}
 ```
 
 The `UseQuickSort____` functions are used for formatting input from `stdin` that Python has given us.
@@ -6999,12 +6995,98 @@ Test 24.7 failed, and was an erroneous test. This test scenario will not happen 
 
 ### Fixing failed tests:
 
+#### Test 7
+
+To fix test 7, I used a metadata folder (named .$metadata) in the recycling bin to hold information on each of the files in the recycling bin.
+
+When a file is deleted, a struct (Python class with no methods) is made containing two attributes:
+
+- The original path of the file.
+- The date the file was deleted.
+
+I wanted the struct to be as small as possible to reduce the disk usage of metadata files, and so it only contains these two items.
+
+This struct is then serialised using pickle (a Python module), and is saved to a file in the aforementioned metadata folder. This file is stored in a path in the metadata folder that resembles the structure of where that file was in the vault. For example, if I deleted a file in (where "/" is the root path of the vault) /folder1/folder2/file, then the metadata for that deleted file would be in /.$recycling/.$metadata/folder1/folder2/file, and the deleted file would be in /.$recycling/folder1/folder2/file respectively. I think this is a good idea because when files from the same parent folder (or below) are deleted, they are still grouped in the same directory structure so that they can be easily found and recovered. Otherwise, the recycling bin becomes cluttered with files that you don't know where they came from or what files they are related to. Also, it prevents two files/folders with the same names since each item in the directory needed to have unique names in the first place.
+
+The struct is called RecycleData and is in the file `code/python-go/recycleInfo.py`, which also contains a function to pickle (serialise) the struct:
+
+```python
+from os import path
+from os import makedirs
+from pickle import dump as pickleDump
+
+class RecycleData:
+
+    def __init__(self, originalLoc, dateDeleted):
+       self.originalLoc = originalLoc
+       self.dateDeleted = dateDeleted
+
+
+def pickleRecData(dataObj, location, folder):
+    if not path.exists(folder): # If the path doesn't exist, make it
+        makedirs(folder)
+
+    fo = open(location, "wb")   # Open the file for writing in binary
+    pickleDump(dataObj, fo)     # Serialise the object into the file
+    fo.close()                  # Close the file
+```
+
+The size of each of these metadata files are only about 100-200 bytes per file, depending on the size of each variable.
+
+When a file is recovered, the file's metadata is recovered, and the original path of the file is used to recover the file to where it belongs. Once the file is moved, the file metadata can be deleted, and the folders above where the file was recovered from are checked in case the folders are empty, and deletes above folders if they are empty (up to the root path of the vault).
 
 
 
 <div style="page-break-after: always;"></div> 
 
 # Evaluation
+
+
+## User Feedback
+
+I sent a questionnaire + my program to one of my classmates with a couple of questions, and here is the response:
+
+
+**Q1: How easy was the program to use (out of 10)?**
+
+6/10. Some of the button icons are a bit vague and I didn’t know what they did until I pressed them (which could sometimes be a bad idea when you’re trying to encrypt and decrypt important files). Adding some text beneath the symbols or a tooltip when hovering could be a useful addition.
+
+*I agree. I think I was a bit too minimalist with the button designs in an attempt to avoid clutter, but went a little too far the other way so usability suffered.*
+
+**Q2: Did you find that the information pop-up had enough information?**
+
+Compared to something like the windows explorer, it doesn’t have a lot of information, but it’s not like it needs such specific details like ‘Rating’ or ‘Comments’. Maybe adding a creation date or resolution (for image files) would be good.
+
+*I agree again, and it would be quite easy to add that information.*
+
+**Q3: How easy was it to add, delete and recover files (out of 10)?**
+
+9/10. The delete and recover options for each file are kept in the same place which makes it easier to quickly manipulate a file. The file adding was easy enough (apart from the vague-ish button symbol).
+
+**Q4: How fast was the encryption/decryption? How long did it take, and do you feel this was too long?**
+
+When I encrypted a 1.3GB folder of images, it fluctuated significantly - between 3MB/s to around 25MB/s - on average it seemed to stay around 15 to 25MB/s. It took about a minute and a half to encrypt which I think is a very decent time.
+
+*The fluctuation was probably due to a high number of small files, which results in more time spent changing in-between files. This is expected behaviour.*
+
+**Q5: How useful was the search function (out of 10)?**
+
+3/10 – It did find the file I was looking for, but the location didn’t seem to display correctly (it was in a subfolder and didn’t display the path to this folder from the root vault directory, only ‘…<filename>.jpg’). I also had duplicates of the same file, but it only showed me one of the files (rather than both) in the search results.
+
+*I did not want to display the location of the file directly on the button, but instead have it in the more information pop-up. I believe he may have been talking about when you have two conflicting search results, which is a bug that should be relatively easy to fix.*
+
+**Q6: How good were the results when using the search function (out of 10)?**
+
+5/10 – As mentioned above, it didn’t show me the duplicate file when I searched for the other file. Different files which matched the search still displayed, though (but their duplicates didn’t show either).
+
+**Q7: Anything else I should improve?**
+
+Multi-file decryption and deletion (with checkboxes or something similar).
+
+*This is quite a good idea.*
+
+
+---
 
 
 ## Objectives
@@ -7021,7 +7103,7 @@ In this section I will go through each of my objectives and comment on their com
 
    ​  ii. Have simple options.
 
-    ***I feel that my program is quite easy to use due to the layout, the important buttons are the largest, and the file browser fills most of the screen, which is the most important part of the main screen. The settings screen is also quite easy to use, as the switches for the True/False configuration values are very straiht forward to change, and it is clear what each setting changes.***
+    ***I feel the layout of my program makes it quite easy to use, as the important buttons are the largest, and the file browser fills most of the screen, which is the most important part of the main screen. However, some graphics for the buttons are probably a bit too vague (such as the add file button), as I focussed so much on reducing clutter that it's hard to know what buttons do what. The settings screen is quite easy to use, as the switches for the True/False configuration values are very straight forward to change, and it is clear what each setting changes.***
 
    b. Display the files currently stored in the vault, along with the file extension and the size of the file.
 
@@ -7074,6 +7156,8 @@ In this section I will go through each of my objectives and comment on their com
   ***All tested to be working.***
 
    h. Look relatively good without being bloated.
+
+   ***Low on resource usage when idle (see black box test number 27), and looks pretty nice in my opinion.***
 
    i. Allow the user to easily read file names, and easily tell folders and files apart.
 
@@ -7191,8 +7275,6 @@ In this section I will go through each of my objectives and comment on their com
   - Move the file to another location in the vault.
   - Copy the file to another location in the vault.
   - Delete the file (move to recycling).
-
-- Improve the recycling bin so that it recovers files to their original location using a pickled class (serialised object), that contains information about each of the files in the recycling bin.
 
 - Change the Bluetooth protocol I made to use serialised objects, to reduce the likelyhood that a pattern used in the protocol will appear in the file, and to also send more data more reliably, such as file metadata.
 

@@ -10,9 +10,9 @@ class RecycleData:
 
 
 def pickleRecData(dataObj, location, folder):
-    if not path.exists(folder):
+    if not path.exists(folder):		# If the path doesn't exist, make it
         makedirs(folder)
 
-    fo = open(location, "wb")
-    pickleDump(dataObj, fo)
-    fo.close()
+    fo = open(location, "wb")		# Open the file for writing in binary
+    pickleDump(dataObj, fo)			# Serialise the object into the file
+    fo.close()						# Close the file

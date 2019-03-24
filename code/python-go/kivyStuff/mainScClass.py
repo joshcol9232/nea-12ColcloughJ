@@ -486,7 +486,7 @@ class MainScreen(Screen):
         return dir
 
     def checkFolderIsEmpty(self, path, empty=True):   # Checks if folder is empty. if folders are found, search those too.
-        if not empty:
+        if not empty or path == self.path:
             return False
 
         fl = os.listdir(path)
