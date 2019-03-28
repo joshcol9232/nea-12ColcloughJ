@@ -199,9 +199,9 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
    a. Be easy to use:
 
-   ​	i. Logically laid out.
+   -------i. Logically laid out.
 
-   ​	ii. Have simple options.
+   -------ii. Have simple options.
 
    b. Display the files currently stored in the vault, along with the file extension and the size of the file.
 
@@ -209,37 +209,37 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
    d. The user should be able to easily encrypt and decrypt files:
 
-   ​	i. Using easy to access buttons in the UI.
+   -------i. Using easy to access buttons in the UI.
 
-   ​	ii. Using drag and drop from outside of the program.
+   -------ii. Using drag and drop from outside of the program.
 
-   ​	iii. Decrypt to a directory specified.
+   -------iii. Decrypt to a directory specified.
 
    e. Have an options menu, including the options to:
 
-   ​	i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
+   -------i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
-   ​	ii. Change the location of the vault.
+   -------ii. Change the location of the vault.
 
-   ​	iii. Set the default login method (Bluetooth or no Bluetooth).
+   -------iii. Set the default login method (Bluetooth or no Bluetooth).
 
-   ​	iiii. Change if the search in the file browser is recursive or not.
+   -------iiii. Change if the search in the file browser is recursive or not.
 
    f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, delete, etc).
 
    g. Have a secure login screen.
 
-   ​	i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
+   -------i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
-   ​	ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
+   -------ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
-   ​	iii. Validate all input.
+   -------iii. Validate all input.
 
    h. Look relatively good without being bloated.
 
-   ​	i. Don't be costly on system resources when you are idle.
+   -------i. Don't be costly on system resources when you are idle.
 
-   ​	ii. Don't overdo animations.
+   -------ii. Don't overdo animations.
 
    i. Allow the user to easily read file names, and easily tell folders and files apart.
 
@@ -253,21 +253,21 @@ SHA256 and SHA224 have taken the longest, at almost identical rates. BLAKE2s is 
 
    n. Give the user statistics during files being enc/decrypted, including:
 
-   ​	i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
+   -------i. What percentage of the file/folder has been completed. (Visual progress bar to show this too)
 
-   ​	ii. The current speed of enc/decryption.
+   -------ii. The current speed of enc/decryption.
 
-   ​	iii. An estimate of how long it should take to finish enc/decryption.
+   -------iii. An estimate of how long it should take to finish enc/decryption.
 
-   ​	iv. If part of a folder then show the progress of the current file.
+   -------iv. If part of a folder then show the progress of the current file.
 
-  o. Allow the user to sort the files by name or by size.
+   o. Allow the user to sort the files by name or by size.
 
-  p. Allow the user to configure default settings using a configuration file that is easy to use.
+   p. Allow the user to configure default settings using a configuration file that is easy to use.
 
-  q. Allow the user to search for file names in the vault.
+   q. Allow the user to search for file names in the vault.
 
-  r. Not break when doing arbitrary tasks such as browsing the files.
+   r. Not break when doing arbitrary tasks such as browsing the files.
 
 
 2. App should:
@@ -7057,7 +7057,7 @@ I added a label to the `<MainScreen>` class in `code/python-go/kivyStuff/kvFiles
 
 `code/python-go/kivyStuff/kvFiles/mainSc.kv`
 
-```css
+```cs
     Label:
       canvas.before:
         Color:
@@ -7083,7 +7083,7 @@ Then, to update it I had to add some code to `code/python-go/kivyStuff/mainScCla
 ```python
   class MainScreen(Screen):
 
-    --- Other stuff
+    # --- Other stuff
 
     def updateRelPathReadout(self):
         self.ids.currDir.text = self.getRelPath()
@@ -7106,7 +7106,7 @@ I sent a questionnaire + my program to one of my classmates with a couple of que
 
 6/10. Some of the button icons are a bit vague and I didn’t know what they did until I pressed them (which could sometimes be a bad idea when you’re trying to encrypt and decrypt important files). Adding some text beneath the symbols or a tooltip when hovering could be a useful addition.
 
-*I agree. I think I was a bit too minimalist with the button designs in an attempt to avoid clutter, but went a little too far the other way so usability suffered.*
+*I agree. I think I was a bit too minimalist with the button designs in an attempt to avoid clutter, but went a little too far the other way so usability suffered. However, I am sure users would soon become used to the layout.*
 
 **Q2: Did you find that the information pop-up had enough information?**
 
@@ -7122,7 +7122,7 @@ Compared to something like the windows explorer, it doesn’t have a lot of info
 
 When I encrypted a 1.3GB folder of images, it fluctuated significantly - between 3MB/s to around 25MB/s - on average it seemed to stay around 15 to 25MB/s. It took about a minute and a half to encrypt which I think is a very decent time.
 
-*The fluctuation was probably due to a high number of small files, which results in more time spent changing in-between files. This is expected behaviour.*
+*The fluctuation was probably due to a high number of small files, which results in more time spent changing in-between files.*
 
 **Q5: How useful was the search function (out of 10)?**
 
@@ -7153,9 +7153,9 @@ In this section I will go through each of my objectives and comment on their com
 
    a. Be easy to use:
 
-     i. Logically laid out.
+   ------i. Logically laid out.
 
-     ii. Have simple options.
+   ------ii. Have simple options.
 
     ***I feel the layout of my program makes it quite easy to use, as the important buttons are the largest, and the file browser fills most of the screen, which is the most important part of the main screen. However, some graphics for the buttons are probably a bit too vague (such as the add file button), as I focussed so much on reducing clutter that it's hard to know what buttons do what. The settings screen is quite easy to use, as the switches for the True/False configuration values are very straight forward to change, and it is clear what each setting changes.***
 
@@ -7169,31 +7169,31 @@ In this section I will go through each of my objectives and comment on their com
 
    d. The user should be able to easily encrypt and decrypt files:
 
-     i. Using easy to access buttons in the UI.
+   ------i. Using easy to access buttons in the UI.
 
-     ii. Using drag and drop from outside of the program.
+   ------ii. Using drag and drop from outside of the program.
 
-    iii. Decrypt to a directory specified.
+   ------iii. Decrypt to a directory specified.
 
     ***All of the above work, as long as you have drag+drop on your machine.***
 
    e. Have an options menu, including the options to:
 
-     i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
+   ------i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
-      ***128 bit was added, meeting the requirement. 256 bit was an optional feature to take it beyond A-Level standard, but was not included due to time constraints and due to the amount of extra code for a feature that would probably not be used very often.***
+   ​	***128 bit was added, meeting the requirement. 256 bit was an optional feature to take it beyond A-Level standard, but was not included due to time constraints and due to the amount of extra code for a feature that would probably not be used very often.***
 
-     ii. Change the location of the vault.
+   ------ii. Change the location of the vault.
 
-      ***Can be changed relative to the program, or as an absolute path.***
+    	***Can be changed relative to the program, or as an absolute path.***
 
-     iii. Set the default login method (Bluetooth or no Bluetooth).
+    ------iii. Set the default login method (Bluetooth or no Bluetooth).
 
-     ***Also done using a switch in the settings screen.***
+     	***Also done using a switch in the settings screen.***
 
-     iiii. Change if the search in the file browser is recursive or not.
+    ------iv. Change if the search in the file browser is recursive or not.
 
-     ***Done using a switch in the settings screen.***
+     	***Done using a switch in the settings screen.***
 
    f. Make it easy to manage the files in the vault (move to other folders in the vault, rename, delete, etc).
 
@@ -7201,13 +7201,13 @@ In this section I will go through each of my objectives and comment on their com
 
    g. Have a secure login screen.
 
-     i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
+   ------i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
-     ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
+   ------ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
-     iii. Validate all input.
+   ------iii. Validate all input.
 
-  ***All tested to be working.***
+   ***All tested to be working.***
 
    h. Look relatively good without being bloated.
 
@@ -7235,21 +7235,21 @@ In this section I will go through each of my objectives and comment on their com
 
    n. Give the user statistics during files being enc/decrypted, including:
 
-  ***Works well. I cover how this works in the Technical Solution, and it is tested to give accurate readings in Testing. Gives the user a nice readable output, displaying all useful information.***
+   ***Works well. I cover how this works in the Technical Solution, and it is tested to give accurate readings in Testing. Gives the user a nice readable output, displaying all useful information.***
 
-  o. Allow the user to sort the files by name or by size.
+   o. Allow the user to sort the files by name or by size.
 
-  ***The user can do this using the two buttons above the list of files on the main screen.***
+   ***The user can do this using the two buttons above the list of files on the main screen.***
 
-  p. Allow the user to configure default settings using a configuration file that is easy to use.
+   p. Allow the user to configure default settings using a configuration file that is easy to use.
 
-  ***The configuration is relatively simple, and easy to edit manually in case of an issue.***
+   ***The configuration is relatively simple, and easy to edit manually in case of an issue.***
 
-  q. Allow the user to search for file names in the vault.
+   q. Allow the user to search for file names in the vault.
 
-  ***Works well, however is quite slow because it is done in Python. I would have liked to do this in Go, however passing the file objects into Go would have been a pain, as they are not all in the same directory like the sorting buttons are (which is why I could do those in Go).***
+   ***Works well, however is quite slow because it is done in Python. I would have liked to do this in Go, however passing the file objects into Go would have been a pain, as they are not all in the same directory like the sorting buttons are (which is why I could do those in Go).***
 
-  r. Not break when doing arbitrary tasks such as browsing the files.
+   r. Not break when doing arbitrary tasks such as browsing the files.
 
   ***See Testing.***
 
@@ -7310,13 +7310,13 @@ In this section I will go through each of my objectives and comment on their com
 
    ***Each file and folder name is encrypted, and encoded to base64. When the files are listed within the app, they are decoded, decrypted and then encoded into string again, and displayed.***
 
-   i. Allow the files/folders to be decrypted to an external location.
+   ------i. Allow the files/folders to be decrypted to an external location.
 
-   ***Works fine. Files can be decrypted to a new folder, with their original name, or they can be renamed when decrypting.***
+   ​	***Works fine. Files can be decrypted to a new folder, with their original name, or they can be renamed when decrypting.***
 
 4. Overall system should work on Windows, MacOS and Linux.
 
-***Works great on Linux, so it should work on MacOS too, however I have no way of checking this as I do not own a computer that runs MacOS. The program works well on Windows as well, however I had issues installing PyBluez for the Bluetooth capability (it was asking for the Windows SDK, and even after I installed it, it still asked for it...). The rest of the program worked fine, as you can see in this video (type the link into the top bar on your web browser): https://youtu.be/2dcJAWGE_IE***
+***Works great on Linux, so it should work on MacOS too, however I have no way of checking this as I do not own a computer that runs MacOS. The program works well on Windows as well, however I had issues installing PyBluez for the Bluetooth capability (it was asking for the Windows SDK, and even after I installed it, it still asked for it...). The rest of the program worked fine, as you can see in this video (type the link into the top bar on your web browser): https://youtu.be/2dcJAWGE_IE (There is an underscore, not a space [ it's quite hard to tell ])***
 
 
 ## Things I would do to improve the project
