@@ -80,7 +80,6 @@ However, with privacy by design, I will not be using any of the user’s data fo
 
 Another issue could be that if a file is deleted, the contents of the file might still remain. To fully remove the file I may have to use a one way function that ruins the data before deletion so that it cannot be accessed after it is deleted.
 
-
 ---
 
 ## Existing Programs
@@ -117,7 +116,6 @@ SanDisk Secure Access did inspire this project, however I do not want to make a 
 
 
 I will take these into account when I come to designing my GUI.
-
 
 ---
 
@@ -6990,7 +6988,7 @@ The key for the different types of data (where applicable) will be:
 
 Test 7 failed, however it was was not a complete failure, as the file was still recovered, just to the wrong location. I will be fixing it in the next sub-section.
 
-Test 24.7 failed, and was an erroneous test. This test scenario will not happen in real world use very often, and can be fixed by simply logging out, and logging back in again with the correct key. I may fix this in the next section.
+Test 24.7 failed, and was an erroneous test. This test scenario will not happen in real world use very often, and can be fixed by simply logging out, and logging back in again with the correct key.
 
 
 ### Fixing failed tests:
@@ -7035,6 +7033,63 @@ The size of each of these metadata files are only about 100-200 bytes per file, 
 
 When a file is recovered, the file's metadata is recovered, and the original path of the file is used to recover the file to where it belongs. Once the file is moved, the file metadata can be deleted, and the folders above where the file was recovered from are checked in case the folders are empty, and deletes above folders if they are empty (up to the root path of the vault).
 
+
+#### Extra changes:
+
+I also added a small bar at the bottom of the screen that tells the user the current directory:
+
+![](Testing/bottomBar/addedBar.png)
+
+As you traverse the directories, the bar will update to show the current directory:
+
+![](Testing/bottomBar/barTraverse.png)
+
+If the text is too big for the bar, then some text is replaced with "...", at every "/".
+
+![](Testing/bottomBar/longFolder.png)
+
+I felt this feature was needed, otherwise the user may feel/get lost. 
+
+
+The amount of code added was minimal:
+
+I added a label to the `<MainScreen>` class in `code/python-go/kivyStuff/kvFiles/mainSc.kv`, with a canvas that sets the background colour for the label.
+
+`code/python-go/kivyStuff/kvFiles/mainSc.kv`
+
+```css
+    Label:
+      canvas.before:
+        Color:
+          rgba: 0.33, 0.33, 0.33, 1
+        Rectangle:
+          pos: self.pos
+          size: self.size
+
+      id: currDir
+      size_hint: 1, .04
+      pos_hint: {"x": 0, "y": 0}
+      text_size: self.size
+      halign: "left"
+      valign: "middle"
+
+      shorten: True
+      shorten_from: "left"
+      split_str: root.fileSep   # Shortens every word rather than splitting a word in half when shortening.
+```
+
+Then, to update it I had to add some code to `code/python-go/kivyStuff/mainScClass.py`:
+
+```python
+  class MainScreen(Screen):
+
+    --- Other stuff
+
+    def updateRelPathReadout(self):
+        self.ids.currDir.text = self.getRelPath()
+```
+
+And this function is called whenever the current directory is changed.
 
 
 <div style="page-break-after: always;"></div> 
@@ -7085,7 +7140,6 @@ Multi-file decryption and deletion (with checkboxes or something similar).
 
 *This is quite a good idea.*
 
-
 ---
 
 
@@ -7099,9 +7153,9 @@ In this section I will go through each of my objectives and comment on their com
 
    a. Be easy to use:
 
-   ​  i. Logically laid out.
+     i. Logically laid out.
 
-   ​  ii. Have simple options.
+     ii. Have simple options.
 
     ***I feel the layout of my program makes it quite easy to use, as the important buttons are the largest, and the file browser fills most of the screen, which is the most important part of the main screen. However, some graphics for the buttons are probably a bit too vague (such as the add file button), as I focussed so much on reducing clutter that it's hard to know what buttons do what. The settings screen is quite easy to use, as the switches for the True/False configuration values are very straight forward to change, and it is clear what each setting changes.***
 
@@ -7115,9 +7169,9 @@ In this section I will go through each of my objectives and comment on their com
 
    d. The user should be able to easily encrypt and decrypt files:
 
-   ​  i. Using easy to access buttons in the UI.
+     i. Using easy to access buttons in the UI.
 
-   ​  ii. Using drag and drop from outside of the program.
+     ii. Using drag and drop from outside of the program.
 
     iii. Decrypt to a directory specified.
 
@@ -7125,19 +7179,19 @@ In this section I will go through each of my objectives and comment on their com
 
    e. Have an options menu, including the options to:
 
-   ​  i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
+     i. Change from 128 bit security to 256 security. 128 bit is the bare minimum.
 
       ***128 bit was added, meeting the requirement. 256 bit was an optional feature to take it beyond A-Level standard, but was not included due to time constraints and due to the amount of extra code for a feature that would probably not be used very often.***
 
-   ​  ii. Change the location of the vault.
+     ii. Change the location of the vault.
 
       ***Can be changed relative to the program, or as an absolute path.***
 
-   ​  iii. Set the default login method (Bluetooth or no Bluetooth).
+     iii. Set the default login method (Bluetooth or no Bluetooth).
 
      ***Also done using a switch in the settings screen.***
 
-   ​  iiii. Change if the search in the file browser is recursive or not.
+     iiii. Change if the search in the file browser is recursive or not.
 
      ***Done using a switch in the settings screen.***
 
@@ -7147,9 +7201,9 @@ In this section I will go through each of my objectives and comment on their com
 
    g. Have a secure login screen.
 
-   ​  i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
+     i. Ask the user to either input the key via their keyboard (no Bluetooth for that session), or connect via the app.
 
-   ​  ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
+     ii. Tell the user if the key is invalid or not, and smoothly transition into the main program.
 
      iii. Validate all input.
 
